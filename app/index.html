@@ -1,0 +1,2102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Oira</title>
+<link rel="icon" type="image/png" sizes="512x512" href="/brand/png/favicon-plum-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/brand/png/favicon-plum-192.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/png/favicon-plum-32.png">
+<link rel="apple-touch-icon" href="/brand/png/app-icon-light-1024.png">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#43203B">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,600&family=Karla:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ===== tokens + components lifted verbatim from Oira_Design_Concepts.html ===== */
+  :root{
+    --blush:#FBF3EE; --ink:#43203B; --mauve:#C9799B; --mauve-deep:#A85578;
+    --gold:#D6A756; --lilac:#B49BE0; --petal:#F3DDD6; --cream:#FFFBF7;
+    --night:#1B1120; --nightcard:rgba(255,244,240,.07); --moon:#F3E9E4;
+    --shadow: 0 18px 40px rgba(168,85,120,.14), 0 4px 10px rgba(67,32,59,.06);
+    --iris: conic-gradient(from 210deg, #F4A7B9, #E8C79A, #BFE3C0, #A9CBEF, #C9A9EF, #F4A7B9);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{min-height:100vh;min-height:100svh;background:linear-gradient(160deg,#F7E7E0 0%, #FBF3EE 45%, #F2E4EE 100%);font-family:'Karla',sans-serif;color:var(--ink);display:flex;align-items:center;justify-content:center;overflow:hidden;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+  .petals{position:fixed;inset:0;pointer-events:none;z-index:0}
+  .petal{position:absolute;width:14px;height:18px;background:radial-gradient(ellipse at 40% 30%, #F7CFDA, #E8A9BE);border-radius:60% 40% 55% 45%/60% 55% 45% 40%;opacity:.5;animation:drift 16s linear infinite}
+  @keyframes drift{0%{transform:translateY(-6vh) rotate(0deg)}100%{transform:translateY(108vh) rotate(300deg)}}
+  @keyframes sheen{0%{background-position:0% 0}100%{background-position:300% 0}}
+
+  .stage{position:relative;z-index:1}
+  /* phone — exact concept style; scaled up for use, hover-lift preserved */
+  .phone{height:min(720px,95vh);height:min(720px,90svh);max-width:96vw;aspect-ratio:308/650;background:var(--blush);border-radius:44px;border:7px solid #3a1f34;box-shadow:0 30px 60px rgba(67,32,59,.22);overflow:hidden;position:relative;transition:transform .55s ease, box-shadow .55s ease, background .9s ease}
+  .phone:hover{transform:translateY(-6px) rotate(-.3deg);box-shadow:0 46px 84px rgba(67,32,59,.3)}
+  .notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:94px;height:22px;background:#3a1f34;border-radius:12px;z-index:6}
+  /* Installed/wrapped app (incl. a Bubblewrap/TWA build on Seeker): the .phone/.notch above
+     are a desktop-demo mockup of "what this looks like on a phone" — inside an actual
+     installed app they'd render as a fake phone-within-a-phone, so strip them here and go
+     edge-to-edge. display-mode:standalone fires automatically for a TWA (from manifest.json's
+     "display":"standalone") and for "add to home screen," never for a normal browser tab. */
+  @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui){
+    body{padding:0}
+    .phone{height:100vh;height:100svh;max-width:100vw;width:100vw;aspect-ratio:auto;border-radius:0;border:none;box-shadow:none}
+    .phone:hover{transform:none;box-shadow:none}
+    .notch{display:none}
+    .scr{padding-top:calc(18px + env(safe-area-inset-top));padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+    /* the splash is a full-bleed welcome; in an installed PWA/APK the phone goes edge-to-edge, so drop
+       its rounded corners (they showed the page behind as a fake phone-border cutout) AND drop the
+       body's safe-area padding (which insetted the whole phone and let the peach page show as bands
+       behind the dark splash). The splash then fills to the true edges, its centred content padded
+       clear of the notch and home indicator. Only the online (browser) PWA keeps the phone mockup. */
+    #splash{border-radius:0;padding-top:calc(38px + env(safe-area-inset-top));padding-bottom:calc(38px + env(safe-area-inset-bottom))}
+  }
+  /* Belt-and-suspenders: some Android TWAs / iOS home-screen webviews misreport display-mode, so the
+     boot script also sets html.appmode (from navigator.standalone or an android-app:// referrer).
+     Mirror the same edge-to-edge treatment so the splash never shows a phone-border cutout there. */
+  html.appmode body{padding:0}
+  html.appmode .phone{height:100vh;height:100svh;max-width:100vw;width:100vw;aspect-ratio:auto;border-radius:0;border:none;box-shadow:none}
+  html.appmode .phone:hover{transform:none;box-shadow:none}
+  html.appmode .notch{display:none}
+  html.appmode .scr{padding-top:calc(18px + env(safe-area-inset-top));padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+  html.appmode #splash{border-radius:0;padding-top:calc(38px + env(safe-area-inset-top));padding-bottom:calc(38px + env(safe-area-inset-bottom))}
+  .scr{position:absolute;inset:0;padding:50px 20px 18px;display:none;flex-direction:column;opacity:0;transition:opacity .5s ease;overflow-y:auto}
+  .scr.on{display:flex;opacity:1}
+  .scr::-webkit-scrollbar{display:none}
+  .brand{font-family:'Fraunces',serif;font-weight:600;font-size:18px;letter-spacing:.02em}
+  .brand i{font-style:italic;color:var(--mauve-deep)}
+  .seyebrow{font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--mauve-deep);font-weight:600}
+  h3.big{font-family:'Fraunces',serif;font-weight:300;font-size:31px;line-height:1.12;margin-top:8px}
+  h3.big em{font-style:italic;color:var(--mauve-deep)}
+  .sub{font-size:12.5px;line-height:1.6;color:#7a5570;margin-top:8px;text-wrap:pretty}
+  p,.osub{text-wrap:pretty}
+  .btn{position:relative;overflow:hidden;display:block;width:100%;text-align:center;background:var(--ink);color:#FDF3EC;border-radius:999px;padding:14px;font-weight:600;font-size:13.5px;border:none;box-shadow:0 10px 22px rgba(67,32,59,.25);cursor:pointer;font-family:'Karla',sans-serif}
+  .btn::after{content:"";position:absolute;top:0;left:-70%;width:45%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,240,230,.35),transparent);animation:sweep 3.6s ease infinite}
+  @keyframes sweep{0%,55%{left:-70%}85%,100%{left:130%}}
+  .btn.rose{background:linear-gradient(120deg,var(--mauve-deep),#8E3F63)}
+  .btn.ghost{background:transparent;color:var(--ink);box-shadow:none;border:1.5px solid #d9bccb;font-weight:500}
+  .btn.ghost::after{display:none}
+  .tiny{font-size:10.5px;color:#7a5570;text-align:center;margin-top:9px}
+  .card{background:var(--cream);border-radius:20px 20px 20px 6px;padding:14px;box-shadow:var(--shadow);border:1px solid #f0dde4}
+  .chiplbl{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:#7a5570;font-weight:600}
+  .swatches{display:flex;gap:5px;margin-top:8px}
+  .sw{flex:1;height:24px;border-radius:8px}
+  .sw.on{outline:2.5px solid var(--gold);outline-offset:2px;animation:glowring 2.6s ease infinite}
+  @keyframes glowring{0%,100%{box-shadow:0 0 0 0 rgba(214,167,86,0)}50%{box-shadow:0 0 14px 2px rgba(214,167,86,.55)}}
+  .ribbon{height:11px;border-radius:999px;background:linear-gradient(90deg,#F1DCCB,#DDB699,#BC8563,#96603F,#6E4128,#4A2B1C);margin-top:10px;position:relative;overflow:hidden}
+  .ribbon::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.4) 50%,transparent 70%);background-size:220% 100%;animation:sheen 5s linear infinite}
+  .grain{position:absolute;inset:0;opacity:.5;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E")}
+  .seal{width:112px;height:112px;border-radius:48% 52% 50% 50%/50% 48% 52% 50%;background:radial-gradient(circle at 34% 30%, #E4B96B 0%, #D6A756 38%, #B4813C 75%, #96682E 100%);box-shadow:inset 0 4px 10px rgba(255,240,210,.65), inset 0 -8px 14px rgba(90,58,20,.45), 0 16px 30px rgba(150,104,46,.4);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;animation:press 4.2s ease infinite}
+  @keyframes press{0%,100%{transform:scale(1)}6%{transform:scale(1.12) rotate(-2deg)}12%{transform:scale(.99)}18%{transform:scale(1)}}
+  .seal::before{content:"";position:absolute;inset:13px;border-radius:50%;border:1.5px solid rgba(255,244,220,.55);box-shadow:inset 0 2px 6px rgba(90,58,20,.35)}
+  .seal span{font-family:'Fraunces',serif;font-style:italic;font-weight:400;font-size:48px;color:#7A5320;text-shadow:0 1px 0 rgba(255,240,205,.6)}
+  .seal.mini{width:42px;height:42px;animation:none}
+  .seal.mini span{font-size:19px}
+  .seal::after{content:"";position:absolute;top:-25%;left:-75%;width:48%;height:150%;background:linear-gradient(100deg,transparent,rgba(255,250,236,.65),transparent);transform:skewX(-14deg);animation:sealsweep 4.6s ease infinite;pointer-events:none}
+  .seal.mini::after{display:none}
+  @keyframes sealsweep{0%,55%{left:-75%}86%,100%{left:135%}}
+  .glowring2{position:absolute;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(214,167,86,.35),transparent 65%);animation:halo 4.2s ease infinite}
+  @keyframes halo{0%,100%{opacity:.35;transform:scale(1)}10%{opacity:.9;transform:scale(1.18)}}
+  .portrait{border-radius:24px;position:relative;overflow:hidden;background:radial-gradient(90px 110px at 50% 42%, #8A5A3C 0%, #6E4128 55%, transparent 60%),radial-gradient(150px 120px at 50% 108%, #4A2B1C 0%, transparent 62%),linear-gradient(165deg,#F2D9C6 0%,#E4BCA3 55%,#D2A184 100%);box-shadow:var(--shadow)}
+  .portrait::after{content:"";position:absolute;inset:0;background:radial-gradient(140px 80px at 78% 12%, rgba(255,235,215,.75), transparent 70%)}
+  .cam{flex:1;border-radius:26px;position:relative;overflow:hidden;box-shadow:var(--shadow);background:radial-gradient(120% 90% at 50% 30%,#2A1B2C,#1B1120)}
+  .cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+  /* Sized relative to the camera frame, not a fixed pixel box: a fixed size looked right only
+     inside the boxed browser-tab mockup (.phone capped at ~720px tall). Installed as a PWA,
+     .phone goes edge-to-edge on the real device screen (see the standalone media query below),
+     so the camera frame gets taller/wider than the mockup ever was, and a fixed-px oval shrank
+     to a fraction of a full face on real phones. These percentages match the proportions the
+     fixed size used to have inside the mockup, so the boxed look is unchanged and the installed
+     look now actually scales with it. */
+  .oval{position:absolute;top:50%;left:50%;transform:translate(-50%,-54%);width:58.5%;height:40%;border-radius:50%;border:2.5px dashed rgba(255,250,244,.92);animation:breathe 3.4s ease infinite;z-index:2}
+  @keyframes breathe{0%,100%{transform:translate(-50%,-54%) scale(1)}50%{transform:translate(-50%,-54%) scale(1.03)}}
+  /* positionOval() (JS) overlays the guide exactly on the object-fit:cover sample region and sets
+     explicit left/top/width/height px, so drop the translate-centering and pulse on scale alone.
+     The % oval above stays the fallback until the video metadata is ready. */
+  .oval.fit{transform:none;animation:breathe-fit 3.4s ease infinite}
+  @keyframes breathe-fit{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+  .hint{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:rgba(255,251,247,.94);border-radius:999px;padding:6px 15px;font-size:11px;font-weight:600;color:var(--mauve-deep);white-space:nowrap;z-index:3}
+  .shutter{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);width:60px;height:60px;border-radius:50%;background:var(--cream);border:5px solid var(--mauve);animation:pulse 2.2s ease infinite;z-index:3;cursor:pointer}
+  /* live scan overlay */
+  .scanline{position:absolute;left:8%;right:8%;top:22%;height:2px;background:linear-gradient(90deg,transparent,rgba(214,167,86,.95),transparent);box-shadow:0 0 14px rgba(214,167,86,.85);opacity:0;z-index:4;border-radius:2px}
+  .cam.scanning .scanline{opacity:1;animation:scanmove 1.15s ease-in-out infinite alternate}
+  @keyframes scanmove{0%{top:24%}100%{top:74%}}
+  .scanbar{position:absolute;bottom:14px;left:14%;right:14%;height:5px;border-radius:99px;background:rgba(255,255,255,.3);z-index:4;overflow:hidden;opacity:0;transition:opacity .3s}
+  .cam.scanning .scanbar{opacity:1}
+  .scanbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#E7A6C0,#D6A756);transition:width .12s linear}
+  .cam.scanning .shutter{opacity:.4;pointer-events:none}
+  /* sliding barometers (skin depth / undertone / season) */
+  .baro{-webkit-appearance:none;appearance:none;width:100%;height:14px;border-radius:99px;outline:none;margin-top:11px;cursor:pointer;border:1px solid rgba(67,32,59,.14)}
+  .baro::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:#fff;border:3px solid var(--gold);box-shadow:0 2px 7px rgba(67,32,59,.32);cursor:grab}
+  .baro::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;border:3px solid var(--gold);box-shadow:0 2px 7px rgba(67,32,59,.32);cursor:grab}
+  .depthbaro{background:linear-gradient(90deg,#f6ede4,#f3e7db,#f7ead0,#eadaba,#d7bd96,#a07e56,#825c43,#604134,#3a312a,#292420)}
+  .curlbaro{background:linear-gradient(90deg,#EAD9CA,#CDAE92 20%,#B98A7E,#96667A,#5E3A5A,#3A2136)}
+  .underbaro{background:linear-gradient(90deg,#7FA8D8,#CFC7C4,#E7BE8E,#8A8A56)}
+  .seasonbaro{background:linear-gradient(90deg,#6E8BC0,#B47F9E,#C99A3E,#4E7A5A,#B3123B,#2C1E14)}
+  .blabels{display:flex;justify-content:space-between;font-size:10px;color:var(--mauve-deep);margin-top:5px;opacity:.85}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(201,121,155,.5)}55%{box-shadow:0 0 0 14px rgba(201,121,155,0)}}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .chip{background:var(--petal);border-radius:999px;padding:4px 11px;font-size:10.5px;font-weight:600;color:var(--mauve-deep);white-space:nowrap}
+  .chip.gold{background:#F4E4C4;color:#8a6420}
+  .verdict{display:flex;align-items:center;gap:10px;background:#EFF7EF;border:1px solid #cfe4cf;border-radius:15px 15px 15px 5px;padding:11px 13px;margin-top:9px}
+  .dot{width:11px;height:11px;border-radius:50%;background:#5E9B6B;animation:pulse 2.4s ease infinite}
+  .verdict.warn{background:#FBF1E4;border-color:#EAD6B4} .verdict.warn .dot{background:#C99A3E}
+  .verdict.warn .dot{animation:none}
+  .row{display:flex;justify-content:space-between;align-items:center}
+  .earn{font-family:'Fraunces',serif;font-size:28px;font-weight:600}
+  .avatarq{width:40px;height:40px;border-radius:50% 50% 50% 8px;background:linear-gradient(135deg,#BC8563,#6E4128);flex:none}
+  .prog{height:5px;border-radius:99px;background:#EBD6DE;margin-top:12px;overflow:hidden}
+  .prog i{display:block;height:100%;width:66%;background:linear-gradient(90deg,var(--mauve),var(--mauve-deep));border-radius:99px;position:relative;overflow:hidden}
+  .prog i::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);background-size:200% 100%;animation:sheen 2.6s linear infinite}
+  .budget{display:flex;gap:4px;margin-top:8px}
+  .budget b{flex:1;height:7px;border-radius:99px;background:#E7CBD7}
+  .budget b.used{background:var(--mauve-deep)}
+  .onchain{font-size:10px;color:#7a5570;text-align:center;margin-top:8px}
+  .onchain a{color:var(--mauve-deep);text-decoration:none;font-weight:600}
+  .chip.tap{cursor:pointer;background:var(--mauve);color:#fff}
+  .phone.d .chip.tap{background:linear-gradient(120deg,#E9B8D2,#C9A9EF);color:#2A1430}
+  .sw{cursor:pointer}
+  .receipt{display:inline-flex;align-items:center;gap:7px;background:var(--petal);color:var(--mauve-deep);border-radius:999px;padding:9px 16px;font-size:11.5px;font-weight:600;text-decoration:none;margin-top:10px;border:1px solid rgba(168,85,120,.22)}
+  .receipt::before{content:"◈";font-size:11px}
+  .receipt:active{transform:scale(.97)}
+  .phone.d .receipt{background:rgba(214,167,86,.16);color:#E8C88C;border-color:rgba(214,167,86,.32)}
+  /* ---- dark (Iris After Dark) ---- */
+  .phone.d{background:linear-gradient(175deg,#241528 0%,#1B1120 60%);border-color:#0f0713}
+  .phone.d .notch{background:#0f0713}
+  .phone.d .brand{color:var(--moon)}
+  .phone.d .seyebrow{color:#CBA0BE}
+  .phone.d h3.big{color:var(--moon)}
+  .phone.d h3.big em{color:#E9B8D2}
+  .phone.d .sub{color:#BBA5B8}
+  .phone.d .tiny{color:#96809A}
+  .phone.d .onchain{color:#96809A} .phone.d .onchain a{color:#E9B8D2}
+  .phone.d .card{background:var(--nightcard);border:1px solid rgba(243,233,228,.14);box-shadow:0 14px 30px rgba(0,0,0,.4);backdrop-filter:blur(6px)}
+  .phone.d .chiplbl{color:#CBA0BE}
+  .phone.d .chip{background:rgba(233,184,210,.14);color:#EFC9DE}
+  .phone.d .chip.gold{background:rgba(214,167,86,.16);color:#E8C88C}
+  .phone.d .btn{background:linear-gradient(120deg,#E9B8D2,#C9A9EF);color:#2A1430}
+  .phone.d .btn.ghost{background:transparent;color:var(--moon);border-color:rgba(243,233,228,.3)}
+  .phone.d .earn{color:var(--moon)}
+  .phone.d .verdict{background:rgba(94,155,107,.14);border-color:rgba(94,155,107,.35);color:#CFE7D4}
+  .phone.d .verdict .tiny{color:#A6C4AC}
+  .irisrim::before{content:"";position:absolute;inset:-3px;border-radius:47px;background:var(--iris);filter:blur(10px);opacity:.55;z-index:-1;animation:spinIris 12s linear infinite}
+  @keyframes spinIris{to{transform:rotate(360deg)}}
+  /* Moonseal — the nested "O": an iris ring (outer O) whose glow EMITS from the ring
+     itself (not a halo around it), with a Fraunces "o" in the middle that the
+     iridescent passing-light travels through. */
+  .moonseal{width:120px;height:120px;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;background:var(--iris);animation:spinIrisBG 14s linear infinite, moonemit 3.8s ease-in-out infinite}
+  @keyframes spinIrisBG{to{filter:hue-rotate(360deg)}}
+  @keyframes moonemit{0%,100%{box-shadow:0 0 24px 2px rgba(201,169,239,.42)}50%{box-shadow:0 0 52px 9px rgba(201,169,239,.82)}}
+  .moonseal::before{content:"";position:absolute;inset:7px;border-radius:50%;background:linear-gradient(160deg,#2A1430,#1B1120)}
+  .moonseal span{position:relative;font-family:'Fraunces',serif;font-style:italic;font-weight:600;font-size:62px;line-height:1;background:linear-gradient(105deg,#F4A7B9 0%,#E8C79A 15%,#FFF7FB 29%,#BFE3C0 43%,#A9CBEF 59%,#C9A9EF 75%,#F4A7B9 90%,#E8C79A 100%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;animation:passlight 4.6s linear infinite;filter:drop-shadow(0 0 15px rgba(242,226,236,.8))}
+  @keyframes passlight{0%{background-position:185% 0}100%{background-position:-85% 0}}
+  /* ---- welcome splash (shown once) ---- */
+  #splash{position:absolute;inset:0;z-index:60;border-radius:37px;background:radial-gradient(125% 90% at 50% 30%,#251637,#160D1E 68%,#110812);display:flex;align-items:center;justify-content:center;text-align:center;padding:38px 28px;overflow:hidden;transition:opacity .8s ease,visibility .8s}
+  #splash.gone{opacity:0;visibility:hidden;pointer-events:none}
+  .splashInner{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;max-width:300px;animation:splashIn 1.15s ease .1s both}
+  @keyframes splashIn{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:translateY(0)}}
+  .moonseal.splashseal{width:170px;height:170px}
+  .moonseal.splashseal::before{inset:9px}
+  .moonseal.splashseal span{font-size:96px}
+  /* THE brand "Passing Light" mark (real animated SVG, iridescent comet orbiting the O ring) */
+  .plmark{display:block;filter:drop-shadow(0 0 22px rgba(201,169,239,.5)) drop-shadow(0 0 6px rgba(214,167,86,.35))}
+  .swordmark{font-family:'Fraunces',serif;font-weight:500;font-size:30px;color:#F3E9E4;margin-top:26px;letter-spacing:.3px}
+  .swordmark i{color:#D6A756;font-style:normal}
+  .shead{font-family:'Fraunces',serif;font-style:italic;font-weight:400;font-size:19px;color:#ECDCE6;margin-top:12px;line-height:1.3}
+  .sbody{font-size:13px;line-height:1.72;color:#C5B0C3;max-width:270px;margin:12px auto 0;text-wrap:pretty}
+  .sbtn{margin-top:24px;background:linear-gradient(150deg,#E7A6C0,#C9799B);color:#fff;border:0;border-radius:99px;padding:12px 36px;font:inherit;font-weight:600;font-size:14px;cursor:pointer;box-shadow:0 8px 24px rgba(201,121,155,.38)}
+  .sbtn:active{transform:scale(.97)}
+  .spetals{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+  .spetal{position:absolute;top:0;left:0;opacity:0;background:radial-gradient(ellipse at 40% 30%,#F7CFDA,#E8A9BE);border-radius:60% 40% 55% 45%/60% 55% 45% 40%;animation-name:sfall;animation-timing-function:ease-in-out;animation-iteration-count:infinite;will-change:transform,opacity}
+  .spetal.g{background:radial-gradient(ellipse at 40% 30%,#F3E0BF,#D6A756)}
+  .spetal.l{background:radial-gradient(ellipse at 40% 30%,#E4D3F4,#B49BE0)}
+  @keyframes sfall{
+    0%{transform:translate(0,-70px) rotate(0deg);opacity:0}
+    8%{opacity:var(--o,.5)}
+    28%{transform:translate(var(--sx1,20px),200px) rotate(85deg)}
+    52%{transform:translate(var(--sx2,-26px),392px) rotate(180deg)}
+    76%{transform:translate(var(--sx3,16px),578px) rotate(272deg)}
+    92%{opacity:var(--o,.5)}
+    100%{transform:translate(var(--sx4,-10px),782px) rotate(var(--rot,350deg));opacity:0}
+  }
+  /* wordmark dot = a slanted petal with a gloss that passes through it, like the seal (no glow) */
+  .swordmark i.pdot{display:inline-block;width:10px;height:14px;margin-left:5px;vertical-align:baseline;background:linear-gradient(115deg,#E8A9BE 0%,#E8A9BE 32%,#FFF7FB 50%,#EAB6C6 64%,#D6A756 100%);background-size:300% 100%;border-radius:52% 52% 52% 2px;transform:rotate(32deg);animation:pdotgloss 3.2s linear infinite}
+  @keyframes pdotgloss{0%{background-position:175% 0}100%{background-position:-75% 0}}
+  .moonwrap{position:relative;display:flex;align-items:center;justify-content:center;margin-top:46px}
+  .moonwrap .moonseal{position:relative;z-index:1;margin-top:0}
+  .nightbar{min-height:44px;border-radius:14px;background:rgba(243,233,228,.06);border:1px solid rgba(243,233,228,.12);display:flex;align-items:center;gap:10px;padding:9px 13px;margin-top:8px}
+  .nightbar .tick{width:20px;height:20px;border-radius:50%;background:rgba(94,155,107,.25);border:1.5px solid #7FB98B;display:flex;align-items:center;justify-content:center;color:#BFE3C0;font-size:11px;flex:none}
+  .nightbar div{font-size:11.5px;color:#D9CBD6}
+  .nrctl{display:flex;align-items:center;gap:11px}
+  .nrctl button{width:27px;height:27px;border-radius:8px;border:1px solid rgba(243,233,228,.28);background:rgba(243,233,228,.09);color:#F3E9E4;font-size:15px;line-height:1;cursor:pointer}
+  .nrctl button:active{background:rgba(243,233,228,.18)}
+  .nrctl b{min-width:46px;text-align:center;font-size:14px;color:#F3E9E4}
+  /* working overlay */
+  .overlay{position:absolute;inset:0;background:rgba(251,243,238,.94);display:none;flex-direction:column;align-items:center;justify-content:center;padding:36px;z-index:20;text-align:center}
+  .overlay.on{display:flex}
+  .phone.d .overlay{background:rgba(20,12,24,.95)}
+  .ospin{width:70px;height:70px;border-radius:50%;background:var(--iris);animation:spinIrisBG 3s linear infinite;box-shadow:0 0 40px rgba(214,167,86,.4)}
+  .ost{font-family:'Fraunces',serif;font-size:21px;color:var(--ink);margin-top:22px}
+  .osub{font-size:12px;color:#7a5570;margin-top:8px;max-width:220px;line-height:1.5}
+  .phone.d .ost{color:var(--moon)} .phone.d .osub{color:#B49CB1}
+  /* ---- slide-out sidebar: profile (retention anchor) + tools + settings ---- */
+  .menuBtn{position:absolute;top:15px;right:15px;width:38px;height:38px;border-radius:50%;background:rgba(255,251,247,.92);border:1px solid #efe0d6;display:none;flex-direction:column;align-items:center;justify-content:center;gap:3.5px;cursor:pointer;z-index:16;box-shadow:0 5px 14px rgba(168,85,120,.14)}
+  .menuBtn.show{display:flex}
+  .menuBtn i{width:15px;height:2px;background:var(--ink);border-radius:2px;display:block}
+  .menuBtn i:nth-child(2){width:11px;align-self:flex-start;margin-left:11.5px}
+  .scrim{position:absolute;inset:0;background:rgba(43,20,52,.30);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .4s ease;z-index:30}
+  .scrim.on{opacity:1;pointer-events:auto}
+  .drawer{position:absolute;top:0;left:0;bottom:0;width:84%;max-width:298px;background:linear-gradient(168deg,#FFFBF7 0%,#FBF3EE 60%,#F5E7EE 100%);border-right:1px solid #efe0d6;box-shadow:16px 0 46px rgba(67,32,59,.24);transform:translateX(-104%);transition:transform .5s cubic-bezier(.22,1,.36,1);z-index:31;display:flex;flex-direction:column;padding:22px 19px 18px;overflow-y:auto}
+  .drawer.on{transform:translateX(0)}
+  .drawer .dhead{display:flex;align-items:center;gap:11px}
+  .iris{width:42px;height:42px;border-radius:50%;background:conic-gradient(from 210deg,#F4A7B9,#E8C79A,#BFE3C0,#A9CBEF,#C9A9EF,#F4A7B9);position:relative;flex:none;box-shadow:0 4px 14px rgba(201,121,155,.3)}
+  .iris::after{content:"";position:absolute;inset:9px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#3a1f34,#2A1430)}
+  .avatarIris{cursor:pointer;overflow:hidden}
+  .avatarImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;z-index:1}
+  .avatarX{position:absolute;top:-3px;right:-3px;width:16px;height:16px;border-radius:50%;background:#43203B;color:#FFFBF7;border:1.5px solid #FFFBF7;font-size:10px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;z-index:2}
+  .dhead h4{font-family:'Fraunces',serif;font-weight:500;font-size:18px;color:var(--ink);margin:0;line-height:1.1;cursor:pointer}
+  .dhead .addr{font-family:ui-monospace,monospace;font-size:10.5px;color:#7a5570;margin-top:2px}
+  .abadge{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.03em;padding:2px 7px;border-radius:99px;margin-top:4px;background:rgba(94,155,107,.16);color:#3f7a4e}
+  .abadge.srv{background:rgba(214,167,86,.18);color:#8a6410}
+  .pcard{background:#fff;border:1px solid #f0e2d8;border-radius:18px 18px 18px 6px;padding:13px 14px;margin-top:13px;box-shadow:0 8px 20px rgba(168,85,120,.07)}
+  .pcard .lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#82597a;font-weight:700}
+  .pcard .season{font-family:'Fraunces',serif;font-style:italic;font-size:19px;color:var(--ink);margin-top:2px}
+  .swrow{display:flex;gap:5px;margin-top:10px}
+  .swrow i{flex:1;height:30px;border-radius:6px;display:block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.04)}
+  .pmeta{display:flex;gap:14px;margin-top:10px}
+  .pmeta div span{display:block;font-size:10px;color:#82597a;letter-spacing:.04em}
+  .pmeta div b{font-size:14px;color:var(--ink);font-weight:600}
+  .earnrow{display:flex;align-items:baseline;justify-content:space-between}
+  .earnrow .bignum{font-family:'Fraunces',serif;font-size:22px;color:var(--ink)}
+  .mrow{display:flex;align-items:center;gap:11px;padding:12px 3px;border-bottom:1px solid #f2e6dd;cursor:pointer;transition:padding-left .2s}
+  .mrow:active{padding-left:7px}
+  .mlist{margin-top:12px}
+  .mrow .mi{width:26px;height:26px;border-radius:8px;background:#f6ebe3;display:flex;align-items:center;justify-content:center;flex:none}
+  .mrow .mi b{width:11px;height:11px;border-radius:50%;display:block}
+  .mrow .ml{flex:1;font-weight:600;font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mrow .mv{font-size:11px;color:#7f5874;white-space:nowrap;text-align:right;flex:none}
+  .mrow .chev{color:#9c7c93;font-size:16px}
+  .drawer .foot{margin-top:auto;padding-top:16px;font-size:10.5px;color:#7f5874;line-height:1.5;text-align:center}
+  .sharebtn{width:100%;margin-top:11px;background:var(--ink);color:#fff;border:0;border-radius:99px;padding:10px;font:inherit;font-weight:600;font-size:13px;cursor:pointer}
+  /* ---- on-device beauty concierge (bottom sheet) ---- */
+  .csheet{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,#FFFBF7,#FBF3EE);border-radius:26px 26px 0 0;box-shadow:0 -14px 40px rgba(67,32,59,.26);transform:translateY(103%);transition:transform .5s cubic-bezier(.22,1,.36,1);z-index:32;display:flex;flex-direction:column;max-height:84%;padding:10px 16px 15px}
+  .csheet.on{transform:translateY(0)}
+  .chandle{width:38px;height:4px;border-radius:99px;background:#e3d2c6;margin:2px auto 9px}
+  .chead{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid #f0e2d8}
+  .chead b{font-family:'Fraunces',serif;font-weight:500;font-size:16px;color:var(--ink)}
+  .clang{border:1px solid #e6d6ca;background:#fff;color:var(--ink);border-radius:99px;font:inherit;font-size:11px;font-weight:600;padding:5px 6px;cursor:pointer;outline:none}
+  .cx{background:none;border:0;font-size:22px;color:#9c7c93;cursor:pointer;line-height:1;padding:0 4px}
+  .cbody{flex:1 1 auto;overflow-y:auto;padding:12px 2px;display:flex;flex-direction:column;gap:9px;min-height:64px}
+  /* proof of privacy sheet */
+  .psheet{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,#FFFBF7,#FBF3EE);border-radius:26px 26px 0 0;box-shadow:0 -14px 40px rgba(67,32,59,.26);transform:translateY(103%);transition:transform .5s cubic-bezier(.22,1,.36,1);z-index:33;display:flex;flex-direction:column;max-height:88%;padding:10px 16px 16px}
+  .psheet.on{transform:translateY(0)}
+  .phead{display:flex;align-items:center;gap:10px;padding-bottom:11px;border-bottom:1px solid #f0e2d8}
+  .phead b{font-family:'Fraunces',serif;font-weight:500;font-size:17px;color:var(--ink)}
+  .pshield{width:30px;height:30px;border-radius:50%;background:linear-gradient(140deg,#7FB98B,#4F9E7A);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;flex:0 0 auto;box-shadow:0 4px 12px rgba(79,158,122,.35)}
+  .pbody{flex:1 1 auto;overflow-y:auto;padding:14px 2px 2px;display:flex;flex-direction:column;gap:13px}
+  .ploader{color:#9c7c93;font-size:13px;text-align:center;padding:26px 0}
+  .pcaption{font-size:13px;line-height:1.55;color:#6f5168;text-wrap:pretty}
+  .pgroup{border-radius:16px;padding:14px 15px;border:1px solid #f0e2d8;background:#fff}
+  .pgroup.seen{background:#fbf4ef;border-color:#f0dfd4}
+  .pgroup.yours{background:linear-gradient(180deg,#f4f9f4,#eef6ef);border-color:#d8ead9}
+  .pgroup h5{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#9c7c93;font-weight:700;margin:0 0 10px}
+  .pgroup.yours h5{color:#4F9E7A}
+  .prow{display:flex;align-items:flex-start;gap:9px;font-size:13.5px;line-height:1.45;color:var(--ink);padding:5px 0}
+  .prow .pk{flex:0 0 auto;margin-top:1px;opacity:.75}
+  .prow .pd{flex:1}
+  .prow .pd small{display:block;color:#9c7c93;font-size:11.5px;margin-top:1px}
+  .pmono{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#7a5570;word-break:break-all}
+  .pverdict{text-align:center;font-family:'Fraunces',serif;font-size:16px;color:#3f7a5c;padding:2px 0}
+  .pexplore{display:block;text-align:center;text-decoration:none;background:var(--ink);color:#fff;border-radius:99px;padding:13px;font-size:13.5px;font-weight:600;margin-top:2px}
+  .pexplore small{display:block;font-weight:400;opacity:.7;font-size:11px;margin-top:2px}
+  /* notification settings sheet */
+  .nsheet{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,#FFFBF7,#FBF3EE);border-radius:26px 26px 0 0;box-shadow:0 -14px 40px rgba(67,32,59,.26);transform:translateY(103%);transition:transform .5s cubic-bezier(.22,1,.36,1);z-index:34;display:flex;flex-direction:column;max-height:84%;padding:10px 16px 16px}
+  .nsheet.on{transform:translateY(0)}
+  .nrow{display:flex;align-items:center;gap:12px;padding:13px 2px;border-bottom:1px solid #f0e2d8}
+  .nrow:last-child{border-bottom:0}
+  .nrow .nl{flex:1}
+  .nrow .nl b{display:block;font-size:13.5px;color:var(--ink);font-weight:600}
+  .nrow .nl small{display:block;font-size:11.5px;color:#9c7c93;margin-top:2px;line-height:1.4}
+  .nswitch{width:42px;height:25px;border-radius:99px;background:#e3d2c6;position:relative;flex:none;cursor:pointer;transition:background .2s}
+  .nswitch::after{content:"";position:absolute;top:2.5px;left:2.5px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(67,32,59,.3);transition:transform .2s}
+  .nswitch.on{background:#4F9E7A}
+  .nswitch.on::after{transform:translateX(17px)}
+  .nnote{font-size:11.5px;color:#9c7c93;line-height:1.5;padding:12px 2px 2px;text-align:center}
+  .cmsg{max-width:82%;font-size:13px;line-height:1.5;padding:9px 12px;border-radius:15px;text-wrap:pretty}
+  .cmsg.oira{align-self:flex-start;background:#fff;border:1px solid #f0e2d8;border-bottom-left-radius:5px;color:var(--ink)}
+  .cmsg.me{align-self:flex-end;background:var(--ink);color:#fff;border-bottom-right-radius:5px}
+  .cmsg.typing{color:#9c7c93;font-style:italic}
+  .cprompts{flex:none;display:flex;gap:7px;overflow-x:auto;padding:10px 0 11px;margin-top:2px;border-top:1px solid #f0e2d8;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .cprompts::-webkit-scrollbar{display:none}
+  .cprompts .chip{flex:none;cursor:pointer;background:#fff;border:1px solid #e2cdda;color:#7a5570;box-shadow:0 1px 3px rgba(67,32,59,.06)}
+  .cprompts .chip:active{background:#FBF3EE}
+  .cinput{flex:none;display:flex;flex-direction:column;gap:9px}
+  .cinput input{width:100%;min-width:0;border:1px solid #e6d6ca;border-radius:16px;padding:12px 15px;font:inherit;font-size:13.5px;color:var(--ink);background:#fff;outline:none}
+  .cinput input:focus{border-color:#C9799B}
+  .cactions{display:flex;gap:9px;align-items:center}
+  .cactions .csend{margin-left:auto}
+  .cicon{flex:none;width:38px;height:38px;border-radius:50%;display:grid;place-items:center;cursor:pointer;padding:0;border:1px solid #e2cdda;transition:transform .12s}
+  .cicon svg{display:block}
+  .cicon:active{transform:scale(.93)}
+  .cicon.cmic,.cicon.ccam{background:linear-gradient(150deg,#F5ECE4,#DAC5B6 42%,#F7EFE8 58%,#C6AB96);color:#6b4a63;box-shadow:inset 0 1px 1px rgba(255,255,255,.65),0 1px 3px rgba(67,32,59,.12)}
+  .cicon.ccam{margin:0}
+  .cicon.csend{background:linear-gradient(150deg,#5a2a4f,#43203B);color:#FFFBF7;border-color:transparent;box-shadow:0 2px 6px rgba(67,32,59,.28)}
+  .cicon.cmic.rec{background:linear-gradient(150deg,#EBA9C2,#C9799B);color:#fff;border-color:transparent;animation:micpulse 1.2s ease-in-out infinite}
+  @keyframes micpulse{0%,100%{box-shadow:0 0 0 0 rgba(201,121,155,.55)}55%{box-shadow:0 0 0 8px rgba(201,121,155,0)}}
+  @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001s !important;animation-iteration-count:1 !important}}
+</style>
+</head>
+<body>
+<div class="petals">
+  <div class="petal" style="left:8%;animation-delay:0s"></div><div class="petal" style="left:26%;animation-delay:4s;animation-duration:20s"></div><div class="petal" style="left:57%;animation-delay:9s"></div><div class="petal" style="left:78%;animation-delay:2s;animation-duration:22s"></div><div class="petal" style="left:92%;animation-delay:12s"></div>
+</div>
+
+<div class="stage"><div class="phone" id="phone"><div class="notch"></div>
+  <!-- welcome splash: shown once, before login, never again (lives inside the phone frame) -->
+  <div id="splash">
+    <div class="spetals" id="spetals" aria-hidden="true"></div>
+    <div class="splashInner">
+      <img class="plmark" src="/brand/svg/oira-mark-passing-light-animated.svg" alt="Oira" width="168" height="168">
+      <div class="swordmark">Oira<i class="pdot"></i></div>
+      <h2 class="shead">Your colour is yours alone.</h2>
+      <p class="sbody">The way light falls on your skin. The shades that make you feel most like yourself. It stays sealed here, seen by no one unless you say so. It is all yours.</p>
+      <button class="sbtn" onclick="dismissSplash()">Come in</button>
+    </div>
+  </div>
+  <script>/* flag installed/app mode for edge-to-edge, and hide the splash instantly for returning users */
+  (function(){
+    try{ var mm=window.matchMedia;
+      var app=(mm&&(mm('(display-mode: standalone)').matches||mm('(display-mode: fullscreen)').matches||mm('(display-mode: minimal-ui)').matches))
+        || window.navigator.standalone===true
+        || (document.referrer||'').indexOf('android-app://')===0;
+      if(app) document.documentElement.classList.add('appmode');
+    }catch(e){}
+    try{ if(localStorage.getItem('oira_splash')){ var s=document.getElementById('splash'); if(s) s.style.display='none'; } }catch(e){}
+  })();</script>
+
+  <!-- slide-out sidebar (shown once she has a Palette) -->
+  <div class="menuBtn" id="menuBtn" onclick="openMenu()"><i></i><i></i><i></i></div>
+  <div class="scrim" id="scrim" onclick="closeMenu();closeConcierge();closePrivacy();closeNotifications();closeWalletSheet();closeSkinTrends()"></div>
+  <aside class="drawer" id="drawer"></aside>
+  <!-- on-device beauty concierge (advisory only; never sees raw traits) -->
+  <div class="csheet" id="csheet">
+    <div class="chandle"></div>
+    <div class="chead"><div class="iris" style="width:30px;height:30px"></div><div style="flex:1"><b id="ctitle">Ask Oira</b><div class="tiny" id="csub" style="text-align:left;margin:2px 0 0">Your private beauty concierge</div></div>
+      <select id="clang" class="clang" aria-label="Language" onchange="onConciergeLang(this.value)"><option value="en">EN</option><option value="fr">FR</option><option value="es">ES</option><option value="pt">PT</option></select>
+      <button class="cx" onclick="closeConcierge()" aria-label="Close">×</button></div>
+    <div class="cbody" id="cbody"></div>
+    <div class="cprompts" id="cprompts"></div>
+    <div class="cinput"><input id="cq" autocomplete="off" placeholder="Ask about your colours…" onkeydown="if(event.key==='Enter')sendConcierge()">
+      <div class="cactions">
+      <button class="cicon cmic" id="cmic" onclick="conciergeMic()" aria-label="Voice" title="Voice"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M6 11a6 6 0 0 0 12 0"/><path d="M12 17v3"/></svg></button>
+      <label class="cicon ccam" aria-label="Photo" title="Photo"><input type="file" accept="image/*" capture="environment" onchange="conciergePhoto(this)" hidden><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.4-2h7.2L23 8"/><path d="M4 8h16a0 0 0 0 1 0 0v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V8Z"/><circle cx="12" cy="13" r="3.1"/></svg></label>
+      <button class="cicon csend" id="csend" onclick="sendConcierge()" aria-label="Send" title="Send"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg></button></div></div>
+  </div>
+
+  <!-- proof of privacy: anyone, crypto or not, can see what the public chain holds -->
+  <div class="psheet" id="psheet">
+    <div class="phead"><div class="pshield">✓</div><div style="flex:1"><b>Your privacy, proven</b><div class="tiny" id="pverif" style="text-align:left;margin:2px 0 0">Checking the public ledger…</div></div>
+      <button class="cx" onclick="closePrivacy()" aria-label="Close">×</button></div>
+    <div class="pbody" id="pbody">
+      <div class="ploader">Reading the Solana ledger, live…</div>
+    </div>
+  </div>
+
+  <!-- skin trends: her own local history, read back to her — nothing here has ever left the phone -->
+  <div class="psheet" id="skinsheet">
+    <div class="phead"><div class="pshield" style="background:linear-gradient(140deg,#C08A4A,#B4633A)">✦</div><div style="flex:1"><b>Your skin, over time</b><div class="tiny" style="text-align:left;margin:2px 0 0">From scans on this device. Never sent anywhere.</div></div>
+      <button class="cx" onclick="closeSkinTrends()" aria-label="Close">×</button></div>
+    <div class="pbody" id="skinTrendBody"></div>
+  </div>
+
+  <!-- notification settings: local-only prefs + Notification API opt-in, no server push -->
+  <div class="nsheet" id="nsheet">
+    <div class="chandle"></div>
+    <div class="phead"><div class="pshield" style="background:linear-gradient(140deg,#8FA8CC,#6B8CB4)">🔔</div><div style="flex:1"><b>Notifications</b><div class="tiny" style="text-align:left;margin:2px 0 0">You choose what reaches you. Nothing else does.</div></div>
+      <button class="cx" onclick="closeNotifications()" aria-label="Close">×</button></div>
+    <div class="pbody" id="nbody"></div>
+  </div>
+
+  <!-- optional wallet connect: Wallet Standard wallets (desktop extensions + wallet
+       in-app browsers) and, on Android, MWA — she picks one; passkey stays the default -->
+  <div class="nsheet" id="wsheet">
+    <div class="chandle"></div>
+    <div class="phead"><div class="pshield" style="background:linear-gradient(135deg,#9945FF,#14F195)">◎</div><div style="flex:1"><b>Connect a wallet</b><div class="tiny" style="text-align:left;margin:2px 0 0">Optional. Fingerprint sign-in stays the default.</div></div>
+      <button class="cx" onclick="closeWalletSheet()" aria-label="Close">×</button></div>
+    <div class="pbody" id="wbody"></div>
+  </div>
+
+  <!-- 0 · 01 Welcome -->
+  <div class="scr on" data-s="0">
+    <div class="brand" style="display:flex;align-items:center;gap:7px"><img src="/brand/svg/oira-mark-mono-plum.svg" width="22" height="22" alt="" style="display:block"><span>Oira<i>.</i></span></div>
+    <div style="margin-top:56px">
+      <div class="seyebrow">One selfie</div>
+      <h3 class="big">Your colours,<br><em>kept.</em></h3>
+      <p class="sub">Find the shades made for your skin. Your reading stays sealed; only you hold the key.</p>
+    </div>
+    <div class="ribbon" style="margin-top:24px"></div>
+    <div style="margin-top:auto">
+      <button class="btn" onclick="unlockDevice()">Continue with fingerprint</button>
+      <button class="btn ghost" style="margin-top:9px" onclick="connectWalletInstead()">Use a wallet instead</button>
+      <div class="tiny">No email. No password. Nothing to remember.</div>
+      <div class="tiny" style="margin-top:6px;cursor:pointer;text-decoration:underline" onclick="restoreWithRecoveryKey()">Sealed a Palette on another device? Restore with your recovery key</div>
+    </div>
+  </div>
+
+  <!-- 1 · 02 Capture -->
+  <div class="scr" data-s="1">
+    <div class="row"><div class="brand">Oira<i>.</i></div><div class="seyebrow">Step 1 of 3</div></div>
+    <div class="cam" id="camWrap" style="margin-top:14px;flex:1;border-radius:26px">
+      <video id="cam" autoplay playsinline muted></video>
+      <div class="grain"></div>
+      <div class="hint" id="s1hint">Face soft light, then tap to scan</div>
+      <div class="oval"></div>
+      <div class="scanline"></div>
+      <div class="scanbar"><i id="scanProg"></i></div>
+      <div class="shutter" onclick="scanColour()"></div>
+    </div>
+    <p class="sub" style="text-align:center;margin-top:10px">A real scan reads your skin over a few seconds.<br>Your photo never leaves this phone.</p>
+  </div>
+
+  <!-- 2 · 03 Confirm her reading (interactive) -->
+  <div class="scr" data-s="2" style="gap:9px">
+    <div class="seyebrow">Your reading · Step 2 of 3</div>
+    <h3 class="big" id="readHead" style="font-size:25px;margin-top:0">Deep <em>&amp;</em> cool.</h3>
+    <div class="tiny" id="readBasis" style="text-align:left;margin-top:-2px;color:var(--mauve-deep)"></div>
+    <div class="card">
+      <div class="row"><div class="chiplbl">Skin depth · <span id="depthName">Deep</span></div><span class="tiny" id="monkTag" style="margin:0">Monk 6</span></div>
+      <input type="range" class="baro depthbaro" id="depthBaro" min="1" max="10" step="1" value="6" oninput="setDepthSlider(this.value)" aria-label="Skin depth">
+      <div class="blabels"><span>Fair</span><span>Medium</span><span>Rich</span><span>Deep</span></div>
+      <div class="tiny" style="text-align:left;margin-top:6px">We read this from your skin. Slide only if it is not quite you.</div>
+    </div>
+    <div class="card">
+      <div class="row"><div class="chiplbl">Undertone · <span id="uName">Cool</span></div></div>
+      <input type="range" class="baro underbaro" id="underBaro" min="0" max="3" step="1" value="0" oninput="setUnderSlider(this.value)" aria-label="Undertone">
+      <div class="blabels"><span>Cool</span><span>Neutral</span><span>Warm</span><span>Olive</span></div>
+    </div>
+    <div class="card">
+      <div class="row"><div class="chiplbl">Season · <span id="sName">True Winter</span></div></div>
+      <input type="range" class="baro seasonbaro" id="seasonBaro" min="0" max="5" step="1" value="0" oninput="setSeasonSlider(this.value)" aria-label="Season">
+      <div class="swatches" id="sSwatches" style="margin-top:9px"></div>
+    </div>
+    <div class="card">
+      <div class="row"><div class="chiplbl">Hair · <span id="curlName">Curly 3A</span></div></div>
+      <input type="range" class="baro curlbaro" id="curlBaro" min="0" max="11" step="1" value="6" oninput="setCurlSlider(this.value)" aria-label="Curl type">
+      <div class="blabels"><span>Straight</span><span>Wavy</span><span>Curly</span><span>Coily</span></div>
+      <div class="tiny" id="curlDesc" style="text-align:left;margin-top:6px">Set your curl type. Wear a headwrap or hijab? Set it from memory, or leave it.</div>
+    </div>
+    <div class="card" style="padding:11px 14px"><div class="chiplbl">Face</div><div class="chips" style="margin-top:5px"><span class="chip">Soft oval</span><span class="chip">Almond eyes</span><span class="chip">Full lips</span></div></div>
+    <div class="card" id="skinCard" style="padding:11px 14px;display:none">
+      <div class="chiplbl">Skin today</div><div class="chips" id="skinChips" style="margin-top:5px"></div>
+      <div class="tiny" id="skinNote" style="text-align:left;margin-top:6px"></div>
+      <div class="tiny" id="skinCloseup" style="text-align:left;margin-top:7px;cursor:pointer;text-decoration:underline" onclick="runCloseupRead()">Get a closer read</div>
+      <div class="tiny" style="text-align:left;margin-top:9px;color:var(--mauve-deep)">Does this match how your skin feels?</div>
+      <div class="chips" id="skinFbRow" style="margin-top:4px">
+        <span class="chip tap" onclick="skinFeedback('match')">Yes, spot on</span>
+        <span class="chip tap" onclick="skinFeedback('off')">A little off</span>
+        <span class="chip tap" onclick="skinFeedback('no')">Not really</span>
+      </div>
+      <div class="tiny" id="skinFbThanks" style="text-align:left;margin-top:4px;display:none">Thank you, that helps this get more accurate for you over time.</div>
+      <div class="row" style="margin-top:9px;gap:6px;align-items:center">
+        <input id="skinProduct" placeholder="What are you using right now? (optional)" style="flex:1;min-width:0;border:1px solid #e6d6ca;border-radius:16px;padding:9px 13px;font:inherit;font-size:12.5px;color:var(--ink);background:#fff;outline:none" onkeydown="if(event.key==='Enter')saveSkinProduct()">
+        <span class="chip tap" style="cursor:pointer" onclick="saveSkinProduct()">Log it</span>
+      </div>
+    </div>
+    <div style="margin-top:auto">
+      <button class="btn rose" id="sealBtn" onclick="seal()">This is me — seal it</button>
+      <button class="btn ghost" style="margin-top:9px" onclick="go(1)">This isn't me · retake</button>
+    </div>
+  </div>
+
+  <!-- 3 · 04 The seal -->
+  <div class="scr" data-s="3" style="align-items:center;text-align:center">
+    <div class="brand" style="align-self:flex-start">Oira<i>.</i></div>
+    <div style="margin-top:58px;position:relative;display:flex;align-items:center;justify-content:center">
+      <div class="glowring2"></div><div class="seal"><img src="/brand/svg/oira-mark-silk-edge-light.svg" alt="Oira sealed" width="112" height="112" style="display:block;filter:drop-shadow(0 2px 10px rgba(214,167,86,.35))"></div>
+    </div>
+    <h3 class="big" style="margin-top:26px">Sealed.</h3>
+    <p class="sub" style="max-width:225px">Locked in a private vault. Only you hold the key.</p>
+    <div class="chips" style="justify-content:center;margin-top:12px"><span class="chip gold">Private vault · on</span><span class="chip">Open anytime</span></div>
+    <div class="onchain" id="sealedChain"></div>
+    <div class="tiny" id="recoveryNote" style="max-width:250px;margin-top:10px"></div>
+    <div style="margin-top:auto;width:100%"><button class="btn" onclick="go(4)">Meet your agent</button></div>
+  </div>
+
+  <!-- 4 · 05 While you slept (day / agent home) -->
+  <div class="scr" data-s="4" style="gap:9px">
+    <div class="row" style="padding-right:46px">
+      <div><div class="seyebrow">While you slept</div><h3 class="big" style="font-size:23px;margin-top:2px">Good morning<em>.</em></h3></div>
+    </div>
+    <div class="card" id="agMatchCard">
+      <div class="row"><div class="chiplbl">Overnight · answered privately</div><span class="chip gold">Attested ✓</span></div>
+      <div id="agMatches"></div>
+    </div>
+    <div class="tiny" style="margin:1px 0 0;cursor:pointer;color:#7a5570;text-align:right" onclick="go(9)">See all brands on the board ›</div>
+    <div class="card" style="padding:12px 14px">
+      <div class="row"><div class="chiplbl">A brand's questions · capped on-chain</div></div>
+      <div class="budget" id="agBudget"></div>
+      <div class="tiny" id="agBudgetTxt" style="text-align:left;margin-top:6px">Any one brand may ask up to 3 times, ever</div>
+    </div>
+    <div class="card" style="padding:12px 14px">
+      <div class="row"><div class="chiplbl">Earned so far</div><span class="tiny" style="margin:0">Cash out</span></div>
+      <div class="earn" id="agEarn">$0.00</div><div class="prog"><i id="agProg"></i></div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:9px"><button class="btn" style="flex:1.5" onclick="go(6)">Set tonight's rules</button><button class="btn ghost" style="flex:1" onclick="go(5)">Check a colour</button></div>
+    <div class="tiny" style="margin-top:9px;cursor:pointer;color:#7a5570" onclick="openConcierge()">Ask Oira about your colours ›</div>
+  </div>
+
+  <!-- 5 · 06 The verdict (check a colour, on-device, real) -->
+  <div class="scr" data-s="5" style="gap:9px">
+    <div class="seyebrow">Check a colour</div>
+    <div class="portrait" id="cSwatch" style="flex:1;min-height:120px;background:#8A2C4B"><div class="grain"></div><div class="hint" id="cName" style="top:12px;background:rgba(255,251,247,.94)">Tap a shade below</div></div>
+    <div class="verdict" id="cVerdict"><div class="dot"></div><div><div id="cvTitle" style="font-weight:600;font-size:13px">Pick a colour to check</div><div class="tiny" id="cvReason" style="text-align:left;margin:0">Judged against your sealed palette, on your phone.</div></div></div>
+    <div class="card" style="padding:11px 14px">
+      <div class="row"><div class="chiplbl">Try a shade</div><label class="chip tap" style="cursor:pointer;position:relative">Any colour<input type="color" value="#8A2C4B" onchange="checkColour(this.value)" style="position:absolute;inset:0;opacity:0;cursor:pointer"></label></div>
+      <div class="chips" id="cPresets" style="margin-top:8px"></div>
+    </div>
+    <div class="card" style="text-align:center;padding:11px">
+      <div style="display:flex;justify-content:center"><div class="seal mini"><span>O</span></div></div>
+      <div style="font-weight:600;font-size:12px;margin-top:6px">Checked on your phone</div>
+      <div class="tiny" style="margin-top:2px">Free, instant, never leaves the device</div>
+    </div>
+    <div style="margin-top:auto"><button class="btn" onclick="go(4)">Back to my agent</button></div>
+  </div>
+
+  <!-- 6 · 07 Goodnight (night) -->
+  <div class="scr" data-s="6">
+    <div class="brand" style="display:flex;align-items:center;gap:7px"><img src="/brand/svg/oira-mark-mono-moonmilk.svg" width="22" height="22" alt="" style="display:block"><span>Oira<i style="color:#E9B8D2">.</i></span></div>
+    <div style="margin-top:34px">
+      <div class="seyebrow" style="color:#CBA0BE">Goodnight</div>
+      <h3 class="big">Sleep. Your palette<br><em>stays awake.</em></h3>
+      <p class="sub">While you sleep, a brand can ask your agent one yes/no question: does a shade suit you? These rules decide which get answered. You set them; the defaults are sensible.</p>
+    </div>
+    <div class="card" style="padding:12px 14px;margin-top:12px">
+      <div class="row"><div class="chiplbl">Lowest payout you'll accept</div><div class="nrctl"><button onclick="nrStep('minPayout',-0.05)">&minus;</button><b id="nrMin">$0.10</b><button onclick="nrStep('minPayout',0.05)">+</button></div></div>
+      <div class="tiny" style="text-align:left;margin-top:5px">A brand pays you this, in stablecoin, for one answered question.</div>
+    </div>
+    <div class="card" style="padding:12px 14px;margin-top:9px">
+      <div class="row"><div class="chiplbl">Times one brand may ever ask</div><div class="nrctl"><button onclick="nrStep('maxPerBrand',-1)">&minus;</button><b id="nrMax">3</b><button onclick="nrStep('maxPerBrand',1)">+</button></div></div>
+      <div class="tiny" style="text-align:left;margin-top:5px">A lifetime cap per brand, enforced on-chain. After that, they can't ask again.</div>
+    </div>
+    <div class="nightbar" style="margin-top:9px"><div class="tick">✓</div><div>Your face and photos are never shared, ever</div></div>
+    <div style="margin-top:auto"><button class="btn" onclick="goodnight()">Set my night rules</button></div>
+  </div>
+
+  <!-- 7 · 08 The 3am match (night) -->
+  <div class="scr" data-s="7" style="align-items:center;text-align:center">
+    <div class="brand" style="align-self:flex-start;display:flex;align-items:center;gap:7px"><img src="/brand/svg/oira-mark-mono-moonmilk.svg" width="22" height="22" alt="" style="display:block"><span>Oira<i style="color:#E9B8D2">.</i></span></div>
+    <div class="moonwrap"><div class="moonseal"><span>O</span></div></div>
+    <h3 class="big" style="margin-top:24px">While you sleep<em>.</em></h3>
+    <p class="sub" style="max-width:235px" id="vaultStatus">A question arrived and was answered inside the vault. One word left: yes.</p>
+    <div class="chips" style="justify-content:center;margin-top:12px"><span class="chip gold">Hardware attested</span><span class="chip">Receipt kept</span></div>
+    <div class="onchain" id="attestChain" style="margin-top:12px"></div>
+    <div style="margin-top:auto;width:100%">
+      <button class="btn" id="morningBtn" onclick="go(8)">See the morning after</button>
+    </div>
+  </div>
+
+  <!-- 8 · 09 Morning digest (night) -->
+  <div class="scr" data-s="8" style="gap:9px">
+    <div class="seyebrow" style="color:#CBA0BE">Good morning</div>
+    <h3 class="big" style="font-size:24px;margin-top:0">While you slept<em>.</em></h3>
+    <div class="card">
+      <div class="row"><div class="chiplbl">2 questions · 1 match</div><span class="chip gold">All attested ✓</span></div>
+      <div class="verdict" style="margin-top:10px"><div class="dot"></div><div><div id="digMatch" style="font-weight:600;font-size:12.5px;color:#DFF0E2">Foundation sample matched</div><div class="tiny" style="text-align:left;margin:0">Paid privately to you</div></div></div>
+    </div>
+    <div class="card" style="padding:12px 14px">
+      <div class="chiplbl">Receipts</div>
+      <div class="tiny" id="digReceipts" style="text-align:left;margin-top:6px"></div>
+    </div>
+    <div class="card" style="padding:12px 14px">
+      <div class="row"><div class="chiplbl">Earned overnight</div></div>
+      <div class="earn" id="digEarn">+$0.00</div>
+      <div class="onchain" id="paidChain"></div>
+    </div>
+    <div style="margin-top:auto;display:flex;gap:9px"><button class="btn" style="flex:1.6" onclick="alert('Every answer is a plain-language receipt: brand, field, yes or no, time. Never a trait value.')">See every receipt</button><button class="btn ghost" style="flex:1" onclick="go(4)">Good morning</button></div>
+  </div>
+
+  <!-- 9 · Marketplace: brands looking for her shade (consumer-facing board) -->
+  <div class="scr" data-s="9" style="gap:9px">
+    <div class="row" style="padding-right:46px">
+      <div><div class="seyebrow">Marketplace</div><h3 class="big" style="font-size:23px;margin-top:2px">Brands looking<br><em>for your shade.</em></h3></div>
+    </div>
+    <div class="tiny" id="mktCount" style="text-align:left;margin:-2px 0 2px;color:#7a5570">Loading the board…</div>
+    <div id="mktBoard" style="display:flex;flex-direction:column;gap:9px;overflow-y:auto;flex:1;padding-bottom:6px"></div>
+    <div class="tiny" style="text-align:center;color:#9c7c93">Your agent checks each one privately against your palette and rules. You are never shown the shade a brand wants.</div>
+    <div style="margin-top:8px"><button class="btn ghost" onclick="go(4)">Back to my agent</button></div>
+  </div>
+
+  <div class="overlay" id="overlay"><div class="ospin"></div><div class="ost" id="ost">Working</div><div class="osub" id="osub"></div></div>
+</div></div>
+
+<script src="/vendor/nacl-fast.min.js"></script>
+<script src="/custody.js"></script>
+<script src="/vendor/mwa-standard.min.js"></script>
+<script src="/mwa.js"></script>
+<script src="/oira-llm.js"></script>
+<script src="/oira-remote.js"></script>
+<script src="/concierge.js"></script>
+<script src="/oira-face.js"></script>
+<script>
+const NIGHT=[6,7,8];
+let deviceOwner=null; // her owner key, held in memory only after unlock
+let cachedAddr=''; try{ cachedAddr=localStorage.getItem('oira_addr')||''; }catch(e){}
+function rememberAddr(a){ if(!a) return; cachedAddr=a; try{ localStorage.setItem('oira_addr',a); }catch(e){} }
+
+// Passkey and an external wallet are two INDEPENDENT, mutually exclusive sign-in paths — she
+// picks exactly one at the welcome screen, and whichever she picked signs everything from then
+// on (never a silent fallback to the other). This flag is the only thing that has to survive a
+// reload to know which one: 'wallet' once she's connected one, cleared back to passkey/local by
+// either "Continue with fingerprint" or Settings > Reset this device.
+const SIGNMODE_KEY='oira_signmode';
+function setSignMode(m){ try{ if(m) localStorage.setItem(SIGNMODE_KEY,m); else localStorage.removeItem(SIGNMODE_KEY); }catch(e){} }
+function signMode(){ try{ return localStorage.getItem(SIGNMODE_KEY)||''; }catch(e){ return ''; } }
+// Build a deviceOwner-shaped signer from a connected wallet — sign() and address are all the
+// rest of the app (seal(), custody.js's relay protocol) already expects, so nothing else has
+// to know she's in wallet mode rather than passkey mode. sealSalt() is one wallet signature
+// (her commitment salt, stable across every future seal — see mwa.js).
+async function becomeWalletOwner(address){
+  const salt=await window.OiraMWA.sealSalt();
+  deviceOwner={ address, assurance:'wallet', salt, sign:(m)=>window.OiraMWA.signBytes(m), wipe:()=>{} };
+  setSignMode('wallet'); rememberAddr(address);
+  return deviceOwner;
+}
+
+// One stable identity per device, so her Palette address never changes on reload. Most of the
+// web has no biometric passkey, so we derive a PERSISTENT local key (custody's fallback seed)
+// silently here — same address every reload. A passkey is an UPGRADE she opts into via the
+// welcome button; boot itself may never touch WebAuthn: Chrome shows the passkey sheet even
+// from load-time script (top-level WebAuthn needs no user activation there), so "no gesture,
+// so it silently fails" is NOT a safe assumption — silence has to be structural.
+let bootPromise=null;
+function bootIdentity(){
+  // Single-flight: the load-time call and any later caller share one run, so a slow boot can
+  // never resolve after a click and overwrite the identity that click just unlocked.
+  if(!bootPromise) bootPromise=(async()=>{
+    try{
+      if(signMode()==='wallet'){
+        // She signed in with a wallet last time. Never silently substitute the passkey/local
+        // identity here — that would swap her Palette address underneath her. Just show her
+        // cached wallet address; regaining a live SIGNER needs a fresh connect() gesture
+        // (wallets don't reliably reconnect silently), done on demand in seal() below.
+        const a=window.OiraMWA&&window.OiraMWA.getCached(); if(a) rememberAddr(a);
+        return;
+      }
+      if(!window.OiraCustody) return;
+      const passkeyReady = window.OiraCustody.hasEnrolled() && localStorage.getItem('oira.prf')==='1';
+      // A passkey key needs a biometric prompt to derive; never prompt on load. Show her known
+      // address now; the real key is unlocked on demand when she signs (seal/payout).
+      if(passkeyReady) return;
+      deviceOwner=await window.OiraCustody.unlockLocal(); // silent, persistent, WebAuthn-free
+      if(deviceOwner) rememberAddr(deviceOwner.address);
+    }catch(e){}
+  })();
+  return bootPromise;
+}
+
+// Welcome: proceed with her stable identity. This click is the ONE place a passkey can be
+// created — it has a real user activation, and boot (above) is structurally unable to reach
+// WebAuthn — so the biometric prompt appears exactly here, never on page load. If she
+// declines, unlockOwner hands back the same persistent local identity boot derived, and the
+// next welcome click simply offers the upgrade again.
+async function unlockDevice(){
+  setSignMode(''); // explicit choice of passkey/local — no longer wallet mode, even if she was
+  try{
+    await bootIdentity(); // joins the load-time run; silent
+    if(window.OiraCustody && !window.OiraCustody.hasEnrolled()){
+      const upgraded=await window.OiraCustody.unlockOwner();
+      if(upgraded){ deviceOwner=upgraded; rememberAddr(deviceOwner.address); }
+    } else if(!deviceOwner && window.OiraCustody && window.OiraCustody.hasEnrolled()){
+      deviceOwner=await window.OiraCustody.unlockOwner(); if(deviceOwner) rememberAddr(deviceOwner.address);
+    }
+  }catch(e){}
+  // She may already have a sealed Palette even if THIS device's local "oira_palette" flag was
+  // lost — the same storage-eviction pattern that used to lose her passkey credential id.
+  // Check the chain by her recovered owner address before deciding where to send her, so a
+  // returning woman lands straight on her agent instead of being walked through scan, confirm,
+  // and seal again just because a cache got cleared.
+  if(palettePubkey()){ go(4); return; }
+  if(deviceOwner && deviceOwner.address){
+    try{ const proof=await clientProofByOwner(deviceOwner.address); if(proof && proof.sealed){ go(4); return; } }catch(e){}
+  }
+  go(1);
+}
+const PROGRAM_EX='https://explorer.solana.com/address/CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP?cluster=devnet';
+let sealData=null, payData=null, campData=null;
+let campaigns=[], lastMatch=null; // real brand offers from the marketplace store + her last settled match
+const shorten=(s)=>s?s.slice(0,4)+'…'+s.slice(-4):'';
+const receipt=(url,label)=>`<a class="receipt" href="${url}" target="_blank" rel="noopener">${label}</a>`;
+
+/* ---- her reading (real, editable) ---- */
+// Official Google Monk Skin Tone Scale (10-point, CC-BY-4.0, skintone.google) — lightest to
+// deepest. Matches the depthBaro slider's real min=1/max=10 range (= reading.monk, the value
+// actually sealed on-chain) so the visual barometer never caps out short of the darkest tones.
+const DEPTHS=['#f6ede4','#f3e7db','#f7ead0','#eadaba','#d7bd96','#a07e56','#825c43','#604134','#3a312a','#292420'];
+const UNDER=['Warm','Neutral','Cool','Olive'];
+const SEASONS={
+  'Deep Winter':['#7A1F3D','#B3123B','#1E2A5A','#0E6B5C','#5A2E8A','#FFFBF7'],
+  'Deep Autumn':['#7A3B2A','#A85A32','#C98A3E','#6E5236','#3E5B4A','#2C1E14'],
+  'True Winter':['#7A1F3D','#B3123B','#1E2A5A','#0E6B5C','#5A2E8A','#FFFBF7'],
+  'Cool Summer':['#9B7787','#7E6E8E','#6E8391','#B48CA0','#4E5B6E','#E7D9E0'],
+  'Warm Spring':['#E0894F','#E4B24A','#D96A4A','#7CA64A','#4FB3A0','#F3E2C4'],
+  'Warm Autumn':['#8A4B2A','#B07A2E','#C99A3E','#6E6236','#4E5B3A','#2C1E14']
+};
+let reading={depth:4, under:'Cool', season:'True Winter', curlIdx:6};
+// Andre Walker curl families, type 4 (coily) a first-class citizen per the whitepaper. She sets it
+// herself (inclusive of headwrap + hijab wearers, whose hair a camera would never read).
+const CURL=[{code:'1A',fam:1},{code:'1B',fam:1},{code:'1C',fam:1},{code:'2A',fam:2},{code:'2B',fam:2},{code:'2C',fam:2},{code:'3A',fam:3},{code:'3B',fam:3},{code:'3C',fam:3},{code:'4A',fam:4},{code:'4B',fam:4},{code:'4C',fam:4}];
+const CURLFAM=['','Straight','Wavy','Curly','Coily'];
+const CURLDESC={1:'Straight, holds little curl',2:'Wavy, soft S-bends',3:'Curly, springs into defined loops',4:'Coily, tight springs and zigzags'};
+function setCurlSlider(i){ reading.curlIdx=Math.max(0,Math.min(11,+i)); renderConfirm(); }
+function seasonFor(u,d){ const deep=d>=3;
+  if(u==='Warm') return deep?'Deep Autumn':'Warm Spring';
+  if(u==='Cool') return deep?'Deep Winter':'Cool Summer';
+  if(u==='Olive') return deep?'Warm Autumn':'Warm Spring';
+  return deep?'True Winter':'Cool Summer'; }
+const depthWord=(d)=> d>=4?'Deep':d>=2?'Rich':'Soft';
+const UORDER=['Cool','Neutral','Warm','Olive']; // barometer order (left->right)
+const SKEYS=()=>Object.keys(SEASONS);
+function renderConfirm(){
+  const dw=depthWord(reading.depth);
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('uName',reading.under); set('sName',reading.season); set('depthName',dw); set('monkTag','Monk '+(reading.monk||6));
+  // A returning (already-sealed) woman is rechecking, not first-time sealing: her Palette can't be
+  // re-created, so the CTA saves her refreshed reading instead of trying (and failing) to re-seal.
+  const sealBtn=document.getElementById('sealBtn'); if(sealBtn) sealBtn.textContent = palettePubkey() ? 'Save my new reading' : 'This is me — seal it';
+  document.getElementById('readHead').innerHTML=`${dw} <em>&amp;</em> ${reading.under.toLowerCase()}.`;
+  document.getElementById('readBasis').textContent = reading.measured
+    ? `Scanned on your device · ITA° ${reading.ita} · Monk ${reading.monk} · ${reading.under.toLowerCase()} undertone`
+    : 'Slide to fine-tune, then confirm. Your word is the final say.';
+  // auto-place the barometers from the reading (she keeps adjustment rights)
+  const db=document.getElementById('depthBaro'); if(db) db.value=reading.monk||6;
+  const ub=document.getElementById('underBaro'); if(ub) ub.value=Math.max(0,UORDER.indexOf(reading.under));
+  const sb=document.getElementById('seasonBaro'); if(sb){ const k=SKEYS(); sb.max=k.length-1; sb.value=Math.max(0,k.indexOf(reading.season)); }
+  const ss=document.getElementById('sSwatches'); if(ss) ss.innerHTML=(SEASONS[reading.season]||SEASONS['True Winter']).map(c=>`<div class="sw" style="background:${c}${c==='#FFFBF7'?';border:1px solid #eee':''}"></div>`).join('');
+  const c=CURL[reading.curlIdx]||CURL[6]; const cb=document.getElementById('curlBaro'); if(cb) cb.value=reading.curlIdx;
+  set('curlName',`${CURLFAM[c.fam]} ${c.code}`);
+  set('curlDesc',`${CURLDESC[c.fam]}. Wear a headwrap or hijab? Set it from memory, or leave it.`);
+  renderSkinCard();
+}
+// Soft, non-diagnostic copy for the skin-condition card. Stays silent (card hidden) rather than
+// guess when the scan came back low-light or she has no skin reading yet — matches this screen's
+// own rule for everything else: a real read or nothing, never a placeholder.
+const DRY_LABEL={dry:'A little dry',normal:'Well balanced',hydrated:'Hydrated'};
+const SHINE_LABEL={shiny:'Some T-zone shine',balanced:'Balanced',matte:'Matte'};
+function renderSkinCard(){
+  const card=document.getElementById('skinCard'); if(!card) return;
+  const sk=reading.skin;
+  if(!sk || !sk.dryness || !sk.shine){ card.style.display='none'; return; }
+  card.style.display='';
+  document.getElementById('skinChips').innerHTML=
+    `<span class="chip">${DRY_LABEL[sk.dryness]}</span><span class="chip">${SHINE_LABEL[sk.shine]}</span>`+
+    (sk.blemish?'<span class="chip">One spot to watch</span>':'');
+  const tips=[];
+  if(sk.dryness==='dry') tips.push('could use a richer moisturizer today');
+  if(sk.shine==='shiny') tips.push('a mattifying primer on your T-zone would help');
+  if(sk.blemish) tips.push('we noticed one small area that looked a little redder than the rest, nothing certain, just worth a gentle spot treatment if you agree');
+  document.getElementById('skinNote').textContent = tips.length
+    ? 'From today\'s light, not a diagnosis: '+tips.join('; ')+'.'
+    : 'Reads calm and balanced today. From today\'s light, not a diagnosis.';
+  const cu=document.getElementById('skinCloseup');
+  if(cu){ cu.textContent = reading.skinCloseupMethod ? 'Get a closer read again' : 'Get a closer read'; cu.style.cursor='pointer'; cu.onclick=runCloseupRead; }
+  // a fresh reading is a fresh, un-rated log entry — reset the feedback row rather than leave a
+  // stale "thank you" showing against a read she has not actually judged yet.
+  const fbRow=document.getElementById('skinFbRow'), fbThanks=document.getElementById('skinFbThanks');
+  if(fbRow) fbRow.style.display=''; if(fbThanks) fbThanks.style.display='none';
+  const pe=document.getElementById('skinProduct'); if(pe){ pe.value=''; pe.placeholder='What are you using right now? (optional)'; }
+}
+// Optional, opt-in, one tap: not folded into the automatic scan because it asks her to physically
+// move the phone closer, real extra friction she should choose, not be defaulted into. Reuses the
+// still-live camera stream from screen 1 (go() never stops those tracks on leaving that screen).
+let closeupRunning=false;
+let skinCheckMode=false;
+// One-tap on-device skin log (period-tracker style): re-check her skin CONDITION anytime, WITHOUT
+// the full palette/liveness/seal flow. Reuses the same on-device scan + trend; the entry never
+// leaves the phone (oira_skinlog in localStorage) — private by construction, no chain, no re-seal.
+async function quickSkinCheck(){
+  closeMenu();
+  skinCheckMode=true;
+  go(1); // the reading screen starts + shows the camera
+  const v=document.getElementById('cam');
+  setHint('Reading your skin — hold still in soft, even light');
+  for(let i=0;i<50 && (!v||!v.videoWidth);i++) await new Promise(r=>setTimeout(r,100));
+  if(!v || !v.videoWidth){ skinCheckMode=false; setHint('Camera didn’t start — open the menu and tap Check my skin again'); return; }
+  const res=await runSkinLog();
+  skinCheckMode=false;
+  if(!res){ setHint('Couldn’t read your skin clearly — soft, even light, then tap Check my skin again'); return; }
+  openSkinTrends(); // today’s reading + her trend
+}
+// Quick skin-CONDITION scan over live video frames (no high-res still, no seal). Appends one entry
+// to her private on-device skin log. Mirrors runCloseupRead's core without the ImageCapture path.
+async function runSkinLog(){
+  const v=document.getElementById('cam'); if(!v || !v.videoWidth) return null;
+  const wrap=document.getElementById('camWrap'); if(wrap) wrap.classList.add('scanning');
+  const roughs=[],shines=[]; let blemHits=0, lightOk=0; const T0=Date.now(), DUR=1800;
+  while(Date.now()-T0 < DUR){
+    let sc=null; try{ sc=analyzeSkinCondition(v, v.videoWidth, v.videoHeight); }catch(e){}
+    if(sc && sc.lightOk){ lightOk++; roughs.push(sc.roughness); shines.push(sc.shineDelta); if(sc.blemish) blemHits++; }
+    const p=document.getElementById('scanProg'); if(p) p.style.width=Math.round((Date.now()-T0)/DUR*100)+'%';
+    await new Promise(r=>setTimeout(r,140));
+  }
+  if(wrap) wrap.classList.remove('scanning'); const p=document.getElementById('scanProg'); if(p) p.style.width='0%';
+  if(lightOk<3) return null;
+  reading.skin=bucketSkinCondition(median(roughs), median(shines), blemHits>=1);
+  oiraSkinLog({ dryness:reading.skin.dryness, shine:reading.skin.shine, blemish:reading.skin.blemish, method:'quick' });
+  return reading.skin;
+}
+async function runCloseupRead(){
+  if(closeupRunning) return; closeupRunning=true;
+  const v=document.getElementById('cam'), btn=document.getElementById('skinCloseup');
+  if(!v || !v.srcObject){ if(btn) btn.textContent='Camera is not available right now'; closeupRunning=false; return; }
+  if(btn){ btn.textContent='Hold your phone about 15cm from your face…'; btn.style.cursor='default'; btn.onclick=null; }
+  await new Promise(r=>setTimeout(r,1800)); // a real moment to actually move closer, not an instant snap
+  if(btn) btn.textContent='Reading a closer detail…';
+  try{
+    const roughs=[],shines=[]; let blemHits=0, lightOkCount=0, method='video';
+    for(let i=0;i<2;i++){
+      const cap=await captureCloseupStill(v); method=cap.method;
+      // a real still bypasses video-stream compression, worth the extra resolution; the video-frame
+      // fallback stays more moderate since compression limits how much added resolution actually helps
+      const W=method==='still'?640:480, H=method==='still'?820:615;
+      let sc=null; try{ sc=analyzeSkinCondition(cap.source, W, H); }catch(e){}
+      if(sc && sc.lightOk){ lightOkCount++; roughs.push(sc.roughness); shines.push(sc.shineDelta); if(sc.blemish) blemHits++; }
+      await new Promise(r=>setTimeout(r,150));
+    }
+    if(lightOkCount<1){
+      if(btn){ btn.textContent='Get a closer read'; btn.style.cursor='pointer'; btn.onclick=runCloseupRead; }
+      document.getElementById('skinNote').textContent='Could not get a clear closer read, try brighter, even light.';
+      closeupRunning=false; return;
+    }
+    reading.skin = bucketSkinCondition(median(roughs), median(shines), blemHits>=1);
+    reading.skinCloseupMethod = method;
+    oiraSkinLog({ dryness:reading.skin.dryness, shine:reading.skin.shine, blemish:reading.skin.blemish, method });
+    renderSkinCard();
+    const note=document.getElementById('skinNote'); if(note) note.textContent += (method==='still' ? ' (closer, high-res read)' : ' (closer read)');
+  }catch(e){
+    if(btn){ btn.textContent='Get a closer read'; btn.style.cursor='pointer'; btn.onclick=runCloseupRead; }
+  }
+  closeupRunning=false;
+}
+// Tags the MOST RECENT skin-log entry (the one just written by scanColour()/runCloseupRead())
+// with her own judgement of whether the read matched how her skin actually feels. This — not more
+// engineering guesswork — is the real calibration path for the skin-condition thresholds: there is
+// no free public ground truth for "how rough is dry skin" the way the Monk scale gave depth.
+function skinFeedback(rating){
+  oiraSkinTagLatest({ feedback:rating });
+  const row=document.getElementById('skinFbRow'), thanks=document.getElementById('skinFbThanks');
+  if(row) row.style.display='none'; if(thanks) thanks.style.display='';
+}
+// Optional product tag on the same entry — the seed of the trend view: "since logging Product X,
+// your reads have looked like Y." Free text, hers, never sent anywhere, capped to a sane length.
+function saveSkinProduct(){
+  const el=document.getElementById('skinProduct'); if(!el) return;
+  const name=el.value.trim().slice(0,60); if(!name) return;
+  oiraSkinTagLatest({ product:name });
+  el.value=''; el.placeholder='Logged: '+name;
+}
+// Turns her local skin-condition history into something she can act on: is she trending
+// hydrated/dry lately regardless of any one product, and — for anything she explicitly tagged —
+// how has THAT product's tagged scans actually read. Only entries she explicitly tagged count
+// toward a product's numbers; this deliberately does not infer "she was probably still using it"
+// across untagged days, that inference is exactly how a correlation stops meaning anything.
+const DRY_SCORE={dry:0,normal:1,hydrated:2}; // ordinal: higher = more hydrated
+const SHINE_SCORE={shiny:0,balanced:1,matte:2}; // ordinal: higher = less shine
+function avgSkinScore(arr, field, table){ const vals=arr.map(e=>table[e[field]]).filter(v=>v!=null); return vals.length? vals.reduce((a,b)=>a+b,0)/vals.length : null; }
+function renderSkinTrends(){
+  const body=document.getElementById('skinTrendBody'); if(!body) return;
+  const esc=(s)=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const hist=oiraSkinHistory();
+  if(hist.length<3){ body.innerHTML='<div class="tiny" style="text-align:left">Not enough scans yet. Come back after a few more, and this will start showing real patterns, not guesses.</div>'; return; }
+  const recent=hist.slice(0,5), older=hist.slice(5,15);
+  const dR=avgSkinScore(recent,'dryness',DRY_SCORE), dO=avgSkinScore(older,'dryness',DRY_SCORE);
+  const sR=avgSkinScore(recent,'shine',SHINE_SCORE), sO=avgSkinScore(older,'shine',SHINE_SCORE);
+  const lines=[];
+  if(dR!=null && dO!=null){
+    if(dR-dO>0.4) lines.push('Your last few scans read more hydrated than your earlier ones.');
+    else if(dO-dR>0.4) lines.push('Your last few scans read a little drier than your earlier ones.');
+  }
+  if(sR!=null && sO!=null){
+    if(sR-sO>0.4) lines.push('T-zone shine has settled down compared to earlier scans.');
+    else if(sO-sR>0.4) lines.push('T-zone shine has picked up a little compared to earlier scans.');
+  }
+  // A SUSTAINED read (most of her recent scans in one state), not a one-off — the ONLY place a
+  // gentle, NON-MEDICAL nudge to mention it to a professional belongs. No diagnosis, no health
+  // claim, no "you might have X" — just navigation, with the choice explicitly left to her.
+  const cntRec=(f,v)=>recent.filter(e=>e[f]===v).length; let nudge='';
+  if(recent.length>=4){
+    if(cntRec('dryness','dry')>=Math.ceil(recent.length*0.8)) nudge='Your skin has read on the drier side across most of your recent scans. Usually that’s just weather, water, or your routine — but if it keeps up and bothers you, it can be worth mentioning to a skincare professional. Entirely your call.';
+    else if(cntRec('shine','shiny')>=Math.ceil(recent.length*0.8)) nudge='Your T-zone has read shiny across most of your recent scans. Often that’s heat, hormones, or products — if it’s bugging you, a skincare professional can help you dial it in. Only if you want to.';
+  }
+  let html=`<div class="tiny" style="text-align:left">${lines.length?lines.join(' '):'Reading steady, no clear shift yet.'} Based on ${hist.length} scan${hist.length>1?'s':''} on this device, never sent anywhere.</div>`;
+  if(nudge) html+=`<div class="tiny" style="text-align:left;margin-top:11px;padding:9px 11px;background:rgba(214,167,86,.12);border-radius:12px">${nudge}</div>`;
+  const byProduct={};
+  hist.forEach(e=>{ if(e.product){ (byProduct[e.product]=byProduct[e.product]||[]).push(e); } });
+  const products=Object.keys(byProduct);
+  if(products.length){
+    html+='<div class="chiplbl" style="margin-top:11px">What you\'ve logged</div>';
+    products.forEach(p=>{
+      const arr=byProduct[p], d=avgSkinScore(arr,'dryness',DRY_SCORE);
+      const word = d==null?'—':(d>1.4?'usually reading hydrated':d>0.6?'usually reading balanced':'usually reading dry');
+      html+=`<div class="tiny" style="text-align:left;margin-top:6px"><b>${esc(p)}</b> · ${arr.length} tagged scan${arr.length>1?'s':''} · ${word}</div>`;
+    });
+  } else {
+    html+='<div class="tiny" style="text-align:left;margin-top:11px">Tag what you\'re using right after a scan (on the "Skin today" card), and this starts showing what actually works for your skin, not just your shade.</div>';
+  }
+  // Legible privacy — the whole point of the health-adjacent layer is that she can SEE it's hers.
+  html+='<div class="tiny" style="text-align:left;margin-top:12px;opacity:.85">🔒 Your skin history lives only on this phone. No one else — not even Oira — can see it. You choose if you ever share it.</div>';
+  // One-time, opt-in intent probe: a soft signal (stored locally) of whether the private
+  // share-with-a-professional layer is even wanted — the trust question, asked gently, no commitment.
+  let intent=''; try{ intent=localStorage.getItem('oira_intent')||''; }catch(e){}
+  if(!intent && hist.length>=5){
+    html+=`<div class="tiny" id="intentProbe" style="text-align:left;margin-top:12px;padding:10px 12px;background:rgba(231,166,192,.12);border-radius:12px">Someday, would you want to <b>privately</b> share your skin history with a skincare professional you choose?<div style="margin-top:8px;display:flex;gap:8px"><button class="btn ghost" style="padding:6px 12px;font-size:12px" onclick="skinIntent('maybe')">Maybe someday</button><button class="btn ghost" style="padding:6px 12px;font-size:12px" onclick="skinIntent('no')">Not for me</button></div></div>`;
+  }
+  body.innerHTML=html;
+}
+function skinIntent(v){ try{ localStorage.setItem('oira_intent', v); }catch(e){} const el=document.getElementById('intentProbe'); if(el) el.innerHTML = v==='maybe' ? 'Noted — and it would only ever happen with your explicit say-so, privately.' : 'Understood — this stays just for you.'; }
+function setDepthSlider(m){ m=+m; reading.monk=m; reading.depth=Math.max(0,Math.min(5,Math.round((m-1)/9*5))); reading.season=seasonFor(reading.under,reading.depth); renderConfirm(); }
+function setUnderSlider(i){ reading.under=UORDER[+i]||'Cool'; reading.season=seasonFor(reading.under,reading.depth); renderConfirm(); }
+function setSeasonSlider(i){ const k=SKEYS(); reading.season=k[+i]||k[0]; renderConfirm(); }
+
+/* ---- Check a colour: real judgement against her sealed palette (on-device) ---- */
+const PRESETS=[['Berry','#8A2C4B'],['Emerald','#0E6B5C'],['Camel','#C08A4A'],['Coral','#E4694A'],['Navy','#1E2A5A'],['Icy pink','#F4C6D6'],['Olive','#6E6E2E'],['Fuchsia','#C42A7A']];
+function renderCheck(){ document.getElementById('cPresets').innerHTML=PRESETS.map(([n,h])=>`<span class="chip tap" style="background:${h};color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)" onclick="checkColour('${h}','${n}')">${n}</span>`).join(''); }
+function hexHsl(hex){ hex=hex.replace('#',''); const r=parseInt(hex.slice(0,2),16)/255,g=parseInt(hex.slice(2,4),16)/255,b=parseInt(hex.slice(4,6),16)/255; const mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,dd=mx-mn; let h=0,s=0; if(dd){ s=l>.5?dd/(2-mx-mn):dd/(mx+mn); h=mx===r?((g-b)/dd+(g<b?6:0)):mx===g?((b-r)/dd+2):((r-g)/dd+4); h*=60; } return {h,s,l,r:r*255,g:g*255,b:b*255}; }
+function checkColour(hex,name){
+  const {h,s,l,g,b}=hexHsl(hex);
+  let temp; if(h>=15&&h<=68) temp='warm'; else if(h>=175&&h<=345) temp='cool'; else if(h<15||h>345) temp=(g>b+8)?'warm':'cool'; else temp='neutral';
+  const deep=l<0.42, pastel=l>0.78||s<0.2;
+  const uWarm=reading.under==='Warm'||reading.under==='Olive', uCool=reading.under==='Cool', neutral=reading.under==='Neutral';
+  const herDeep=reading.depth>=3;
+  const tempMatch = neutral||temp==='neutral'||(uWarm&&temp==='warm')||(uCool&&temp==='cool');
+  let good,title,reason;
+  if(herDeep&&pastel){ good=false; title='Pretty, but it may wash you'; reason='Quite pale for your depth. A richer version of this would sing on you.'; }
+  else if(tempMatch){ good=true; title='In your palette'; reason=`A ${temp==='neutral'?'balanced':temp} ${deep?'deep':pastel?'soft':'clear'} shade that sits with your ${reading.under.toLowerCase()} undertone.`; }
+  else { good=false; title='Fights your undertone a little'; reason=`This reads ${temp}, and you lean ${reading.under.toLowerCase()}. A ${uWarm?'warmer':'cooler'} version flatters you more.`; }
+  document.getElementById('cSwatch').style.background=hex;
+  document.getElementById('cName').textContent=name||hex.toUpperCase();
+  document.getElementById('cvTitle').textContent=title;
+  document.getElementById('cvReason').textContent=reason;
+  document.getElementById('cVerdict').classList.toggle('warn',!good);
+  oiraRemember({ name:name||hex.toUpperCase(), hex, good, title });
+}
+// her private, on-device colour memory — colours she chose to check + the verdict she saw.
+// No raw traits; stays in localStorage on her phone. The concierge reads it to feel like hers.
+function oiraRemember(c){ try{ const arr=JSON.parse(localStorage.getItem('oira_checks')||'[]');
+  arr.unshift({ n:c.name, h:c.hex, g:!!c.good, t:c.title, ts:Date.now() });
+  localStorage.setItem('oira_checks', JSON.stringify(arr.slice(0,20))); }catch(e){} }
+// her private, on-device skin-condition history + optional product tag + optional calibration
+// feedback — same posture as oiraRemember above: bucketed words only, stays in localStorage on
+// her phone, nothing raw, nothing ever sent anywhere. This is the only path to real calibration
+// for the skin-condition heuristic (there is no public ground-truth standard for it the way there
+// is for depth/Monk), and it is what powers her personal trend view (renderSkinTrends()).
+function oiraSkinLog(entry){ try{ const arr=JSON.parse(localStorage.getItem('oira_skinlog')||'[]');
+  arr.unshift(Object.assign({ ts:Date.now() }, entry));
+  localStorage.setItem('oira_skinlog', JSON.stringify(arr.slice(0,120))); }catch(e){} }
+function oiraSkinHistory(){ try{ return JSON.parse(localStorage.getItem('oira_skinlog')||'[]'); }catch(e){ return []; } }
+// tag the MOST RECENT entry with her calibration feedback or a product she is using — both
+// optional, both stay local, silently no-op if she has not logged a reading yet this session.
+function oiraSkinTagLatest(fields){ try{ const arr=JSON.parse(localStorage.getItem('oira_skinlog')||'[]');
+  if(!arr.length) return; Object.assign(arr[0], fields); localStorage.setItem('oira_skinlog', JSON.stringify(arr)); }catch(e){} }
+
+/* ---- her agent home: real running state ---- */
+let agent={ earned:0, nubiaUsed:0, nights:0 };
+// her night rules — the agent policy that gates WHICH offers get answered while she sleeps.
+// minPayout is her floor; maxPerBrand mirrors the on-chain lifetime query cap; blocked is her denylist.
+let agentRules={ minPayout:0.10, maxPerBrand:3, blocked:[] };
+const brandCount={}; // brand pubkey -> offers answered this session (client mirror of the on-chain cap)
+function allowedOffer(c){
+  if(Number(c.payout) < agentRules.minPayout) return false;
+  if(agentRules.blocked.includes(c.brand)) return false;
+  if((brandCount[c.brand]||0) >= agentRules.maxPerBrand) return false;
+  return true;
+}
+const amt=()=> (payData&&typeof payData.amount==='number')?payData.amount:5;
+const CATS=['Foundation','Concealer','Lipstick','Blush','Skincare','Other'];
+const catName=(c)=> CATS[c]||'Other';
+// pull the real brand offers from the marketplace store (public-safe: no shade, no salt ever leaves)
+async function loadBoard(){
+  try{ const j=await fetch('/api/brand/campaigns').then(r=>r.ok?r.json():null); campaigns=(j&&j.campaigns)||[]; }catch(e){ campaigns=[]; }
+  renderAgent();
+}
+// overnight settlement: prefer a real brand-posted campaign from the board; fall back to a
+// self-posted offer so the flow still resolves before any brand has posted. Returns a record
+// carrying the brand label + receipt so her board can show the real match.
+async function matchBoard(){
+  try{
+    const j=await fetch('/api/brand/campaigns').then(r=>r.ok?r.json():null);
+    const list=(j&&j.campaigns)||[]; campaigns=list;
+    // her rules gate the board: only an open offer that clears her floor, brand budget and denylist
+    const open=list.find(c=>c.status==='open' && (!c.live||c.live.phase!=='settled') && allowedOffer(c));
+    if(open){
+      const r=await fetch('/api/brand/match',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({campaign:open.campaign})}).then(x=>x.ok?x.json():null);
+      if(r){ if(r.matched!==false) brandCount[open.brand]=(brandCount[open.brand]||0)+1; return { ...r, label:open.label, category:open.category, campaignExplorer:r.explorer||open.explorer }; }
+    }
+  }catch(e){}
+  return fetch('/api/campaign',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({payout:amt()})}).then(r=>r.ok?r.json():null).catch(()=>null);
+}
+function renderAgent(){
+  const m=document.getElementById('agMatches');
+  // brand-controlled text (label) must never reach innerHTML unescaped — it comes from the
+  // public, unauthenticated POST /api/brand/campaign, so this is a real injection surface.
+  const aesc=(s)=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const rows=[];
+  // 1) her settled match, from a real posted campaign when one exists (real brand label + receipt)
+  if(lastMatch && lastMatch.matched!==false){
+    const brand=aesc(lastMatch.label||'A brand'), paid=(typeof lastMatch.amount==='number')?lastMatch.amount:amt();
+    const link=lastMatch.campaignExplorer||lastMatch.explorer;
+    rows.push(`<div class="row" style="margin-top:9px;gap:10px"><div class="avatarq"></div><div style="flex:1"><div style="font-weight:600;font-size:12.5px">${brand} · matched</div><div class="tiny" style="text-align:left;margin-top:2px">Wanted your ${depthWord(reading.depth).toLowerCase()} ${reading.under.toLowerCase()} shade · +$${paid.toFixed(2)} · paid privately</div>${link?`<a class="receipt" href="${aesc(link)}" target="_blank" rel="noopener" style="margin-top:5px;display:inline-block">Settled from escrow · ✓</a>`:''}</div></div>`);
+  } else if(lastMatch){
+    rows.push(`<div class="row" style="margin-top:9px;gap:10px"><div class="avatarq" style="background:linear-gradient(135deg,#7A1F3D,#4A1226)"></div><div style="flex:1"><div style="font-weight:600;font-size:12.5px">${aesc(lastMatch.label||'A brand')} · outside your rules</div><div class="tiny" style="text-align:left;margin-top:2px">Declined automatically · no data shared</div></div></div>`);
+  }
+  // 2) real open offers still waiting on the board (excludes the one she just settled)
+  const settledPk=lastMatch&&lastMatch.campaign;
+  const open=campaigns.filter(c=>c.status==='open' && c.campaign!==settledPk).slice(0,8);
+  open.forEach(c=>{
+    if(allowedOffer(c)){
+      rows.push(`<div class="row" style="margin-top:8px;gap:10px"><div class="avatarq" style="background:linear-gradient(135deg,#C9799B,#B49BE0)"></div><div style="flex:1"><div style="font-weight:600;font-size:12.5px">${aesc(c.label||'A brand')} · asking tonight</div><div class="tiny" style="text-align:left;margin-top:2px">${catName(c.category)} · pays $${Number(c.payout).toFixed(2)} on a yes · your rules decide</div></div></div>`);
+    } else {
+      const reason = Number(c.payout)<agentRules.minPayout ? `Below your $${agentRules.minPayout.toFixed(2)} floor` : 'Outside your rules';
+      rows.push(`<div class="row" style="margin-top:8px;gap:10px;opacity:.6"><div class="avatarq" style="background:#5A4152"></div><div style="flex:1"><div style="font-weight:600;font-size:12.5px">${aesc(c.label||'A brand')} · skipped</div><div class="tiny" style="text-align:left;margin-top:2px">${reason} · nothing shared</div></div></div>`);
+    }
+  });
+  if(rows.length){ m.innerHTML=rows.join(''); }
+  else if(agent.nights>0){ m.innerHTML=`<div class="tiny" style="text-align:left;margin-top:10px">Your agent answered privately overnight. No offer met your rules, so nothing was shared.</div>`; }
+  else { m.innerHTML=`<div class="tiny" style="text-align:left;margin-top:10px">Your agent is set and watching. No questions yet. Set your night rules and it will answer while you sleep.</div>`; }
+  document.getElementById('agEarn').textContent=`$${agent.earned.toFixed(2)}`;
+  document.getElementById('agBudget').innerHTML=Array.from({length:agentRules.maxPerBrand}).map((_,i)=>`<b class="${i<agent.nubiaUsed?'used':''}"></b>`).join('');
+  document.getElementById('agBudgetTxt').textContent=`Any one brand may ask up to ${agentRules.maxPerBrand} times, ever`;
+  document.getElementById('agProg').style.width=Math.min(100, agent.earned/10*100)+'%';
+}
+// consumer-facing marketplace board: every brand currently on the board. Public campaign
+// data only (label, payout, category, escrow, on-chain link); the shade a brand wants stays
+// private and is matched by her agent, never shown to her here.
+function renderMarket(){
+  const board=document.getElementById('mktBoard'); if(!board) return;
+  const mesc=(s)=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const paint=()=>{
+    const list=(campaigns||[]).slice();
+    document.getElementById('mktCount').textContent = list.length ? `${list.length} brands live on the board` : 'No brands on the board yet.';
+    board.innerHTML=list.map(c=>{
+      const st = c.status==='matched' ? '<span class="chip gold">Matched ✓</span>'
+        : (c.status==='open' ? '<span class="chip">Asking now</span>' : '<span class="chip">Closed</span>');
+      const ex = c.explorer ? `<a href="${mesc(c.explorer)}" target="_blank" rel="noopener" class="tiny" style="margin:0;color:#7a5570">on-chain ↗</a>` : '<span></span>';
+      return `<div class="card" style="padding:12px 14px">
+        <div class="row"><div style="font-family:'Fraunces',serif;font-weight:600;font-size:15px;color:var(--ink)">${mesc(c.label||'A brand')}</div><div style="font-weight:700;font-size:13.5px;color:var(--mauve-deep)">$${Number(c.payout).toFixed(0)}<span class="tiny" style="margin:0;color:#9c7c93"> / match</span></div></div>
+        <div class="row" style="margin-top:6px"><div class="tiny" style="margin:0;text-align:left;color:#7a5570">${mesc(CATS[c.category]||'Beauty')} · brand locked $${mesc(c.escrowUi||'')} on-chain</div>${st}</div>
+        <div class="row" style="margin-top:7px">${ex}<div class="tiny" style="margin:0;color:#9c7c93">Checked privately by your agent</div></div>
+      </div>`;
+    }).join('');
+  };
+  if((campaigns||[]).length) paint();   // instant from cache
+  loadBoard().then(paint);              // then always refresh from the live board
+}
+function renderDigest(){
+  // brand-controlled text (label) must never reach innerHTML unescaped — see renderAgent()
+  const desc=(s)=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  document.getElementById('digEarn').textContent=`+$${amt().toFixed(2)}`;
+  document.getElementById('digMatch').textContent=`${depthWord(reading.depth)}-${reading.under.toLowerCase()} foundation · +$${amt().toFixed(2)}`;
+  document.getElementById('paidChain').innerHTML=receipt(payData&&payData.explorer?payData.explorer:PROGRAM_EX,'View the receipt on Solana');
+  // real receipts only — no invented brand names or timestamps
+  const dr=document.getElementById('digReceipts'); if(dr){ const rows=[];
+    if(payData&&payData.explorer) rows.push(`<a class="receipt" href="${desc(payData.explorer)}" target="_blank" rel="noopener">Private payout · +$${amt().toFixed(2)} · ✓</a>`);
+    const cx=campData&&(campData.campaignExplorer||campData.explorer);
+    if(cx&&campData.matched!==false) rows.push(`<a class="receipt" href="${desc(cx)}" target="_blank" rel="noopener">${desc(campData.label?campData.label+' offer':'Brand offer')} · settled from escrow · ✓</a>`);
+    dr.innerHTML = rows.length?rows.join('<br>'):'Answered privately inside the vault.'; }
+}
+
+/* ---- slide-out sidebar: her profile (retention anchor) + tools + daily hooks ---- */
+function renderProfile(){
+  const esc=(s)=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const sw = SEASONS[reading.season]||SEASONS['True Winter'];
+  const addr = (deviceOwner&&deviceOwner.address) || cachedAddr || (sealData&&sealData.her) || '';
+  const passkey = deviceOwner&&deviceOwner.assurance==='passkey';
+  const walletSignin = (deviceOwner&&deviceOwner.assurance==='wallet') || (!deviceOwner && signMode()==='wallet');
+  const assur = walletSignin?'Wallet':(deviceOwner?(passkey?'Key on this device':'Device key'):'Sealed');
+  const explorer = sealData&&sealData.explorer?sealData.explorer:PROGRAM_EX;
+  const dotUnder = {Warm:'#E4B24A',Neutral:'#C99A6E',Cool:'#9B7787',Olive:'#8A8A4E'}[reading.under]||'#C99A6E';
+  let photo=''; try{ photo=localStorage.getItem('oira_photo')||''; }catch(e){}
+  let name=''; try{ name=localStorage.getItem('oira_name')||''; }catch(e){}
+  document.getElementById('drawer').innerHTML=`
+    <div class="dhead">
+      <div class="iris avatarIris" id="avatarIris" onclick="pickAvatar()">${photo?`<img class="avatarImg" src="${photo}" alt="">`:''}${photo?`<button class="avatarX" onclick="removeAvatar(event)" aria-label="Remove photo" title="Remove photo">&times;</button>`:''}</div>
+      <input type="file" id="avatarFile" accept="image/*" hidden onchange="onAvatarPick(this)">
+      <div><h4 onclick="editName()" title="Tap to set your name">${esc(name)||'Your Palette'}</h4>
+      <div class="addr">${addr?shorten(addr):'not sealed yet'}</div>
+      <span class="abadge ${passkey?'':'srv'}">${assur}</span></div></div>
+    <div class="pcard">
+      <div class="lbl">Your season</div><div class="season">${reading.season}</div>
+      <div class="swrow">${sw.map(c=>`<i style="background:${c}${c==='#FFFBF7'?';box-shadow:inset 0 0 0 1px #eadfd6':''}"></i>`).join('')}</div>
+      <div class="pmeta"><div><span>Undertone</span><b>${reading.under}</b></div><div><span>Depth</span><b>${depthWord(reading.depth)}${reading.monk?' · Monk '+reading.monk:''}</b></div></div>
+      <button class="sharebtn" onclick="shareSeason()">Share your season card</button>
+    </div>
+    <div class="pcard">
+      <div class="earnrow"><div class="lbl">Earned so far</div><div class="bignum">$${agent.earned.toFixed(2)}</div></div>
+      <div class="mrow" style="border:0;padding:10px 0 0" onclick="window.open('${explorer}','_blank')"><div class="mi"><b style="background:#D6A756"></b></div><div class="ml">Receipts</div><span class="chev">›</span></div>
+    </div>
+    <div class="mlist">
+      <div class="mrow" onclick="menuPrivacy()"><div class="mi"><b style="background:linear-gradient(135deg,#7FB98B,#4F9E7A)"></b></div><div class="ml">Is your privacy real?</div><div class="mv">See the proof</div><span class="chev">›</span></div>
+      <div class="mrow" onclick="menuConcierge()"><div class="mi"><b style="background:linear-gradient(135deg,#C9799B,#B49BE0)"></b></div><div class="ml">Ask Oira</div><div class="mv">Concierge</div><span class="chev">›</span></div>
+      <div class="mrow" onclick="menuGo(5)"><div class="mi"><b style="background:${dotUnder}"></b></div><div class="ml">Check a colour</div><div class="mv">Before you buy</div><span class="chev">›</span></div>
+      <div class="mrow" onclick="menuGo(6)"><div class="mi"><b style="background:#B49BE0"></b></div><div class="ml">Night rules</div><div class="mv">While you sleep</div><span class="chev">›</span></div>
+      <div class="mrow" onclick="menuGo(9)"><div class="mi"><b style="background:linear-gradient(135deg,#D6A756,#C9799B)"></b></div><div class="ml">Marketplace</div><div class="mv">Brands looking</div><span class="chev">›</span></div>
+      <div class="mrow" onclick="quickSkinCheck()"><div class="mi"><b style="background:linear-gradient(140deg,#E7A6C0,#C08A4A)"></b></div><div class="ml">Check my skin</div><div class="mv">Anytime · stays on your phone</div><span class="chev">›</span></div>
+      <div class="mrow" onclick="menuRecheck()"><div class="mi"><b style="background:#7FB98B"></b></div><div class="ml">Recheck your colours</div><div class="mv">Monthly</div><span class="chev">›</span></div>
+      ${oiraSkinHistory().length>=1?`<div class="mrow" onclick="openSkinTrends()"><div class="mi"><b style="background:linear-gradient(140deg,#C08A4A,#B4633A)"></b></div><div class="ml">Skin trends</div><div class="mv">Your history</div><span class="chev">›</span></div>`:''}
+      <div class="mrow" onclick="openNotifications()"><div class="mi"><b style="background:#6B8CB4"></b></div><div class="ml">Notifications</div><div class="mv" id="notifSummary"></div><span class="chev">›</span></div>
+      ${(window.OiraMWA&&window.OiraMWA.isSupported())?`<div class="mrow" onclick="menuWallet()"><div class="mi"><b style="background:linear-gradient(135deg,#9945FF,#14F195)"></b></div><div class="ml">Wallet</div><div class="mv">${window.OiraMWA.getCached()?shorten(window.OiraMWA.getCached()):'Optional'}</div><span class="chev">›</span></div>`:''}
+      ${(deviceOwner&&deviceOwner.assurance==='fallback')?`<div class="mrow" onclick="menuRecoveryKey()"><div class="mi"><b style="background:#C97A4A"></b></div><div class="ml">Recovery key</div><div class="mv">No Face/Touch ID here</div><span class="chev">›</span></div>`:''}
+      <div class="mrow" onclick="menuSettings()"><div class="mi"><b style="background:#A85578"></b></div><div class="ml">Settings</div><span class="chev">›</span></div>
+    </div>
+    <div class="foot">Your Palette lives on Solana.<br>You can leave any time; it stays yours.</div>`;
+  renderNotifSummary();
+}
+function editName(){
+  let cur=''; try{ cur=localStorage.getItem('oira_name')||''; }catch(e){}
+  const v=prompt('What should Oira call you?', cur);
+  if(v===null) return;
+  const n=v.trim().slice(0,24);
+  try{ if(n) localStorage.setItem('oira_name', n); else localStorage.removeItem('oira_name'); }catch(e){}
+  renderProfile();
+}
+function pickAvatar(){ const f=document.getElementById('avatarFile'); if(f) f.click(); }
+function onAvatarPick(input){
+  const file=input.files&&input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const img=new Image();
+    img.onload=function(){
+      const size=160, canvas=document.createElement('canvas'); canvas.width=size; canvas.height=size;
+      const ctx=canvas.getContext('2d'), s=Math.min(img.width,img.height);
+      ctx.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,size,size);
+      try{ localStorage.setItem('oira_photo', canvas.toDataURL('image/jpeg',0.72)); }catch(e){}
+      renderProfile();
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function removeAvatar(ev){ if(ev){ ev.stopPropagation(); ev.preventDefault(); } try{ localStorage.removeItem('oira_photo'); }catch(e){} renderProfile(); }
+function openMenu(){ renderProfile(); document.getElementById('scrim').classList.add('on'); document.getElementById('drawer').classList.add('on'); }
+function closeMenu(){ document.getElementById('scrim').classList.remove('on'); document.getElementById('drawer').classList.remove('on'); }
+function menuGo(n){ closeMenu(); go(n); }
+function menuRecheck(){ closeMenu(); reading.measured=false; go(1); }
+function menuSettings(){ if(confirm('Reset this device? Your on-chain Palette stays; this clears the local key so you can re-enroll.')){ try{ window.OiraCustody&&window.OiraCustody.reset&&window.OiraCustody.reset(); window.OiraMWA&&window.OiraMWA.disconnect&&window.OiraMWA.disconnect(); localStorage.removeItem('oira_k'); localStorage.removeItem('oira_addr'); localStorage.removeItem('oira_palette'); localStorage.removeItem('oira.fbbackup'); }catch(e){} setSignMode(''); cachedAddr=''; sealData=null; deviceOwner=null; bootPromise=null; closeMenu(); go(0); } }
+// Optional, opt-in only — never touches deviceOwner or her passkey flow. Purely additive:
+// lets her connect an external wallet (desktop extensions via the Wallet Standard, MWA
+// wallets on Android — e.g. so a Genesis Token check can run), while sign-in stays
+// passkey-first for everyone, always.
+
+// The one wallet-picker sheet, shared by the welcome button and the profile row: the
+// caller passes what happens after a successful connect. Names go through an index (not
+// interpolated into onclick) so an odd wallet name can never break out of the attribute.
+let walletChoices=[], walletDone=null;
+function chooseWallet(wallets, done){
+  walletChoices=wallets; walletDone=done;
+  const esc=(s)=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  document.getElementById('wbody').innerHTML = wallets.map((w,i)=>
+    `<div class="mrow" onclick="pickWallet(${i})"><div class="mi">${w.icon?`<img src="${esc(w.icon)}" width="26" height="26" style="border-radius:7px;display:block" alt="">`:'<b style="background:linear-gradient(135deg,#9945FF,#14F195)"></b>'}</div><div class="ml">${esc(w.name)}</div><span class="chev">›</span></div>`).join('')
+    + '<div class="tiny" style="text-align:left">A wallet is never required. Your Palette and fingerprint sign-in stay exactly the same.</div>';
+  document.getElementById('scrim').classList.add('on'); document.getElementById('wsheet').classList.add('on');
+}
+function closeWalletSheet(){ const s=document.getElementById('wsheet'); if(s) s.classList.remove('on');
+  const sc=document.getElementById('scrim'); if(sc && !anyOtherSheetOpen()) sc.classList.remove('on'); }
+async function pickWallet(i){
+  const w=walletChoices[i], done=walletDone; walletDone=null; closeWalletSheet();
+  if(!w) return;
+  try{ const r=await window.OiraMWA.connect(w.name); if(done) await done(r); }
+  catch(e){ alert('Could not connect '+w.name+': '+(e&&e.message?e.message:'unknown error')); }
+}
+// Shared entry: detect what can connect HERE, then either connect the single option,
+// offer a choice, or say honestly why nothing can (old code silently did nothing on
+// desktop/iOS — the button looked dead).
+async function connectAnyWallet(done){
+  if(!window.OiraMWA){ alert('Wallet connect could not load in this browser. You can still continue with fingerprint.'); return; }
+  const ws=window.OiraMWA.listWallets();
+  if(!ws.length){ alert(window.OiraMWA.unavailableMessage()); return; }
+  if(ws.length===1){
+    try{ const r=await window.OiraMWA.connect(ws[0].name); await done(r); }
+    catch(e){ alert('Could not connect '+ws[0].name+': '+(e&&e.message?e.message:'unknown error')); }
+    return;
+  }
+  chooseWallet(ws, done);
+}
+// Welcome-screen "Use a wallet instead": this IS her sign-in choice, an alternative to
+// fingerprint, not an addition on top of it — becomeWalletOwner() makes the connected wallet
+// deviceOwner for the rest of this session, exactly the way unlockDevice() makes the passkey
+// deviceOwner. Everything downstream (seal, etc.) already just checks deviceOwner.sign.
+async function connectWalletInstead(){
+  await connectAnyWallet(async ({address,walletName})=>{
+    work('Connecting your wallet','One more signature sets up your seal — approve it in '+walletName+'.');
+    try{ await becomeWalletOwner(address); }
+    catch(e){ hideWork(); alert('Could not finish connecting: '+(e&&e.message?e.message:'unknown error')); return; }
+    hideWork();
+    go(1);
+  });
+}
+async function menuWallet(){
+  if(!window.OiraMWA || !window.OiraMWA.isSupported()) return;
+  const cached = window.OiraMWA.getCached();
+  if(cached){
+    if(confirm(`Disconnect this wallet (${shorten(cached)})? Your Palette and passkey sign-in are unaffected.`)){
+      window.OiraMWA.disconnect(); renderProfile();
+    }
+    return;
+  }
+  closeMenu();
+  await connectAnyWallet(async ({address})=>{
+    renderProfile();
+    // Optional Genesis Token check — informational only for now (no reward mechanic
+    // wired up yet on the product side); never blocks or affects her passkey identity.
+    try{
+      const chal = await fetch('/api/genesis/challenge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pubkey:address})}).then(r=>r.json());
+      const signature = await window.OiraMWA.signMessage(chal.message);
+      const verify = await fetch('/api/genesis/verify',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pubkey:address,signature})}).then(r=>r.json());
+      alert(verify.holder
+        ? `Connected: ${shorten(address)}. Seeker Genesis Token verified${verify.alreadyClaimed?' (already on file)':''}.`
+        : `Connected: ${shorten(address)}. No Seeker Genesis Token found on this wallet.`);
+    }catch(e){
+      // Genesis check failing (e.g. server not configured with HELIUS_API_KEY yet) must
+      // never break the connection itself — she's still connected either way.
+      alert(`Connected: ${shorten(address)}. This is optional and separate from your passkey sign-in.`);
+    }
+  });
+}
+// build her custom, unfurling share link: a per-season page with baked OpenGraph/Twitter meta so
+// it shows a rich card on Telegram, WhatsApp, X, Instagram, Facebook. Carries a ref code (from her
+// address) for attribution. No private data in the link (season + undertone are what she displays).
+function seasonSlug(s){ return (s||'').toLowerCase().replace(/ /g,'-'); }
+function shareRef(){ const a=(deviceOwner&&deviceOwner.address)||(sealData&&sealData.her)||''; return a?a.slice(0,10):''; }
+function shareUrl(){ const base=location.origin.includes('localhost')?'https://oira-palette.netlify.app':location.origin;
+  const q=new URLSearchParams({u:reading.under, d:depthWord(reading.depth)}); const r=shareRef(); if(r) q.set('r',r);
+  return `${base}/s/${seasonSlug(reading.season)}.html?${q.toString()}`; }
+async function shareSeason(){
+  const url=shareUrl();
+  const txt=`My colours are ${reading.season}. Find yours on Oira.`;
+  try{
+    if(navigator.share){ await navigator.share({title:`My colours are ${reading.season}`, text:txt, url}); }
+    else { await navigator.clipboard.writeText(url); alert('Your season link is copied. Paste it anywhere and it opens as a card.'); }
+  }catch(e){}
+}
+
+/* ---- concierge: oiraBuildContext is the ONLY data boundary — whitelisted, coarse, no
+   secrets, no raw selfie/measurements/keys/wallet. The concierge module gets only this. ---- */
+function oiraBuildContext(){
+  return {
+    season: reading.season, under: reading.under,
+    depthWord: depthWord(reading.depth), depthNum: reading.depth, monk: reading.monk||null,
+    curl: (CURL[reading.curlIdx]||{}).code||null, curlFamily: CURLFAM[(CURL[reading.curlIdx]||{}).fam]||null,
+    // bucketed skin-condition read (dryness/shine/blemish words only, never the raw roughness or
+    // shine numbers) — same coarse-only boundary as everything else the concierge sees.
+    skinDryness: (reading.skin&&reading.skin.dryness)||null, skinShine: (reading.skin&&reading.skin.shine)||null, skinBlemish: !!(reading.skin&&reading.skin.blemish),
+    earned: agent.earned, matched: !!(campData ? (campData.matched!==false) : payData),
+    rules: { minPayout:agentRules.minPayout, maxPerBrand:agentRules.maxPerBrand, blocked:agentRules.blocked.slice() },
+    // tonight's real open offers, coarse only (product category + payout). No shade ever leaves the vault.
+    offers: (campaigns||[]).filter(c=>c.status==='open').slice(0,6).map(c=>({ category:catName(c.category), payout:Number(c.payout) })),
+    checks: (function(){ try{ return JSON.parse(localStorage.getItem('oira_checks')||'[]').slice(0,8); }catch(e){ return []; } })()
+  };
+}
+let cInit=false;
+function applyConciergeLang(){ if(!window.OiraConcierge)return; const u=OiraConcierge.ui();
+  const set=(id,txt,attr)=>{ const el=document.getElementById(id); if(el){ attr?el.setAttribute(attr,txt):el.textContent=txt; } };
+  set('ctitle',u.title); set('csub',u.sub); set('cq',u.ph,'placeholder');
+  const sel=document.getElementById('clang'); if(sel) sel.value=OiraConcierge.lang(); }
+function openConcierge(){ closeMenu(); applyConciergeLang();
+  if(!cInit){ addCMsg('oira', window.OiraConcierge?OiraConcierge.greet():'Hi. I am your Oira concierge.'); cInit=true; }
+  renderCPrompts(); document.getElementById('scrim').classList.add('on'); document.getElementById('csheet').classList.add('on');
+  setTimeout(()=>{ try{ document.getElementById('cq').focus(); }catch(e){} }, 420); }
+// switching language re-greets in that language in place (no stacked reply)
+function onConciergeLang(v){ if(!window.OiraConcierge)return; OiraConcierge.setLang(v); applyConciergeLang();
+  const b=document.getElementById('cbody'); if(b) b.innerHTML=''; addCMsg('oira', OiraConcierge.greet()); cInit=true; renderCPrompts(); }
+function closeConcierge(){ const s=document.getElementById('csheet'); if(s) s.classList.remove('on');
+  const sc=document.getElementById('scrim'); if(sc && !anyOtherSheetOpen()) sc.classList.remove('on'); }
+
+// ---- proof of privacy: a live, plain-language chain read anyone can open (no crypto knowledge needed)
+function menuPrivacy(){ closeMenu(); openPrivacy(); }
+function closePrivacy(){ const s=document.getElementById('psheet'); if(s) s.classList.remove('on');
+  const sc=document.getElementById('scrim'); if(sc && !anyOtherSheetOpen()) sc.classList.remove('on'); }
+function anyOtherSheetOpen(){
+  return ['drawer','csheet','psheet','nsheet','wsheet','skinsheet'].some(id=>{ const el=document.getElementById(id); return el && el.classList.contains('on'); });
+}
+function closeSkinTrends(){ const s=document.getElementById('skinsheet'); if(s) s.classList.remove('on');
+  const sc=document.getElementById('scrim'); if(sc && !anyOtherSheetOpen()) sc.classList.remove('on'); }
+function openSkinTrends(){ closeMenu(); document.getElementById('scrim').classList.add('on'); document.getElementById('skinsheet').classList.add('on'); renderSkinTrends(); }
+
+// ---- notification prefs: local-only (no server push yet) — Notification API opt-in per toggle
+const NOTIF_DEFS=[
+  {key:'offers', label:'New brand offers', hint:'When a brand posts something that fits your season.'},
+  {key:'nightRecap', label:'While-you-slept recap', hint:'A morning summary of what your agent answered overnight.'},
+  {key:'weekly', label:'Weekly recap', hint:'What you earned and matched this week.'}
+];
+function notifPrefs(){
+  let p={}; try{ p=JSON.parse(localStorage.getItem('oira_notif')||'{}'); }catch(e){}
+  return p;
+}
+function saveNotifPrefs(p){ try{ localStorage.setItem('oira_notif', JSON.stringify(p)); }catch(e){} }
+function renderNotifSummary(){
+  const p=notifPrefs(); const n=NOTIF_DEFS.filter(d=>p[d.key]).length;
+  const el=document.getElementById('notifSummary'); if(el) el.textContent = n?`${n} on`:'Off';
+}
+function renderNotifBody(){
+  const p=notifPrefs();
+  const perm=(typeof Notification!=='undefined')?Notification.permission:'unsupported';
+  const body=document.getElementById('nbody'); if(!body) return;
+  body.innerHTML = NOTIF_DEFS.map(d=>`
+    <div class="nrow">
+      <div class="nl"><b>${d.label}</b><small>${d.hint}</small></div>
+      <div class="nswitch ${p[d.key]?'on':''}" onclick="toggleNotif('${d.key}')" role="switch" aria-checked="${!!p[d.key]}" aria-label="${d.label}"></div>
+    </div>`).join('') +
+    `<div class="nnote">${perm==='denied'?'Notifications are blocked in your browser settings — turn them on there first.':'Local to this device only. Turning one on may ask your browser to allow notifications.'}</div>`;
+}
+async function toggleNotif(key){
+  const p=notifPrefs();
+  const turningOn=!p[key];
+  if(turningOn && typeof Notification!=='undefined' && Notification.permission==='default'){
+    try{ await Notification.requestPermission(); }catch(e){}
+  }
+  if(turningOn && typeof Notification!=='undefined' && Notification.permission!=='granted'){
+    renderNotifBody(); return; // blocked/denied — don't silently flip the switch on
+  }
+  p[key]=turningOn; saveNotifPrefs(p); renderNotifBody(); renderNotifSummary();
+}
+function openNotifications(){ closeMenu(); renderNotifBody();
+  document.getElementById('scrim').classList.add('on'); document.getElementById('nsheet').classList.add('on'); }
+function closeNotifications(){ const s=document.getElementById('nsheet'); if(s) s.classList.remove('on');
+  const sc=document.getElementById('scrim'); if(sc && !anyOtherSheetOpen()) sc.classList.remove('on'); }
+
+// ---- a single gentle local nudge (no server push; fires only if the tab is open
+// and she already opted in via Notifications > While-you-slept recap) ----
+function maybeDailyNudge(){
+  try{
+    const p=notifPrefs(); if(!p.nightRecap) return;
+    if(typeof Notification==='undefined' || Notification.permission!=='granted') return;
+    const today=new Date().toISOString().slice(0,10);
+    if(localStorage.getItem('oira_nudge_day')===today) return;
+    localStorage.setItem('oira_nudge_day', today);
+    const n=(campaigns||[]).filter(c=>c.status==='open').length;
+    new Notification('Oira', { body: n ? `${n} brand offer${n===1?'':'s'} open tonight, within your rules.` : 'Your Palette is sealed and quiet tonight.' });
+  }catch(e){}
+}
+// her sealed-palette address (public PDA), from the seal receipt or remembered locally
+function palettePubkey(){
+  try{ if(sealData&&sealData.explorer){ const m=sealData.explorer.match(/address\/([^?\/]+)/); if(m){ localStorage.setItem('oira_palette',m[1]); return m[1]; } } }catch(e){}
+  try{ return localStorage.getItem('oira_palette')||''; }catch(e){ return ''; }
+}
+// trustless fallback: read her public palette account straight from a public Solana RPC in the
+// browser and decode it here. No bridge, no server in the middle. Same opaque bytes anyone sees.
+// reliable devnet RPC via a key-safe proxy (Helius behind Supabase; no key in the
+// client), with the public RPC as a last resort. Throws only if every endpoint is unreachable.
+const OIRA_RPCS=['https://dwqhnsdegjsgtixdwnoq.supabase.co/functions/v1/rpc-proxy?cluster=devnet','https://api.devnet.solana.com'];
+const OIRA_PROGRAM='CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP';
+async function oiraRpc(method, params){
+  let responded=false, result;
+  for(const rpc of OIRA_RPCS){
+    try{ const j=await (await fetch(rpc,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})})).json();
+      if(j && 'result' in j){ responded=true; result=j.result; break; } }catch(e){}
+  }
+  if(!responded) throw new Error('rpc unreachable');
+  return result;
+}
+// decode her PUBLIC palette account into the friendly proof shape (opaque bytes anyone can see)
+function buildPaletteProof(b64, addr){
+  const bin=atob(b64); const u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  let o=8+32; const encLen=u8[o]|(u8[o+1]<<8)|(u8[o+2]<<16)|(u8[o+3]*16777216); o+=4; o+=encLen;
+  const root=u8.slice(o,o+32); o+=32; o+=12; const isPrivate=u8[o]===1;
+  const hex=[...root].map(x=>x.toString(16).padStart(2,'0')).join('');
+  return { sealed:true, verifiedAt:new Date().toISOString(), network:'Solana devnet',
+    publicCanSee:{ scrambledBlob:`${encLen} bytes of scrambled data`, fingerprint:'0x'+hex.slice(0,12)+'…', isPrivate },
+    staysPrivate:['your season and undertone','your secret key (salt)',"each brand's yes/no answer"],
+    holds:true, explorer:`https://explorer.solana.com/address/${addr}?cluster=devnet` };
+}
+// trustless read #1: her palette account by its known address (from the seal receipt).
+// getAccountInfo's JSON-RPC result is { context, value } — the account lives under .value
+// (reading .data off the result directly, as this used to, always came back empty).
+async function clientPrivacyProof(addr){
+  const res=await oiraRpc('getAccountInfo',[addr,{encoding:'base64'}]);
+  const acct=res&&res.value;
+  if(!acct||!acct.data||!acct.data[0]) return { sealed:false };
+  return buildPaletteProof(acct.data[0], addr);
+}
+// trustless read #2: find her palette by owner (no stored address needed). A SEALED palette is
+// DELEGATED into the enclave, so on the base layer it is owned by MagicBlock's delegation
+// program, not ours — a getProgramAccounts against OIRA_PROGRAM can never find it (this was
+// why the sheet showed "no palette sealed" for a sealed palette). Search the delegation
+// program first (the steady state), then ours (a not-yet/no-longer-delegated edge), matching
+// the PaletteVault account discriminator at offset 0 + her owner pubkey at offset 8.
+const OIRA_DELEGATION='DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh';
+const PALETTE_DISC='i3KryBYrWJL'; // base58(sha256('account:PaletteVault')[0..8])
+async function clientProofByOwner(owner){
+  for(const prog of [OIRA_DELEGATION, OIRA_PROGRAM]){
+    let accts=null;
+    try{ accts=await oiraRpc('getProgramAccounts',[prog,{encoding:'base64',filters:[{memcmp:{offset:0,bytes:PALETTE_DISC}},{memcmp:{offset:8,bytes:owner}}]}]); }catch(e){ continue; }
+    if(!Array.isArray(accts)) continue;
+    for(const it of accts){ const d=it.account&&it.account.data&&it.account.data[0]; if(d){ try{ const p=buildPaletteProof(d, it.pubkey); try{ localStorage.setItem('oira_palette',it.pubkey); }catch(e){} return p; }catch(e){} } }
+  }
+  return { sealed:false };
+}
+async function openPrivacy(){
+  document.getElementById('scrim').classList.add('on');
+  document.getElementById('psheet').classList.add('on');
+  document.getElementById('pverif').textContent='Checking the public ledger…';
+  document.getElementById('pbody').innerHTML='<div class="ploader">Reading the Solana ledger, live…</div>';
+  // Her owner address: the in-memory key if unlocked, else the seal receipt, else the address
+  // REMEMBERED from her last unlock (oira_addr). The last one is what makes this page work on
+  // a fresh reload: in passkey mode boot never unlocks silently, so deviceOwner is null here —
+  // before this fallback the sheet had nothing to look up and showed "no palette sealed yet"
+  // to someone who sealed weeks ago.
+  const owner=(deviceOwner&&deviceOwner.address)||(sealData&&sealData.her)||cachedAddr||'';
+  const addr=palettePubkey();
+  let r=null;
+  try{ const resp=await fetch('/api/privacy-proof'+(owner?('?owner='+encodeURIComponent(owner)):'')); if(resp.ok) r=await resp.json(); }catch(e){}
+  // bridge unavailable or doesn't know her: read the chain directly in the browser
+  let reached=false;
+  if(!r||!r.sealed){
+    try{
+      if(addr){ const c=await clientPrivacyProof(addr); reached=true; if(c&&c.sealed) r=c; }
+      if((!r||!r.sealed) && owner){ const c2=await clientProofByOwner(owner); reached=true; if(c2&&c2.sealed) r=c2; }
+    }catch(e){}
+  } else { reached=true; }
+  // remember her palette address whenever any path found it, so the next open is one direct read
+  if(r&&r.sealed&&r.explorer){ try{ const m=String(r.explorer).match(/address\/([^?\/]+)/); if(m) localStorage.setItem('oira_palette',m[1]); }catch(e){} }
+  if(!r&&!reached){ document.getElementById('pverif').textContent='Ledger unavailable'; document.getElementById('pbody').innerHTML='<div class="ploader">Could not reach the ledger just now. Please try again in a moment.</div>'; return; }
+  if(!r) r={ sealed:false };
+  renderPrivacy(r);
+}
+function renderPrivacy(r){
+  const v=document.getElementById('pverif'), body=document.getElementById('pbody');
+  if(!r||!r.sealed){ v.textContent='No palette sealed yet';
+    body.innerHTML='<div class="pcaption">Once you seal your colours, this page shows you exactly what the public record holds about you. Which is almost nothing. Come back after you seal.</div>'; return; }
+  const t=new Date(r.verifiedAt); v.textContent='Verified live on '+(r.network||'Solana')+' · '+t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const seen=r.publicCanSee||{}, yours=r.staysPrivate||[];
+  const eye='<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const lock='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+  body.innerHTML=`
+    <div class="pcaption">Your colours are sealed on a public blockchain. Here is everything the whole world can see about you, and everything that stays only yours. No account, no wallet. This is read straight from the ledger, just now.</div>
+    <div class="pgroup seen"><h5>${eye} What anyone can see</h5>
+      <div class="prow"><span class="pk">•</span><div class="pd">A scrambled blob<small>${seen.scrambledBlob||'encrypted bytes'} that no one can unscramble</small></div></div>
+      <div class="prow"><span class="pk">•</span><div class="pd">A one-way fingerprint<small class="pmono">${seen.fingerprint||''}</small><small>a hash that can never be turned back into your colours</small></div></div>
+      <div class="prow"><span class="pk">•</span><div class="pd">That is the whole record.</div></div>
+    </div>
+    <div class="pgroup yours"><h5>${lock} What stays only yours</h5>
+      ${yours.map(x=>`<div class="prow"><span class="pk" style="color:#4F9E7A">${lock}</span><div class="pd">${x}</div></div>`).join('')}
+      <div class="prow"><span class="pk"></span><div class="pd" style="color:#4F9E7A;font-weight:600">None of it ever touches the public record. Not even we can read it.</div></div>
+    </div>
+    ${r.holds?'<div class="pverdict">Your privacy holds.</div>':''}
+    <a class="pexplore" href="${r.explorer}" target="_blank" rel="noopener">See it yourself on Solana<small>Open the public ledger. You will find only the scramble and the fingerprint, nothing more.</small></a>`;
+}
+function addCMsg(who,text){ const b=document.getElementById('cbody'); const d=document.createElement('div'); d.className='cmsg '+who; d.textContent=text; b.appendChild(d); b.scrollTop=b.scrollHeight; return d; }
+function renderCPrompts(){ const s=(window.OiraConcierge&&OiraConcierge.suggestions&&OiraConcierge.suggestions())||[]; document.getElementById('cprompts').innerHTML=s.map(t=>`<span class="chip tap" onclick="askCPrompt(this.textContent)">${t}</span>`).join(''); }
+function askCPrompt(t){ document.getElementById('cq').value=t; sendConcierge(); }
+let voiceMode=false, micRec=null;
+async function sendConcierge(){ const i=document.getElementById('cq'); const q=(i.value||'').trim(); if(!q||!window.OiraConcierge) return; i.value=''; addCMsg('me',q);
+  const spoke=voiceMode; voiceMode=false;
+  const t=addCMsg('oira typing','…'); try{ const r=await OiraConcierge.answer(q); t.className='cmsg oira'; t.textContent=r.text; if(spoke) conciergeSpeak(r.text); }
+  catch(e){ t.className='cmsg oira'; t.textContent='I could not answer that just now. Try a colour, your season, or last night.'; }
+  document.getElementById('cbody').scrollTop=1e6; renderCPrompts(); }
+function menuConcierge(){ closeMenu(); openConcierge(); }
+
+// ---- voice in (browser speech, current language) + voice out (TTS) ----
+// server voice (Whisper + ElevenLabs via the bridge) is OFF until this flag is set; until then
+// the free browser voice is used. Flip on after the ElevenLabs/RunPod keys are live on the bridge.
+function serverVoiceOn(){ try{ return localStorage.getItem('oira_voice_server')==='1'; }catch(e){ return false; } }
+function conciergeMic(){ if(serverVoiceOn() && window.MediaRecorder && navigator.mediaDevices && navigator.mediaDevices.getUserMedia) return micServer(); return micBrowser(); }
+function conciergeSpeak(text){ if(serverVoiceOn()) return speakServer(text); return speakBrowser(text); }
+
+// --- browser engines (default, free) ---
+function micBrowser(){ const SR=window.SpeechRecognition||window.webkitSpeechRecognition; const btn=document.getElementById('cmic'); const ph=document.getElementById('cq');
+  if(!SR){ addCMsg('oira','Voice input is not available in this browser yet. You can type your question.'); return; }
+  if(micRec){ try{ micRec.stop(); }catch(e){} return; }
+  micRec=new SR(); micRec.lang=OiraConcierge.locale(); micRec.interimResults=false; micRec.maxAlternatives=1; voiceMode=true;
+  const prevPh=ph?ph.placeholder:''; if(btn) btn.classList.add('rec'); if(ph) ph.placeholder=(OiraConcierge.ui().listening||'Listening…');
+  micRec.onresult=(e)=>{ const txt=e.results[0][0].transcript; if(ph) ph.value=txt; };
+  micRec.onerror=()=>{};
+  micRec.onend=()=>{ if(btn) btn.classList.remove('rec'); if(ph) ph.placeholder=prevPh; micRec=null; if(ph&&ph.value.trim()) sendConcierge(); };
+  try{ micRec.start(); }catch(e){ if(btn) btn.classList.remove('rec'); micRec=null; voiceMode=false; } }
+function speakBrowser(text){ try{ if(!window.speechSynthesis)return; const u=new SpeechSynthesisUtterance(text); u.lang=OiraConcierge.locale();
+  const vs=speechSynthesis.getVoices()||[]; const v=vs.find(x=>x.lang&&x.lang.toLowerCase().startsWith(u.lang.slice(0,2).toLowerCase())); if(v) u.voice=v;
+  speechSynthesis.cancel(); speechSynthesis.speak(u); }catch(e){} }
+
+// --- server engines (Whisper STT + ElevenLabs TTS via the bridge; privacy-first, crafted voice) ---
+let mediaRec=null, mediaChunks=[];
+async function micServer(){ const btn=document.getElementById('cmic'); const ph=document.getElementById('cq');
+  if(mediaRec){ try{ mediaRec.stop(); }catch(e){} return; }
+  let stream; try{ stream=await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(e){ addCMsg('oira','I could not reach the microphone. You can type instead.'); return; }
+  mediaChunks=[]; voiceMode=true;
+  try{ mediaRec=new MediaRecorder(stream); }catch(e){ stream.getTracks().forEach(t=>t.stop()); mediaRec=null; return micBrowser(); }
+  const prevPh=ph?ph.placeholder:''; if(btn) btn.classList.add('rec'); if(ph) ph.placeholder=(OiraConcierge.ui().listening||'Listening…');
+  mediaRec.ondataavailable=(e)=>{ if(e.data&&e.data.size) mediaChunks.push(e.data); };
+  mediaRec.onstop=async()=>{ if(btn) btn.classList.remove('rec'); if(ph) ph.placeholder=prevPh; try{ stream.getTracks().forEach(t=>t.stop()); }catch(e){} mediaRec=null;
+    const blob=new Blob(mediaChunks,{type:(mediaChunks[0]&&mediaChunks[0].type)||'audio/webm'}); if(!blob.size){ voiceMode=false; return; }
+    const t=addCMsg('oira typing','…');
+    try{ const r=await fetch('/api/stt?lang='+encodeURIComponent(OiraConcierge.locale()),{method:'POST',headers:{'content-type':blob.type||'audio/webm'},body:blob});
+      if(!r.ok) throw new Error('stt '+r.status); const j=await r.json(); t.remove();
+      const text=(j.text||'').trim(); if(!text){ voiceMode=false; addCMsg('oira','I did not catch that. Try again, or type it.'); return; }
+      if(ph) ph.value=text; sendConcierge();
+    }catch(e){ t.remove(); voiceMode=false; addCMsg('oira','Voice is unavailable right now. You can type your question.'); } };
+  try{ mediaRec.start(); }catch(e){ mediaRec=null; if(btn) btn.classList.remove('rec'); try{ stream.getTracks().forEach(t=>t.stop()); }catch(_){} return micBrowser(); } }
+async function speakServer(text){ try{ const r=await fetch('/api/tts',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text,lang:OiraConcierge.locale()})});
+  if(!r.ok) throw new Error('tts '+r.status); const url=URL.createObjectURL(await r.blob()); const a=new Audio(url); a.onended=()=>URL.revokeObjectURL(url); a.play().catch(()=>{}); }
+  catch(e){ speakBrowser(text); } }
+
+// ---- photo of an item -> sample its colour on-device -> judge it (private, no upload) ----
+function conciergePhoto(input){ const f=input&&input.files&&input.files[0]; if(!f||!window.OiraConcierge){ if(input) input.value=''; return; }
+  const url=URL.createObjectURL(f); const img=new Image();
+  img.onload=async()=>{ let t=null; try{ const S=48; const cv=document.createElement('canvas'); cv.width=S; cv.height=S; const cx=cv.getContext('2d'); cx.drawImage(img,0,0,S,S);
+    const d=cx.getImageData(Math.floor(S*0.32),Math.floor(S*0.32),Math.floor(S*0.36),Math.floor(S*0.36)).data; let r=0,g=0,b=0,n=0;
+    for(let p=0;p<d.length;p+=4){ r+=d[p]; g+=d[p+1]; b+=d[p+2]; n++; }
+    r=Math.round(r/n); g=Math.round(g/n); b=Math.round(b/n);
+    const hex='#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join(''); const ui=OiraConcierge.ui();
+    const body=document.getElementById('cbody'); const me=document.createElement('div'); me.className='cmsg me';
+    me.innerHTML=`<span style="display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:6px;background:${hex};border:1px solid rgba(255,255,255,.4)"></span>${ui.photo||'A colour I photographed'}`; body.appendChild(me);
+    t=addCMsg('oira typing','…'); body.scrollTop=1e6;
+    const text=await OiraConcierge.judgeHex(hex); t.className='cmsg oira'; t.textContent=text; body.scrollTop=1e6;
+  }catch(e){ if(t) t.remove(); addCMsg('oira','I could not read that photo. Try one with the colour filling the middle.'); } finally{ URL.revokeObjectURL(url); input.value=''; } };
+  img.onerror=()=>{ addCMsg('oira','I could not open that photo.'); URL.revokeObjectURL(url); input.value=''; }; img.src=url; }
+
+// welcome splash: dismiss once, remember so it never repeats (before or after sign-in)
+// whisper-soft entry chime: generated on the tap (a real gesture, so it always plays and mute is
+// respected). No asset, no network. Two gentle notes fading out, like a small wind chime.
+function splashChime(){ try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; const ac=new AC();
+  const now=ac.currentTime; [523.25, 783.99].forEach((f,i)=>{ const o=ac.createOscillator(), g=ac.createGain();
+    o.type='sine'; o.frequency.value=f; const t=now+i*0.13;
+    g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(0.045,t+0.04); g.gain.exponentialRampToValueAtTime(0.0001,t+1.15);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t+1.25); });
+  setTimeout(()=>{ try{ ac.close(); }catch(e){} }, 1700); }catch(e){} }
+function dismissSplash(){ splashChime(); try{ localStorage.setItem('oira_splash','1'); }catch(e){} const s=document.getElementById('splash'); if(s){ s.classList.add('gone'); setTimeout(()=>{ try{ s.style.display='none'; }catch(e){} }, 850); } }
+// petals: seeded randomly (so it is never the same fall twice) with NEGATIVE delays, so on open
+// they are already scattered mid-air and drifting like wind, never lined up waiting at the top.
+function seedSplashPetals(){ const box=document.getElementById('spetals'); if(!box) return;
+  try{ if(localStorage.getItem('oira_splash')) return; }catch(e){}
+  const N=15, kinds=['','g','l'], R=(a,b)=>a+Math.random()*(b-a), sx=()=>R(-58,58).toFixed(0)+'px'; let html='';
+  for(let i=0;i<N;i++){ const w=R(8,18), h=w*R(1.2,1.45), dur=R(7,13), delay=-R(0,dur), o=R(.32,.6).toFixed(2),
+    cls=kinds[Math.floor(Math.random()*kinds.length)], blur=Math.random()<.35?`filter:blur(${R(.6,1.6).toFixed(1)}px);`:'';
+    html+=`<span class="spetal ${cls}" style="left:${R(2,94).toFixed(1)}%;width:${w.toFixed(0)}px;height:${h.toFixed(0)}px;--o:${o};--sx1:${sx()};--sx2:${sx()};--sx3:${sx()};--sx4:${sx()};--rot:${R(210,440).toFixed(0)}deg;animation-duration:${dur.toFixed(1)}s;animation-delay:${delay.toFixed(1)}s;${blur}"></span>`; }
+  box.innerHTML=html; }
+seedSplashPetals();
+
+function go(n){
+  document.querySelectorAll('.scr').forEach(s=>s.classList.toggle('on', +s.dataset.s===n));
+  const p=document.getElementById('phone'); p.className='phone'+(NIGHT.includes(n)?' d irisrim':'');
+  document.getElementById('menuBtn').classList.toggle('show',[3,4,5,9].includes(n));
+  closeMenu();
+  if(n===1){ startCam(); startFraming(); } else { stopFraming(); }
+  if(n===2) renderConfirm();
+  if(n===3){ document.getElementById('sealedChain').innerHTML = sealData?receipt(sealData.explorer,'See your Palette on Solana'):receipt(PROGRAM_EX,'See the vault on Solana'); renderRecoveryNote(); }
+  if(n===4){ renderAgent(); loadBoard(); }
+  if(n===6) syncNightRules();
+  if(n===9) renderMarket();
+  if(n===5) renderCheck();
+  if(n===8) renderDigest();
+  document.querySelector('.scr.on').scrollTop=0;
+}
+function work(t,s){ document.getElementById('ost').textContent=t; document.getElementById('osub').textContent=s||''; document.getElementById('overlay').classList.add('on'); }
+function hideWork(){ document.getElementById('overlay').classList.remove('on'); }
+async function startCam(){ const v=document.getElementById('cam'); try{ v.srcObject=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}}); v.style.display='block'; }catch(e){ v.style.display='none'; } }
+/* ---- real on-device skin analysis: grey-world WB -> CIELAB -> ITA° (depth) + a*b* hue (undertone) ---- */
+const s2lin=(c)=>{ c/=255; return c<=0.04045? c/12.92 : Math.pow((c+0.055)/1.055,2.4); };
+const fLab=(t)=> t>0.008856? Math.cbrt(t) : (7.787*t + 16/116);
+function rgb2lab(r,g,b){
+  const R=s2lin(r),G=s2lin(g),B=s2lin(b);
+  const X=(R*0.4124+G*0.3576+B*0.1805)/0.95047, Y=(R*0.2126+G*0.7152+B*0.0722), Z=(R*0.0193+G*0.1192+B*0.9505)/1.08883;
+  const fx=fLab(X),fy=fLab(Y),fz=fLab(Z);
+  return { L:116*fy-16, a:500*(fx-fy), b:200*(fy-fz) };
+}
+// one frame -> raw skin metrics, sampling only pixels inside the face ellipse (matches the on-screen
+// oval) that pass a skin-colour test, after grey-world white balance. Returns null if no face/skin.
+function analyzeSkinRaw(v){
+  const W=140,H=180, c=document.createElement('canvas'); c.width=W;c.height=H; const g=c.getContext('2d');
+  g.drawImage(v,0,0,W,H); const px=g.getImageData(0,0,W,H).data;
+  const cx=W*0.5, cy=H*0.46, rx=W*0.30, ry=H*0.36; // the face oval
+  // Grey-world reference is sampled from the BACKGROUND only (outside the oval), never the face
+  // itself: skin, at any depth, reads warmer than neutral, so folding it into the "assume this
+  // averages to gray" reference systematically attenuates red / boosts blue in the correction —
+  // i.e. reads her tone darker and cooler than she actually is, worse the more of the frame her
+  // face fills. Falls back to the whole frame only if the background sample is too small to trust
+  // (an extreme close-up), rather than silently reintroducing that bias.
+  let ar=0,ag=0,ab=0,bn=0, war=0,wag=0,wab=0,N=W*H;
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const i=(y*W+x)*4; war+=px[i]; wag+=px[i+1]; wab+=px[i+2];
+    const dx=(x-cx)/rx, dy=(y-cy)/ry; if(dx*dx+dy*dy>1){ ar+=px[i]; ag+=px[i+1]; ab+=px[i+2]; bn++; }
+  }
+  war/=N; wag/=N; wab/=N;
+  if(bn>=N*0.15){ ar/=bn; ag/=bn; ab/=bn; } else { ar=war; ag=wag; ab=wab; }
+  const gray=(ar+ag+ab)/3, kr=gray/(ar||1),kg=gray/(ag||1),kb=gray/(ab||1);
+  let sr=0,sg=0,sb=0,n=0;
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const dx=(x-cx)/rx, dy=(y-cy)/ry; if(dx*dx+dy*dy>1) continue; // inside the ellipse only
+    const i=(y*W+x)*4, r=Math.min(255,px[i]*kr),gr=Math.min(255,px[i+1]*kg),b=Math.min(255,px[i+2]*kb);
+    if(r>28 && r>=gr*0.92 && gr>=b*0.85 && (r-b)>=2 && (r-b)<150 && !(r>245&&gr>245&&b>245)){ sr+=r;sg+=gr;sb+=b;n++; }
+  }
+  if(n<80) return null; sr/=n; sg/=n; sb/=n;
+  const {L,a,b}=rgb2lab(sr,sg,sb);
+  return { ita:Math.atan2(L-50,b)*180/Math.PI, hab:Math.atan2(b,a)*180/Math.PI, L, n };
+}
+// Skin-condition scanner (texture/dryness, T-zone shine, a soft blemish flag) — real on-device
+// computer-vision heuristics, not a diagnosis. No medical claims anywhere downstream: language
+// stays soft and optional, and every signal can come back "not enough light to judge" rather than
+// force a guess. Higher resolution than analyzeSkinRaw's colour-averaging pass (420x540 default,
+// vs its 140x180) because texture needs pixels colour-averaging deliberately throws away — and
+// `source` can be a higher-res still (see captureCloseupStill below) for an even better read, not
+// just the live <video> element. Thresholds below are a reasoned starting point, not a calibrated
+// ground truth the way bucketize()'s Monk mapping is — there is no public reference standard for
+// "how rough is dry skin" the way there is for depth. That's what the calibration feedback control
+// (skinFeedback()) is for: real usage over time is the only path to real ground truth here.
+// W,H default to exactly 1.5x analyzeSkinRaw's 140x180, same 0.778 target ratio — deliberately
+// NOT aspect-preserving, matching analyzeSkinRaw's own squish-to-a-fixed-ratio approach exactly,
+// so the two functions' "same oval" stays geometrically identical regardless of resolution. The
+// close-up capture path (captureCloseupStill) passes a larger W/H at the SAME ratio for its
+// higher-fidelity still.
+function analyzeSkinCondition(source, W=420, H=540){
+  const c=document.createElement('canvas'); c.width=W;c.height=H; const g=c.getContext('2d');
+  g.drawImage(source,0,0,W,H); const px=g.getImageData(0,0,W,H).data;
+  const cx=W*0.5, cy=H*0.46, rx=W*0.30, ry=H*0.36; // same oval as analyzeSkinRaw
+  const at=(x,y)=>{ const i=(y*W+x)*4; return [px[i],px[i+1],px[i+2]]; };
+  const inOval=(x,y)=>{ const dx=(x-cx)/rx, dy=(y-cy)/ry; return dx*dx+dy*dy<=1; };
+  let ar=0,ag=0,ab=0,bn=0;
+  for(let y=0;y<H;y+=2) for(let x=0;x<W;x+=2) if(!inOval(x,y)){ const [r,gc,b]=at(x,y); ar+=r;ag+=gc;ab+=b;bn++; }
+  if(bn<40) return null;
+  ar/=bn; ag/=bn; ab/=bn;
+  const gray=(ar+ag+ab)/3, kr=gray/(ar||1), kg=gray/(ag||1), kb=gray/(ab||1);
+  const bal=(x,y)=>{ const [r,gc,b]=at(x,y); return [Math.min(255,r*kr),Math.min(255,gc*kg),Math.min(255,b*kb)]; };
+
+  let sumL=0, nSkin=0;
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){ if(!inOval(x,y)) continue; const [r,gc,b]=bal(x,y);
+    if(r>28 && r>=gc*0.92 && gc>=b*0.85 && (r-b)>=2 && (r-b)<150 && !(r>245&&gc>245&&b>245)){ sumL+=(r+gc+b)/3; nSkin++; } }
+  if(nSkin<200) return null;
+  const meanL=sumL/nSkin;
+  if(meanL<40 || meanL>230) return { lightOk:false }; // too dark/blown-out to read texture honestly
+
+  // texture roughness (dryness proxy): pixel-to-pixel luminance variation in the lower cheek band,
+  // away from eyes/mouth/hairline where anatomy, not skin texture, would dominate the signal.
+  const bandY0=cy+ry*0.15, bandY1=cy+ry*0.75, bandX0=cx-rx*0.7, bandX1=cx+rx*0.7;
+  let rough=0, roughN=0;
+  for(let y=Math.floor(bandY0)+1;y<bandY1;y++) for(let x=Math.floor(bandX0)+1;x<bandX1;x++){
+    if(!inOval(x,y)) continue;
+    const [r0,g0,b0]=bal(x,y), [r1,g1,b1]=bal(x-1,y), [r2,g2,b2]=bal(x,y-1);
+    const l0=(r0+g0+b0)/3, l1=(r1+g1+b1)/3, l2=(r2+g2+b2)/3;
+    rough += Math.abs(l0-l1)+Math.abs(l0-l2); roughN++;
+  }
+  const roughness = roughN? rough/roughN/meanL : 0; // normalized so overall exposure doesn't skew it
+
+  // T-zone shine: specular-highlight pixel density in the forehead/nose band vs. the rest of the
+  // face, a differential (not absolute) measure so overall brightness doesn't read as "oily".
+  const tzY0=cy-ry*0.85, tzY1=cy-ry*0.05, tzX0=cx-rx*0.35, tzX1=cx+rx*0.35;
+  const isSpec=(r,gc,b)=> r>238&&gc>236&&b>228&&(Math.max(r,gc,b)-Math.min(r,gc,b))<18;
+  let tzSpec=0,tzN=0, restSpec=0,restN=0;
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    if(!inOval(x,y)) continue; const [r,gc,b]=bal(x,y);
+    const inTz = x>=tzX0&&x<=tzX1&&y>=tzY0&&y<=tzY1;
+    if(inTz){ tzN++; if(isSpec(r,gc,b)) tzSpec++; } else { restN++; if(isSpec(r,gc,b)) restSpec++; }
+  }
+  const shineDelta = (tzN?tzSpec/tzN:0) - (restN?restSpec/restN:0);
+
+  // soft blemish flag: a small patch noticeably redder than the rest, via a coarse grid and a
+  // robust (median + MAD) outlier check rather than a raw threshold. Deliberately conservative —
+  // a miss costs nothing, a false "you have a blemish" on a freckle or birthmark costs real trust,
+  // and redness-based signals are exactly the kind of thing that historically under-serves deeper
+  // skin tones on cheap sensors (the same failure this product's own privacy pitch criticizes in
+  // others) — this stays silent rather than guess when the signal is not clearly unambiguous.
+  const GX=6, GY=7, cellA=[];
+  for(let gy=0; gy<GY; gy++) for(let gx=0; gx<GX; gx++){
+    if(gy>=GY*0.6 && gx>GX*0.3 && gx<GX*0.7) continue; // skip mouth/chin-shadow territory
+    const x0=Math.floor(cx-rx+(2*rx*gx/GX)), x1=Math.floor(cx-rx+(2*rx*(gx+1)/GX));
+    const y0=Math.floor(cy-ry+(2*ry*gy/GY)), y1=Math.floor(cy-ry+(2*ry*(gy+1)/GY));
+    let sr=0,sg=0,sb=0,n=0;
+    for(let y=y0;y<y1;y++) for(let x=x0;x<x1;x++){ if(!inOval(x,y)) continue; const [r,gc,b]=bal(x,y); sr+=r;sg+=gc;sb+=b;n++; }
+    if(n<12) continue;
+    cellA.push(rgb2lab(sr/n,sg/n,sb/n).a);
+  }
+  let blemish=false;
+  if(cellA.length>=10){
+    const sorted=[...cellA].sort((x,y)=>x-y), med=sorted[Math.floor(sorted.length/2)];
+    const dev=cellA.map(x=>Math.abs(x-med)).sort((x,y)=>x-y), mad=dev[Math.floor(dev.length/2)]||1;
+    if((Math.max(...cellA)-med)/Math.max(mad,1.5) > 3.2) blemish=true;
+  }
+  return { lightOk:true, roughness, shineDelta, blemish };
+}
+function bucketSkinCondition(roughness, shineDelta, blemish){
+  const dryness = roughness>0.055?'dry' : roughness>0.032?'normal' : 'hydrated';
+  const shine = shineDelta>0.05?'shiny' : shineDelta>0.015?'balanced' : 'matte';
+  return { dryness, shine, blemish:!!blemish };
+}
+// A dedicated, one-time high-res still for the closest a phone gets to pore-level texture:
+// ImageCapture.takePhoto() (Chrome/Android/Seeker) reads the sensor's real still-photo path, not
+// the compressed live video stream — video codecs specifically discard the fine high-frequency
+// detail texture analysis needs. Safari/iOS has NO ImageCapture support as of Safari 26 stable
+// (Apple mandates WebKit for every iOS browser, so there is no "use Chrome on iPhone" workaround)
+// — falls back there, and anywhere takePhoto() fails, to drawing the live video frame at a larger
+// size than the automatic scan uses. Still a real improvement even on the fallback path, just
+// without the stream-compression bypass a real still gets on supported browsers.
+async function captureCloseupStill(v){
+  const track = v && v.srcObject && v.srcObject.getVideoTracks && v.srcObject.getVideoTracks()[0];
+  if(window.ImageCapture && track){
+    try{
+      const ic = new ImageCapture(track);
+      const blob = await ic.takePhoto();
+      const bitmap = await createImageBitmap(blob);
+      return { source: bitmap, method: 'still' };
+    }catch(e){ /* falls through to the video-frame method below, same as an unsupported browser */ }
+  }
+  return { source: v, method: 'video' };
+}
+// Boundaries between adjacent Google Monk Skin Tone reference swatches (skintone.google), the
+// same 10-swatch academic/industry standard this product already shows her ("Monk 6"). Each
+// boundary is the midpoint ITA° between two neighbouring official swatch hexes, run through this
+// file's own rgb2lab/ITA° pipeline: MST1..10 = f6ede4,f3e7db,f7ead0,eadaba,d7bd96,a07e56,825c43,
+// 604134,3a312a,292420 -> ITA° 83.0,80.2,71.8,64.7,50.3,10.9,-20.2,-55.4,-78.4,-84.3. Classifying
+// by nearest reference swatch (largest boundary the measured ITA° still exceeds) replaces the
+// previous hand-guessed linear formula, which was never checked against the scale it claims to
+// report and disagreed with it by up to 3 full steps at the light end.
+const MONK_ITA_BOUNDARIES=[81.6,76.0,68.2,57.5,30.6,-4.6,-37.8,-66.9,-81.3];
+function monkFromIta(ita){
+  for(let i=0;i<MONK_ITA_BOUNDARIES.length;i++) if(ita>MONK_ITA_BOUNDARIES[i]) return i+1;
+  return 10;
+}
+function bucketize(ita, hab){
+  const monk = monkFromIta(ita);
+  // depth (0-5, drives the "Soft/Rich/Deep" word and the season's light/deep split) is derived
+  // from the SAME calibrated monk value rather than its own independent ITA° cascade, so the two
+  // numbers she's shown can never quietly disagree with each other.
+  const depth = Math.min(5, Math.floor((monk-1)*6/10));
+  let under; if(hab>=66) under='Olive'; else if(hab>=52) under='Warm'; else if(hab>=47) under='Neutral'; else under='Cool';
+  return { depth, under, monk, ita:Math.round(ita) };
+}
+const median=(a)=>{ const s=[...a].sort((x,y)=>x-y); return s[Math.floor(s.length/2)]; };
+const variance=(a)=>{ if(a.length<2) return 0; const m=a.reduce((x,y)=>x+y,0)/a.length; return a.reduce((s,y)=>s+(y-m)*(y-m),0)/a.length; };
+const setHint=(t)=>{ const h=document.getElementById('s1hint'); if(h) h.textContent=t; };
+// live framing coach: before she scans, tell her in real time what to fix, and turn the oval
+// gold when the light + face are good. Runs while she is on screen 1 and not mid-scan.
+let framing=false, frameGood=false;
+function startFraming(){ if(framing) return; framing=true; if(window.OiraFace) OiraFace.available(); frameTick(); }
+function stopFraming(){ framing=false; }
+function ovalEl(){ return document.querySelector('#camWrap .oval'); }
+// Overlay the dashed guide EXACTLY on the region the scanner samples. oira-face and analyzeSkinRaw
+// both read the frame-normalized ellipse (cx .5, cy .46, rx .30, ry .36); the <video> is
+// object-fit:cover, which crops that frame differently in the boxed browser tab vs the full-screen
+// installed app — so a static %-of-box oval drifted small and off in standalone. Recompute from the
+// cover mapping so the ring she lines up to is where her skin is actually measured, on every device.
+function positionOval(){
+  const box=document.getElementById('camWrap'), v=document.getElementById('cam'), ov=ovalEl();
+  if(!box||!v||!ov||!v.videoWidth||!v.videoHeight) return;
+  const camW=box.clientWidth, camH=box.clientHeight; if(!camW||!camH) return;
+  const s=Math.max(camW/v.videoWidth, camH/v.videoHeight); // object-fit:cover scale
+  const dw=v.videoWidth*s, dh=v.videoHeight*s, oy=(dh-camH)/2;
+  let w=0.60*dw, h=0.72*dh, cy=0.46*dh-oy; // the sampled ellipse (2·rx, 2·ry) mapped to the screen
+  // Keep the guide inside the frame and face-shaped even when the camera's native aspect is
+  // landscape (many front sensors are), which would otherwise splay the mapped ellipse wide and
+  // past the box. For a normal portrait stream none of these caps bind and it matches exactly.
+  const maxW=0.74*camW, maxH=0.86*camH;
+  if(h>maxH) h=maxH;
+  if(w>maxW) w=maxW;
+  if(w>0.9*h) w=0.78*h;                     // never wider than a face
+  cy=Math.max(h/2, Math.min(cy, camH-h/2)); // stay vertically inside the box
+  ov.style.width=w+'px'; ov.style.height=h+'px';
+  ov.style.left=(camW/2-w/2)+'px'; ov.style.top=(cy-h/2)+'px';
+  ov.classList.add('fit');
+}
+// real face detection (BlazeFace, on-device) gates the ring/shutter BEFORE the lighting check —
+// fixes the "gold ring lights up with no face in frame" bug, where a fixed-region skin-colour
+// blob test alone could pass on a hand, neck, or wall. Graceful fallback to the old
+// lighting-only heuristic while the model is still loading (or unavailable) so scanning never
+// hard-breaks on it.
+async function frameTick(){
+  if(!framing) return;
+  const v=document.getElementById('cam');
+  if(v && v.videoWidth) positionOval(); // keep the guide on the sampled region (re-runs on rotate/resize)
+  if(v && v.videoWidth && !scanning && !skinCheckMode){ // skinCheckMode owns the hint during a quick skin log
+    let face=null; try{ if(window.OiraFace) face=await OiraFace.detectFace(v); }catch(e){}
+    let good=false, msg;
+    if(face && !face.present){ msg='Center your face in the oval'; }
+    else if(face && face.present && !face.ok){
+      msg = face.tooClose ? 'A little too close, ease back a touch' : face.tooFar ? 'Come a little closer' : 'Center your face in the oval';
+    } else {
+      // a real face is confirmed centered, or OiraFace has no answer yet this tick — either way,
+      // the lighting-quality check (unchanged) still decides whether the ring goes gold.
+      let m=null; try{ m=analyzeSkinRaw(v); }catch(e){}
+      if(!m) msg='Center your face in the oval';
+      else if(m.L<28) msg='A little dark, face a window or lamp';
+      else if(m.L>93) msg='A touch bright, soften the light';
+      else { good=true; msg='Lovely light, tap to scan'; }
+    }
+    frameGood=good; setHint(msg);
+    const ov=ovalEl(); if(ov) ov.style.borderColor = good ? 'rgba(214,167,86,.95)' : 'rgba(255,250,244,.92)';
+    const sh=document.querySelector('#camWrap .shutter'); if(sh) sh.style.boxShadow = good ? '0 0 0 4px rgba(214,167,86,.35)' : 'none';
+  }
+  setTimeout(frameTick, 260);
+}
+// Active liveness challenge: ask her to turn her head and come back, using BlazeFace's per-frame
+// yaw signal (nose position relative to the two ears, see oira-face.js). A flat photo or a phone
+// replay held at a fixed angle can't reproduce a genuine, controllable, out-of-plane turn inside
+// the challenge window, a materially higher bar than frame-to-frame lightness variance alone.
+// Direction-agnostic on purpose: it doesn't matter which way she turns, or how the preview mirrors
+// it on screen, only that a real turn-and-return happened. If the model can't produce yaw data at
+// all (still loading, unsupported device), this reports 'unavailable' rather than failing her —
+// scanColour() falls back to the passive variance check in that case, same graceful-degradation
+// pattern as the rest of this screen.
+const YAW_TURN_THRESHOLD=0.09, YAW_CENTER_TOLERANCE=0.06;
+async function livenessChallenge(){
+  const v=document.getElementById('cam');
+  if(!window.OiraFace || !(await OiraFace.available())) return {verified:false, method:'unavailable'};
+  setHint('Slowly turn your head to one side…');
+  // 4.5s, not 2.2s: she has to READ the prompt, turn, and come back — the old window ran down
+  // mid-gesture and failed a real face. baseline = median of the first few forward samples (one
+  // noisy frame no longer skews it); peak = furthest she turned. Success needs a real turn AND a
+  // return back toward centre — not a pixel-perfect return, she's moving a live head.
+  const T0=Date.now(), DUR=4500;
+  let base=[], baseline=null, lastYaw=null, peak=0, samples=0, turned=false, prompted=false;
+  while(Date.now()-T0 < DUR){
+    let f=null; try{ f=await OiraFace.detectFace(v); }catch(e){}
+    if(f && f.present && typeof f.yaw==='number'){
+      samples++;
+      if(baseline==null){ base.push(f.yaw); if(base.length>=4){ base.sort((a,b)=>a-b); baseline=base[base.length>>1]; } }
+      else {
+        const dev=Math.abs(f.yaw-baseline); if(dev>peak) peak=dev;
+        if(dev>YAW_TURN_THRESHOLD){ turned=true; if(!prompted){ prompted=true; setHint('…now slowly back to centre'); } }
+        lastYaw=f.yaw;
+      }
+    }
+    const p=document.getElementById('scanProg'); if(p) p.style.width=Math.round((Date.now()-T0)/DUR*100)+'%';
+    await new Promise(r=>setTimeout(r,100));
+  }
+  if(samples<5 || baseline==null) return {verified:false, method:'no-data'};
+  const off = lastYaw==null ? 1 : Math.abs(lastYaw-baseline);
+  const returned = off<=YAW_CENTER_TOLERANCE || (peak>0 && off<=0.5*peak); // back near centre, or ≥halfway back
+  return {verified: turned && returned, method:'active'};
+}
+// a real scan: sample many frames over a couple of seconds, keep the good ones, take the median
+// (robust to a stray frame), and record a light liveness signal. Not a single snapshot.
+let scanning=false;
+async function scanColour(){
+  if(skinCheckMode) return; // a quick skin log is running; the shutter must not start a full palette seal
+  const v=document.getElementById('cam'), wrap=document.getElementById('camWrap'); if(scanning) return;
+  if(!v.videoWidth){ setHint('Let the camera start, then tap to scan'); return; }
+  scanning=true; wrap.classList.add('scanning');
+  const liveness=await livenessChallenge();
+  if(liveness.method==='active' && !liveness.verified){
+    // the model ran the challenge and it did not pass, this is a real failed check, not a
+    // degraded-mode skip, so she retries rather than sliding through on the colour scan alone.
+    wrap.classList.remove('scanning'); scanning=false; const p=document.getElementById('scanProg'); if(p) p.style.width='0%';
+    setHint('I didn’t catch a real head turn. Turn a little further, then tap to scan again');
+    return;
+  }
+  setHint('Reading your light, hold still');
+  const itas=[], habs=[], Ls=[]; let faceChecks=0, faceHits=0; const T0=Date.now(), DUR=2400;
+  while(Date.now()-T0 < DUR){
+    let faceOk=true;
+    try{
+      if(window.OiraFace){ const f=await OiraFace.detectFace(v);
+        if(f!=null){ faceChecks++; if(f.present && f.ok) faceHits++; faceOk = !!(f.present && f.ok); } }
+    }catch(e){}
+    // only a frame with a real, centered face (when detection is active) counts toward her colour
+    // read — a false skin-colour blob elsewhere in the shot can no longer sneak into the sample.
+    if(faceOk){ let m=null; try{ m=analyzeSkinRaw(v); }catch(e){} if(m){ itas.push(m.ita); habs.push(m.hab); Ls.push(m.L); } }
+    const p=document.getElementById('scanProg'); if(p) p.style.width=Math.round((Date.now()-T0)/DUR*100)+'%';
+    await new Promise(r=>setTimeout(r,120));
+  }
+  wrap.classList.remove('scanning'); scanning=false; const p=document.getElementById('scanProg'); if(p) p.style.width='0%';
+  if(faceChecks>0 && faceHits===0){
+    setHint('I could not find your face. Center it fully in the oval and try again'); return;
+  }
+  if(itas.length < 6){
+    let m=null; try{ m=analyzeSkinRaw(v); }catch(e){}
+    setHint(!m ? 'I could not see your face clearly. Center it in the oval and try again'
+              : (m.L<28 ? 'It is a little dark. Face softer, even light and try again'
+                        : 'Almost. Hold still a moment and tap to scan again'));
+    return;
+  }
+  const ita=median(itas), hab=median(habs), b=bucketize(ita,hab);
+  reading.depth=b.depth; reading.under=b.under; reading.ita=b.ita; reading.monk=b.monk; reading.measured=true;
+  // the active head-turn challenge is the real signal; frame-variance is only a fallback for when
+  // the model couldn't run the challenge at all (still loading / unsupported device), not a
+  // second chance after a failed challenge (that path already returned above).
+  reading.live = liveness.verified || (liveness.method!=='active' && variance(Ls) > 0.15);
+  reading.livenessMethod = liveness.method;
+  reading.season=seasonFor(reading.under,reading.depth);
+  // skin condition: a few quick high-res frames right after the colour read, same held-still
+  // moment so there is no extra step. Median across frames rather than trusting one, same "several
+  // frames, not a snapshot" principle as the colour read above.
+  try{
+    const roughs=[],shines=[]; let blemHits=0, lightOkCount=0;
+    for(let i=0;i<3;i++){
+      let sc=null; try{ sc=analyzeSkinCondition(v); }catch(e){}
+      if(sc && sc.lightOk){ lightOkCount++; roughs.push(sc.roughness); shines.push(sc.shineDelta); if(sc.blemish) blemHits++; }
+      await new Promise(r=>setTimeout(r,90));
+    }
+    reading.skin = lightOkCount>=2
+      ? bucketSkinCondition(median(roughs), median(shines), blemHits>=2)
+      : { dryness:null, shine:null, blemish:false, lowLight:true };
+    if(reading.skin.dryness) oiraSkinLog({ dryness:reading.skin.dryness, shine:reading.skin.shine, blemish:reading.skin.blemish, method:'scan' });
+  }catch(e){ reading.skin=null; }
+  go(2);
+}
+/* ---- on-device encryption: traits are AES-256-GCM sealed BEFORE they ever leave the phone.
+   The key lives on the device only (localStorage here; Keystore/Seed Vault + biometrics in prod).
+   The server/relay only ever sees ciphertext — the on-chain blob is opaque. ---- */
+async function deviceKey(){
+  let raw=localStorage.getItem('oira_k');
+  if(!raw){ const k=crypto.getRandomValues(new Uint8Array(32)); raw=btoa(String.fromCharCode(...k)); localStorage.setItem('oira_k',raw); }
+  const kb=Uint8Array.from(atob(raw),c=>c.charCodeAt(0));
+  return crypto.subtle.importKey('raw',kb,{name:'AES-GCM'},false,['encrypt','decrypt']);
+}
+async function encryptTraits(obj){
+  const key=await deviceKey(), iv=crypto.getRandomValues(new Uint8Array(12));
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(obj))));
+  const blob=new Uint8Array(iv.length+ct.length); blob.set(iv); blob.set(ct,iv.length);
+  return btoa(String.fromCharCode(...blob));
+}
+async function seal(){
+  // Already sealed on this device? init_palette is a ONE-TIME PDA create (program/src/lib.rs uses
+  // `init`, not init_if_needed), so re-running it throws "account already in use" — exactly the error
+  // a returning woman hit when she re-scanned via "Recheck your colours". A recheck is not a re-seal:
+  // just refresh what her agent shows from the fresh scan and return, leaving her sealed Palette (her
+  // identity) untouched. (Writing the new buckets on-chain would go through set_traits, not a re-seal;
+  // tracked as a follow-up — for now the recheck updates her displayed colours without erroring.)
+  if(palettePubkey()){ go(4); return; }
+  // Hard gate: reading.live is only ever set by scanColour() (the sole path to this screen), so
+  // this can't strand a legitimate flow, it can only stop a Palette from sealing when neither the
+  // active head-turn challenge nor the passive fallback confirmed a real face. Previously this
+  // signal was computed and simply never read, so a static photo could seal a Palette outright.
+  if(!reading.live){
+    alert('We couldn’t confirm this is a live face. Go back and rescan in good, even light, facing the camera.');
+    go(1);
+    return;
+  }
+  work('Sealing your Palette','Encrypted on your device before it leaves.');
+  try{ const encBlob=await encryptTraits(reading); // ciphertext only leaves the phone
+    // her CONFIRMED bucketed traits, mapped to the on-chain enum (undertone 0=warm..3=olive,
+    // depth = Monk 1-10, season 0-11). The raw selfie never leaves the phone; these buckets do,
+    // and they are what she confirmed. The enclave binds them to a commitment root and seals them.
+    const traits={ undertone:Math.max(0,UNDER.indexOf(reading.under)), depth:Math.max(1,Math.min(10,reading.monk||6)), season:Math.max(0,Math.min(11,Object.keys(SEASONS).indexOf(reading.season))) };
+    // ensure we hold a real signer (boot may have deferred an enrolled passkey until sign-time,
+    // or — wallet mode — bootIdentity() deliberately never reconnects one without a gesture).
+    if(!deviceOwner || !deviceOwner.sign){
+      if(signMode()==='wallet' && window.OiraMWA){
+        try{ await connectAnyWallet(async ({address})=>{ await becomeWalletOwner(address); }); }
+        catch(e){ console.warn('oira: seal-time wallet reconnect failed', e); }
+      } else if(window.OiraCustody){
+        try{ deviceOwner=await window.OiraCustody.unlockOwner(); if(deviceOwner) rememberAddr(deviceOwner.address); }
+        catch(e){ console.warn('oira: seal-time unlock failed (passkey cancelled or PRF unavailable)', e); }
+      }
+    }
+    if(!(deviceOwner && deviceOwner.sign)){
+      // No device signer => STOP. The old fallback here (POST /api/seal) had the server mint
+      // a fresh random owner per call — a different wallet/Palette every time it silently ran
+      // (the address-changed-between-sessions bug). Her identity only ever comes from her
+      // device key, so a failed unlock must surface and retry, never substitute.
+      hideWork();
+      alert('Your device key wasn’t available to sign, so nothing was sealed. Tap “This is me — seal it” to try again.');
+      return;
+    }
+    // Fallback path (no PRF / no Face-Touch-ID) has NO automatic recovery — the device-local seed
+    // IS her only key. Don't seal her into a Palette she could be permanently locked out of: make
+    // her save the recovery key and prove it FIRST. Passkey owners skip this (they recover via
+    // platform passkey sync); wallet owners skip it (their wallet holds recovery).
+    if(deviceOwner.assurance==='fallback' && !(await ensureFallbackBackup())){ hideWork(); return; }
+    // her key signs the seal on THIS device; the bridge never sees her owner secret
+    work('Sealing your Palette','Signing on your device. Your key never leaves it.');
+    sealData=await window.OiraCustody.sealViaDevice(deviceOwner,{traits,encBlob});
+  }catch(e){
+    // loud failure (bridge unreachable, tx error, timeout): nothing was stored, she retries —
+    // never advance to the "Sealed." screen on a failed seal.
+    console.warn('oira: seal failed', e);
+    sealData=null; hideWork();
+    alert('Sealing didn’t complete ('+((e&&e.message)||'connection failed')+'). Nothing was stored — tap “This is me — seal it” to try again.');
+    return;
+  }
+  try{ if(sealData&&sealData.explorer){ const m=sealData.explorer.match(/address\/([^?\/]+)/); if(m) localStorage.setItem('oira_palette',m[1]); } }catch(e){}
+  hideWork(); go(3);
+}
+// Fallback recovery-key backup GATE (called by seal() before a fallback owner seals). The fallback
+// seed has no platform sync — it is the only key — so she must save it and prove it before we seal,
+// not just be shown an optional note afterwards. The marker is a short prefix of the seed so a
+// re-generated seed (device reset or storage eviction) automatically re-gates; it exposes nothing
+// beyond what LS_FALLBACK already stores locally on this same device.
+function fbMark(key){ return key ? String(key).slice(0,10) : ''; }
+function fallbackBackedUp(){ try{ const k=window.OiraCustody&&window.OiraCustody.exportFallbackSeed&&window.OiraCustody.exportFallbackSeed(); return !!k && localStorage.getItem('oira.fbbackup')===fbMark(k); }catch(e){ return false; } }
+async function ensureFallbackBackup(){
+  if(fallbackBackedUp()) return true;
+  const key=window.OiraCustody&&window.OiraCustody.exportFallbackSeed&&window.OiraCustody.exportFallbackSeed();
+  if(!key) return true; // no fallback seed to protect (shouldn't happen for a fallback owner)
+  try{ await navigator.clipboard.writeText(key); }catch(e){}
+  alert('This device has no Face/Touch ID, so Oira can’t recover your Palette for you.\n\nYour recovery key (copied to your clipboard):\n\n'+key+'\n\nSave it in a password manager or notes app now — it is the ONLY way back in if you lose this device. Treat it like a password: anyone with it can open your Palette.');
+  const back=prompt('To confirm you’ve saved it, paste your recovery key back here:');
+  if(back && back.trim()===String(key).trim()){ try{ localStorage.setItem('oira.fbbackup',fbMark(key)); }catch(e){} return true; }
+  alert('That didn’t match, so nothing was sealed — we don’t want you locked out. Save your recovery key, then tap “This is me — seal it” again.');
+  return false;
+}
+// Honest, assurance-specific recovery disclosure, shown once right when it matters (just after
+// she seals) rather than left silent. 'passkey' recovers for free via her platform's own passkey
+// sync (iCloud Keychain / Google Password Manager) — nothing more to do, but she should know that
+// IS what recovers her. 'fallback' has no sync backing it at all, so losing this device without
+// saving the key first is unrecoverable, no support flow can bring it back — this is the one
+// case that gets an explicit save-it-now action, not just a note.
+function renderRecoveryNote(){
+  const el=document.getElementById('recoveryNote'); if(!el || !deviceOwner) return;
+  if(deviceOwner.assurance==='fallback'){
+    el.innerHTML='This device has no Face/Touch ID, so your recovery key is the only way back in — you saved it before sealing, keep that copy safe. <span style="text-decoration:underline;cursor:pointer;color:var(--mauve-deep)" onclick="showRecoveryKey()">Show it again</span>';
+  } else if(deviceOwner.assurance==='passkey'){
+    el.textContent='Recovers automatically with Face/Touch ID on any device signed into the same Apple or Google account. Losing this device without that signed in means losing this Palette.';
+  } else if(deviceOwner.assurance==='wallet'){
+    el.textContent='This Palette follows your connected wallet. Its recovery is whatever your wallet app already uses (e.g. a seed phrase) — Oira does not hold a separate copy.';
+  } else { el.textContent=''; }
+}
+function showRecoveryKey(){
+  if(!window.OiraCustody || !window.OiraCustody.exportFallbackSeed) return;
+  const key=window.OiraCustody.exportFallbackSeed();
+  if(!key){ alert('No recovery key found on this device yet.'); return; }
+  try{ navigator.clipboard&&navigator.clipboard.writeText(key); }catch(e){}
+  alert('Your recovery key (copied to your clipboard):\n\n'+key+'\n\nSave this somewhere private and safe, a notes app or password manager, not a screenshot anyone could see. Anyone with this key can open this Palette, so treat it like a password. There is no other way to recover this identity if you lose this device.');
+}
+function menuRecoveryKey(){ closeMenu(); showRecoveryKey(); }
+function restoreWithRecoveryKey(){
+  const key=prompt('Paste your recovery key:');
+  if(!key) return;
+  if(!window.OiraCustody || !window.OiraCustody.restoreFallbackSeed){ alert('Restore is not available in this browser.'); return; }
+  window.OiraCustody.restoreFallbackSeed(key.trim())
+    .then((owner)=>{ deviceOwner=owner; rememberAddr(owner.address); setSignMode(''); alert('Restored. Continuing to your Palette.'); go(4); })
+    .catch((e)=>{ alert((e&&e.message)||'Could not restore with that key.'); });
+}
+// her night rules are editable on screen 6; these mutate agentRules and re-label the controls
+function nrStep(field,delta){
+  if(field==='minPayout') agentRules.minPayout=Math.max(0.05,Math.round((agentRules.minPayout+delta)*100)/100);
+  if(field==='maxPerBrand') agentRules.maxPerBrand=Math.max(1,Math.min(10,agentRules.maxPerBrand+delta));
+  syncNightRules();
+}
+function syncNightRules(){
+  const mn=document.getElementById('nrMin'); if(mn) mn.textContent='$'+agentRules.minPayout.toFixed(2);
+  const mx=document.getElementById('nrMax'); if(mx) mx.textContent=String(agentRules.maxPerBrand);
+}
+async function goodnight(){
+  go(7); // she sleeps; the 3am match plays out on-screen (no covering overlay)
+  const status=document.getElementById('vaultStatus'), chain=document.getElementById('attestChain');
+  status.textContent='A question arrived. Answering inside the vault…';
+  chain.textContent='';
+  // two real rails run in parallel: the PRIVATE payout inside the enclave (brand→her link
+  // never on public base) and the OFFER_BOARD settlement (her $ drawn from a brand's
+  // escrowed, stake-gated campaign). Either can fail gracefully in a live demo.
+  const [pRes,cRes]=await Promise.allSettled([
+    fetch('/api/payout',{method:'POST'}).then(r=>r.ok?r.json():null),
+    matchBoard(),
+  ]);
+  payData = pRes.status==='fulfilled'?pRes.value:null;
+  campData = cRes.status==='fulfilled'?cRes.value:null;
+  lastMatch = campData; // drives her offer board (real brand label + receipt)
+  const matched = !campData || campData.matched !== false; // Model B verdict from the enclave
+  status.textContent = matched
+    ? 'Answered inside the vault. One word left: yes.'
+    : 'Answered inside the vault. It wasn’t your colour, so nothing was said.';
+  chain.innerHTML = receipt(payData&&payData.explorer?payData.explorer:PROGRAM_EX,'Check the receipt on Solana')
+    + receipt(campData&&(campData.explorer||campData.campaignExplorer)?(campData.explorer||campData.campaignExplorer):PROGRAM_EX, matched?'Paid from a brand’s escrowed offer':'A brand asked; your rules answered');
+  // record the real overnight into her agent state
+  const earned=(campData&&typeof campData.amount==='number')?campData.amount:amt();
+  agent.nights++; agent.nubiaUsed=Math.min(3, agent.nubiaUsed+1); agent.earned+=earned;
+}
+bootIdentity(); // establish her stable device identity on load, before any screen needs the address
+maybeDailyNudge();
+const _q=new URLSearchParams(location.search);
+// She already sealed on this device (oira_palette persists from a prior seal() success) — go
+// straight to her agent, not back through capture/confirm/seal. Only "Reset this device" in
+// Settings clears this, so it stays true across reloads until she explicitly re-enrolls.
+if(_q.has('s')) go(+_q.get('s')); // ?s=6 jumps to a screen (explicit override, e.g. demos)
+else if(palettePubkey()) go(4);
+</script>
+</body></html>

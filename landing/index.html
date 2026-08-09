@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oira: your colours, kept.</title>
+<meta name="description" content="A private, sealed Palette that answers brand questions for you while you sleep, without her ever seeing your face. Find your colours on Oira.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Oira: your colours, kept.">
+<meta property="og:description" content="A private, sealed Palette that answers brand questions for you while you sleep, without her ever seeing your face.">
+<meta property="og:url" content="https://myoira.com/">
+<meta name="theme-color" content="#43203B">
+<link rel="icon" type="image/png" sizes="512x512" href="/brand/png/favicon-plum-512.png">
+<link rel="apple-touch-icon" href="/brand/png/app-icon-light-1024.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Karla:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#FBF3EE; --ink:#43203B; --mauve:#C9799B; --mauve-deep:#A85578;
+    --gold:#D6A756; --lilac:#B49BE0; --aubergine:#1B1120; --moon:#F3E9E4;
+    --iris: conic-gradient(from 210deg, #F4A7B9, #E8C79A, #BFE3C0, #A9CBEF, #C9A9EF, #F4A7B9);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Karla',sans-serif;color:var(--ink);background:var(--blush);line-height:1.5;-webkit-font-smoothing:antialiased}
+  em{font-style:italic;color:var(--gold)}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px}
+  @media (max-width:640px){.wrap{padding:0 20px}}
+
+  /* ---- hero ---- */
+  .hero{position:relative;overflow:hidden;background:linear-gradient(160deg,#F7E7E0 0%, #FBF3EE 45%, #F2E4EE 100%);padding:88px 0 120px}
+  .hero::before{content:"";position:absolute;top:-20%;right:-12%;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(233,184,210,.35),transparent 70%);pointer-events:none}
+  .nav{display:flex;align-items:flex-end;justify-content:space-between;padding:0 0 64px;position:relative;z-index:2}
+  .brandline{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+  .wordmark-img{height:26px;width:auto;display:block}
+  .nav a.cta-ghost{font-size:14px;font-weight:600;color:var(--ink);text-decoration:none;border:1.5px solid rgba(67,32,59,.18);border-radius:99px;padding:9px 20px;transition:border-color .3s ease, background .3s ease}
+  .nav a.cta-ghost:hover{border-color:var(--mauve);background:rgba(201,121,155,.08)}
+
+  /* the "O" mark — the real app icon: a dark ring, slightly organic/oblong (not a perfect
+     circle), with a WIDE soft band of light sweeping through roughly half its circumference.
+     Rebuilt in CSS (matched against the actual PNG at brand/png/app-icon-light-1024.png) so
+     the light actually travels around the ring instead of sitting baked into a static image. */
+  .omark{width:34px;height:34px;flex:none;position:relative}
+  .omark .ring{position:absolute;inset:0;border-radius:30%;overflow:hidden;
+    animation:omark-shape-spin 16s linear infinite}
+  .omark .ring .light{position:absolute;inset:-25%;
+    background:conic-gradient(from 0deg,
+      var(--ink) 0deg, var(--ink) 20deg,
+      var(--mauve) 45deg, var(--gold) 88deg, #BFE3C0 112deg, #A9CBEF 138deg, var(--lilac) 162deg,
+      var(--ink) 188deg, var(--ink) 360deg);
+    animation:omark-light-spin 5s linear infinite reverse}
+  .omark .ring::after{content:"";position:absolute;inset:24%;border-radius:22%;background:var(--blush)}
+  @keyframes omark-shape-spin{to{transform:rotate(360deg)}}
+  @keyframes omark-light-spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.omark .ring,.omark .ring .light{animation:none}}
+  @media (min-width:641px){ .omark{width:38px;height:38px} }
+  /* mobile: same row as desktop — mark+wordmark on the left, Open-the-app on the right,
+     nothing centered */
+
+  /* ---- petals: a light, occasional drift down the WHOLE page (fixed, not clipped to the
+     hero) — some density so it reads as alive, still far short of confetti ---- */
+  .petals{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:40}
+  .petal{position:absolute;top:-40px;border-radius:70% 30% 65% 35%/55% 40% 60% 45%;opacity:0;animation:petal-fall linear infinite}
+  @keyframes petal-fall{
+    0%{opacity:0;transform:translate(0,0) rotate(0deg)}
+    6%{opacity:.5}
+    50%{transform:translate(var(--drift,26px),50vh) rotate(150deg)}
+    92%{opacity:.35}
+    100%{opacity:0;transform:translate(calc(var(--drift,26px)*-1.6),100vh) rotate(300deg)}
+  }
+  @media (prefers-reduced-motion:reduce){.petal{display:none}}
+
+  .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:56px;align-items:center;position:relative}
+  @media (max-width:860px){.hero-grid{grid-template-columns:1fr;gap:48px}}
+  .eyebrow{font-size:13px;letter-spacing:3px;text-transform:uppercase;color:var(--mauve-deep);font-weight:600}
+  h1.headline{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(38px,5.2vw,64px);line-height:1.06;margin-top:18px;color:var(--ink)}
+  .sub{font-size:18px;color:#6e4f66;margin-top:22px;max-width:46ch;line-height:1.65}
+  .cta-row{display:flex;gap:14px;margin-top:36px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:8px;text-decoration:none;border-radius:99px;padding:15px 30px;font-weight:600;font-size:15px;transition:transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s ease}
+  .btn:hover{transform:translateY(-2px)}
+  .btn-primary{background:linear-gradient(150deg,#E7A6C0,#C9799B);color:#fff;box-shadow:0 12px 28px rgba(201,121,155,.34);position:relative;overflow:hidden}
+  .btn-primary:hover{box-shadow:0 18px 36px rgba(201,121,155,.42)}
+  .btn-primary::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-16deg);animation:btnsheen 3.6s ease infinite}
+  @keyframes btnsheen{0%,45%{left:-60%}70%,100%{left:130%}}
+  @media (prefers-reduced-motion:reduce){.btn-primary::after{animation:none;display:none}}
+  .btn-secondary{background:transparent;color:var(--ink);border:1.5px solid rgba(67,32,59,.2)}
+  .btn-secondary:hover{border-color:var(--ink);background:rgba(67,32,59,.04)}
+  .trust-line{margin-top:22px;font-size:13px;color:#9c7c93}
+
+  /* the seal, lifted verbatim from the product itself */
+  .seal-stage{display:flex;align-items:center;justify-content:center;position:relative}
+  .seal{width:180px;height:180px;border-radius:48% 52% 50% 50%/50% 48% 52% 50%;background:radial-gradient(circle at 34% 30%, #E4B96B 0%, #D6A756 38%, #B4813C 75%, #96682E 100%);box-shadow:inset 0 6px 16px rgba(255,240,210,.65), inset 0 -12px 22px rgba(90,58,20,.45), 0 26px 50px rgba(150,104,46,.35);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;animation:press 4.6s ease infinite}
+  .seal::before{content:"";position:absolute;inset:20px;border-radius:50%;border:2px solid rgba(255,244,220,.55);box-shadow:inset 0 3px 9px rgba(90,58,20,.35)}
+  .seal span{font-family:'Fraunces',serif;font-style:italic;font-weight:400;font-size:76px;color:#7A5320;text-shadow:0 1px 0 rgba(255,240,205,.6)}
+  .seal::after{content:"";position:absolute;top:-25%;left:-75%;width:48%;height:150%;background:linear-gradient(100deg,transparent,rgba(255,250,236,.65),transparent);transform:skewX(-14deg);animation:sealsweep 5s ease infinite;pointer-events:none}
+  @keyframes press{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
+  @keyframes sealsweep{0%{left:-75%}55%,100%{left:135%}}
+  @media (prefers-reduced-motion:reduce){.seal,.seal::after{animation:none}}
+
+  /* ---- benefit rows (deliberately not a repeated card grid — each gets its own shape) ---- */
+  .benefits{padding:104px 0}
+  .brow{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;padding:56px 0}
+  .brow + .brow{border-top:1px solid rgba(67,32,59,.08)}
+  .brow.reverse .btext{order:2}
+  .brow.reverse .bvisual{order:1}
+  @media (max-width:820px){.brow, .brow.reverse{grid-template-columns:1fr}.brow.reverse .btext{order:1}.brow.reverse .bvisual{order:2}}
+  .bnum{font-family:'Fraunces',serif;font-style:italic;color:var(--gold);font-size:15px;letter-spacing:1px}
+  .btitle{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(26px,3vw,34px);margin-top:10px;line-height:1.15}
+  .btext p{color:#6e4f66;margin-top:16px;font-size:16.5px;max-width:42ch;line-height:1.65}
+
+  /* visual 1: on-device reading — the same iris ring + scan sweep used in the product itself */
+  .bvisual{display:flex;align-items:center;justify-content:center;min-height:220px}
+  .scan-ring{width:200px;height:200px;border-radius:50%;position:relative;background:var(--iris);box-shadow:0 20px 46px rgba(180,121,155,.28);animation:iris-turn 14s linear infinite}
+  .scan-ring::before{content:"";position:absolute;inset:14px;border-radius:50%;background:linear-gradient(145deg,#FFFBF7,#F5E7EE)}
+  .scan-oval{position:absolute;inset:38px;border-radius:50%;border:2px dashed rgba(168,85,120,.4);animation:breathe 3.4s ease infinite}
+  .scan-line{position:absolute;left:38px;right:38px;top:38px;height:2px;background:linear-gradient(90deg,transparent,var(--mauve-deep),transparent);animation:scan-sweep 2.3s ease-in-out infinite}
+  @keyframes iris-turn{to{transform:rotate(360deg)}}
+  @keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+  @keyframes scan-sweep{0%,100%{top:44px}50%{top:154px}}
+  @media (prefers-reduced-motion:reduce){.scan-ring,.scan-oval,.scan-line{animation:none}}
+
+  /* visual 2: brands pay for a yes — a single receipt-like card, on purpose singular not gridded */
+  .receipt{background:#FFFBF7;border-radius:20px 20px 20px 6px;box-shadow:0 20px 44px rgba(67,32,59,.12);padding:26px 28px;width:100%;max-width:320px}
+  .receipt .rl{display:flex;justify-content:space-between;font-size:13px;color:#9c7c93;padding:9px 0;border-bottom:1px solid rgba(67,32,59,.07)}
+  .receipt .rl:last-child{border-bottom:none}
+  .receipt .rl b{color:var(--ink);font-weight:600}
+  .receipt .ryes{margin-top:14px;text-align:center;font-family:'Fraunces',serif;font-style:italic;font-size:28px;color:var(--mauve-deep)}
+
+  /* visual 3: her rules — a slider-like bar, static illustration */
+  .rules-bar{width:100%;max-width:320px}
+  .rbar{height:10px;border-radius:99px;background:rgba(67,32,59,.08);position:relative;margin:18px 0 8px}
+  .rbar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,var(--mauve),var(--lilac))}
+  .rbar-lbl{display:flex;justify-content:space-between;font-size:12px;color:#9c7c93}
+
+  /* ---- season showcase ---- */
+  .seasons{padding:20px 0 104px}
+  .stitle{text-align:center;margin-bottom:8px}
+  .stitle .eyebrow{display:block;text-align:center}
+  .stitle h2{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(28px,3.6vw,40px);margin-top:10px}
+  .ssub{text-align:center;color:#6e4f66;max-width:52ch;margin:16px auto 52px;font-size:16px}
+  .srow{display:flex;gap:18px;overflow-x:auto;padding:8px 4px 20px;scrollbar-width:none}
+  .srow::-webkit-scrollbar{display:none}
+  .scard{flex:none;width:216px;background:#FFFBF7;border-radius:20px 20px 20px 6px;box-shadow:0 14px 30px rgba(67,32,59,.1);padding:22px}
+  .scard .sname{font-family:'Fraunces',serif;font-style:italic;font-size:19px;color:var(--ink)}
+  .sw{display:flex;gap:7px;margin-top:16px}
+  .sw i{width:24px;height:24px;border-radius:50%;box-shadow:0 4px 10px rgba(67,32,59,.16);border:2px solid rgba(255,255,255,.7);flex:none}
+
+  /* ---- dark close band, deliberate rhythm break using the product's own night theme ---- */
+  .close{background:linear-gradient(175deg,#241528 0%,#1B1120 60%);color:var(--moon);padding:110px 0;text-align:center;position:relative;overflow:hidden}
+  .close::before{content:"";position:absolute;top:50%;left:50%;width:640px;height:640px;transform:translate(-50%,-50%);border-radius:50%;background:var(--iris);opacity:.08;filter:blur(60px)}
+  .close .eyebrow{color:#CBA0BE}
+  .close h2{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(30px,4vw,46px);margin-top:16px;max-width:18ch;margin-left:auto;margin-right:auto;line-height:1.15;position:relative}
+  .close .sub{color:#BBA5B8;max-width:44ch;margin:20px auto 0;position:relative}
+  .close .cta-row{justify-content:center;margin-top:38px;position:relative}
+  .close .btn-secondary{color:var(--moon);border-color:rgba(243,233,228,.28)}
+  .close .btn-secondary:hover{background:rgba(243,233,228,.08);border-color:rgba(243,233,228,.5)}
+
+  footer{padding:56px 0 40px;text-align:center;font-size:13px;color:#9c7c93}
+  footer .fmark-img{height:22px;width:auto;margin:0 auto 18px;display:block;opacity:.9}
+  .fsocial{display:flex;justify-content:center;gap:14px;margin-bottom:22px}
+  .fsocial a{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#b3a0ab;border:1.5px solid rgba(67,32,59,.14);transition:border-color .3s ease, color .3s ease}
+  .fsocial a[href]:hover{border-color:var(--mauve);color:var(--mauve-deep)}
+  .fsocial a.disabled{cursor:default;opacity:.5}
+  .fsocial svg{width:16px;height:16px}
+  .fline{margin-top:4px}
+  .fpartner{margin-top:14px;font-size:12px;color:#b3a0ab;display:flex;align-items:center;justify-content:center;gap:6px}
+</style>
+</head>
+<body>
+
+<div class="petals" aria-hidden="true">
+  <div class="petal" style="left:4%;width:13px;height:10px;background:#E9B8D2;--drift:30px;animation-duration:17s;animation-delay:0s"></div>
+  <div class="petal" style="left:14%;width:9px;height:7px;background:#D6A756;--drift:-20px;animation-duration:21s;animation-delay:4s"></div>
+  <div class="petal" style="left:24%;width:15px;height:12px;background:#C9A9EF;--drift:36px;animation-duration:16s;animation-delay:8s"></div>
+  <div class="petal" style="left:34%;width:10px;height:8px;background:#B49BE0;--drift:-26px;animation-duration:19s;animation-delay:2s"></div>
+  <div class="petal" style="left:45%;width:12px;height:9px;background:#E9B8D2;--drift:22px;animation-duration:18s;animation-delay:11s"></div>
+  <div class="petal" style="left:55%;width:8px;height:6px;background:#D6A756;--drift:-16px;animation-duration:20s;animation-delay:6s"></div>
+  <div class="petal" style="left:63%;width:14px;height:11px;background:#C9A9EF;--drift:32px;animation-duration:15s;animation-delay:13s"></div>
+  <div class="petal" style="left:72%;width:11px;height:9px;background:#E9B8D2;--drift:-28px;animation-duration:22s;animation-delay:1s"></div>
+  <div class="petal" style="left:80%;width:13px;height:10px;background:#B49BE0;--drift:24px;animation-duration:17s;animation-delay:9s"></div>
+  <div class="petal" style="left:88%;width:9px;height:7px;background:#D6A756;--drift:-18px;animation-duration:19s;animation-delay:5s"></div>
+  <div class="petal" style="left:95%;width:12px;height:10px;background:#C9A9EF;--drift:20px;animation-duration:21s;animation-delay:14s"></div>
+  <div class="petal" style="left:9%;width:10px;height:8px;background:#B49BE0;--drift:-24px;animation-duration:18s;animation-delay:16s"></div>
+</div>
+
+<div class="hero">
+  <div class="wrap">
+    <nav class="nav">
+      <div class="brandline">
+        <div class="omark" aria-hidden="true"><div class="ring"><div class="light"></div></div></div>
+        <img class="wordmark-img" src="/brand/png/wordmark-light-2000w.png" alt="Oira">
+      </div>
+      <a class="cta-ghost" href="https://app.myoira.com">Open the app</a>
+    </nav>
+    <div class="hero-grid">
+      <div>
+        <div class="eyebrow">Named for the goddess who spoke in rainbows</div>
+        <h1 class="headline">Your colours, <em>kept.</em></h1>
+        <p class="sub">One reading, taken on your own phone, sealed so it belongs to you alone. Brands who want exactly your shade pay you for a private yes, and you never lift a finger.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="https://app.myoira.com">Find your colours</a>
+          <a class="btn btn-secondary" href="#get-app">Download for Seeker</a>
+        </div>
+        <div class="trust-line">No account. No seed phrase to remember. Your photo never leaves your hand.</div>
+      </div>
+      <div class="seal-stage"><div class="seal"><span>O</span></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="benefits">
+  <div class="wrap">
+
+    <div class="brow">
+      <div class="btext">
+        <div class="bnum">One</div>
+        <h2 class="btitle">Read on your phone. Sealed before it ever leaves it.</h2>
+        <p>Oira finds your season, your undertone, your depth, right there on your device. Then it's sealed, so the exact reading is yours and only yours, not sitting on a server somewhere waiting to be useful to someone else.</p>
+      </div>
+      <div class="bvisual"><div class="scan-ring"><div class="scan-oval"></div><div class="scan-line"></div></div></div>
+    </div>
+
+    <div class="brow reverse">
+      <div class="btext">
+        <div class="bnum">Two</div>
+        <h2 class="btitle">While you sleep, a brand pays for a yes.</h2>
+        <p>A brand can ask if you match what they're looking for. Not who you are. Your agent answers privately, and if it's a match, you're paid, quietly, before you've even woken up.</p>
+      </div>
+      <div class="bvisual">
+        <div class="receipt">
+          <div class="rl"><span>Brand</span><b>A foundation line</b></div>
+          <div class="rl"><span>Asked for</span><b>Your exact shade</b></div>
+          <div class="rl"><span>What they learned</span><b>Nothing else</b></div>
+          <div class="ryes">yes.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="brow">
+      <div class="btext">
+        <div class="bnum">Three</div>
+        <h2 class="btitle">You decide what's worth answering.</h2>
+        <p>What a question is worth. How often a brand can ask. Who you'd rather never hear from at all. Anything outside your rules gets turned away, quietly, and nothing about you is shared to find that out.</p>
+      </div>
+      <div class="bvisual">
+        <div class="rules-bar">
+          <div class="rbar"><i style="width:62%"></i></div>
+          <div class="rbar-lbl"><span>Your minimum</span><span>Your call, always</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="seasons">
+  <div class="wrap">
+    <div class="stitle">
+      <span class="eyebrow">Every depth, every undertone</span>
+      <h2>Your season is already <em>real</em>.</h2>
+    </div>
+    <p class="ssub">Oira reads the full range, deep tones first, never an afterthought. These are a few of the seasons waiting to be named as yours.</p>
+    <div class="srow">
+      <div class="scard"><div class="sname">Deep Winter</div><div class="sw"><i style="background:#7A1F3D"></i><i style="background:#B3123B"></i><i style="background:#1E2A5A"></i><i style="background:#0E6B5C"></i><i style="background:#5A2E8A"></i></div></div>
+      <div class="scard"><div class="sname">Deep Autumn</div><div class="sw"><i style="background:#7A3B2A"></i><i style="background:#A85A32"></i><i style="background:#C98A3E"></i><i style="background:#6E5236"></i><i style="background:#3E5B4A"></i></div></div>
+      <div class="scard"><div class="sname">Cool Summer</div><div class="sw"><i style="background:#9B7787"></i><i style="background:#7E6E8E"></i><i style="background:#6E8391"></i><i style="background:#B48CA0"></i><i style="background:#4E5B6E"></i></div></div>
+      <div class="scard"><div class="sname">Warm Spring</div><div class="sw"><i style="background:#E0894F"></i><i style="background:#E4B24A"></i><i style="background:#D96A4A"></i><i style="background:#7CA64A"></i><i style="background:#4FB3A0"></i></div></div>
+      <div class="scard"><div class="sname">Warm Autumn</div><div class="sw"><i style="background:#8A4B2A"></i><i style="background:#B07A2E"></i><i style="background:#C99A3E"></i><i style="background:#6E6236"></i><i style="background:#4E5B3A"></i></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="close" id="get-app">
+  <div class="wrap">
+    <div class="eyebrow">Ready when you are</div>
+    <h2>Your most private information, finally working for you.</h2>
+    <p class="sub">Open Oira in your browser, or install it as an app. On a Solana Seeker, it runs deeper still, with your phone's own secure vault standing behind it.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://app.myoira.com">Open Oira</a>
+      <a class="btn btn-secondary" href="/downloads/oira-seeker.apk">Download for Seeker (.apk)</a>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <img class="fmark-img" src="/brand/png/wordmark-light-2000w.png" alt="Oira">
+  <div class="fsocial">
+    <a href="mailto:info@myoira.com" title="Email"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18v12H3z"/><path d="m3 7 9 6 9-6"/></svg></a>
+    <a href="https://x.com/MyOira_" target="_blank" rel="noopener" title="X"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.9 2H22l-7.6 8.7L23.3 22h-7l-5.5-7.2L4.6 22H1.5l8.1-9.3L1 2h7.2l5 6.6L18.9 2Zm-1.2 18h1.7L7.4 4H5.6l12.1 16Z"/></svg></a>
+    <a class="disabled" aria-disabled="true" title="Instagram — coming soon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg></a>
+  </div>
+  <div class="fline">Your Palette lives on Solana. You can leave any time; it stays yours.</div>
+  <div class="fpartner">A partnership between BantuBloomNwk <span>&times;</span> Aurora K. <span>&copy;</span> 2026</div>
+</footer>
+
+</body>
+</html>

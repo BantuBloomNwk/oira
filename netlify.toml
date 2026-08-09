@@ -1,0 +1,41 @@
+# Oira — Netlify deploy config.
+# LIVE: static app in app/ (deployed via a combined app+brand dir); /api/* is proxied to
+# the persistent bridge on the Contabo VPS (Docker + Caddy sslip.io). The serverless
+# Functions in netlify/functions/ are the staged fallback only — the VPS bridge is
+# authoritative because the delegation flows exceed Lambda timeouts. See docs/NETLIFY-DEPLOY.md.
+
+[build]
+  publish = "app"
+  functions = "netlify/functions"
+
+# Proxy the API to the persistent VPS bridge (server-side rewrite => same-origin to the
+# browser, no CORS/mixed-content). TEMPORARY sslip.io host until the real domain.
+[[redirects]]
+  from = "/api/*"
+  to = "https://oira.161-97-74-212.sslip.io/api/:splat"
+  status = 200
+  force = true
+
+[functions]
+  node_bundler = "esbuild"
+  # oira-chain.mjs pulls in @solana/web3.js + ephemeral-rollups-sdk + tweetnacl, which are
+  # installed under client/node_modules. Bundle them + the mint config alongside the funcs.
+  included_files = ["client/node_modules/**", "client/payout-config.json"]
+
+# Static-only headers hardening (aligns with docs/OIRA-STRATEGY.md landing spec).
+# CSP is deliberately more permissive than the landing site's — this app has real inline
+# script/style (no bundler), a direct WebSocket to the VPS bridge, devnet/MagicBlock RPC
+# calls, and the Supabase RPC proxy. Tightened as far as verified-working without breaking
+# the live flows; script-src/style-src keep 'unsafe-inline' until those get extracted to
+# external files with a nonce or hash.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' wss://oira.161-97-74-212.sslip.io https://oira.161-97-74-212.sslip.io https://api.devnet.solana.com https://devnet.magicblock.app https://devnet-tee.magicblock.app https://dwqhnsdegjsgtixdwnoq.supabase.co; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=()"
+    Cross-Origin-Opener-Policy = "same-origin"
+    # NOTE: camera=(self) is required for the reading-flow selfie; do not lock it to ().

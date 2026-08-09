@@ -1,0 +1,16 @@
+{
+  "name": "Oira",
+  "short_name": "Oira",
+  "description": "Your colours, kept. A private, sealed Palette that answers brand questions for you, without her ever seeing your face.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FBF3EE",
+  "theme_color": "#43203B",
+  "icons": [
+    { "src": "/brand/png/favicon-plum-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/png/favicon-plum-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/png/app-icon-light-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "maskable" }
+  ]
+}

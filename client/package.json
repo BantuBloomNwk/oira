@@ -1,0 +1,18 @@
+{
+  "name": "oira-client",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "dependencies": {
+    "@magicblock-labs/ephemeral-rollups-sdk": "^0.15.5",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
+    "express": "^4.22.2",
+    "tweetnacl": "^1.0.3",
+    "ws": "^8.21.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.43.1"
+  }
+}

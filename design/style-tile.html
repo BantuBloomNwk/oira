@@ -1,0 +1,83 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..500&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root{--ivory:#FBF5EE;--blush:#EBB9AE;--rosewood:#C0736A;--cocoa:#4E2E23;--espresso:#3A2A24;--taupe:#B7A392;--sand:#E9DCC9;--champagne:#C9A96A;--mauve:#9B7787;
+--serif:'Fraunces',Georgia,serif;--sans:'Hanken Grotesk',system-ui,sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+body{width:1240px;background:var(--ivory);color:var(--espresso);font-family:var(--sans);padding:64px 72px;}
+.eyebrow{font-family:var(--sans);text-transform:uppercase;letter-spacing:.2em;font-size:12px;font-weight:600;color:var(--rosewood);}
+.brand{font-family:var(--serif);font-weight:400;font-size:96px;line-height:.9;color:var(--cocoa);letter-spacing:-1px;margin:10px 0 4px;}
+.tag{font-family:var(--serif);font-style:italic;font-weight:300;font-size:26px;color:var(--mauve);}
+.rule{height:1px;background:var(--taupe);opacity:.4;margin:40px 0;}
+.grid2{display:flex;gap:40px;}
+h3.sec{font-family:var(--sans);text-transform:uppercase;letter-spacing:.18em;font-size:12px;color:var(--taupe);margin-bottom:18px;font-weight:600;}
+.sw{display:flex;gap:14px;flex-wrap:wrap;}
+.chip{width:120px;}
+.chip .box{height:82px;border-radius:14px;box-shadow:0 10px 22px rgba(78,46,35,.10);}
+.chip .nm{font-size:12px;font-weight:600;margin-top:8px;color:var(--espresso);}
+.chip .hx{font-size:11px;color:var(--taupe);font-family:var(--sans);}
+.spectrum{display:flex;height:64px;border-radius:16px;overflow:hidden;box-shadow:0 12px 26px rgba(78,46,35,.12);}
+.spectrum span{flex:1;}
+.specimen .big{font-family:var(--serif);font-weight:400;font-size:64px;line-height:1;color:var(--cocoa);letter-spacing:-1px;}
+.specimen .big em{font-style:italic;font-weight:300;color:var(--rosewood);}
+.specimen .body{font-family:var(--sans);font-size:16px;line-height:1.6;color:var(--espresso);max-width:440px;margin-top:14px;}
+.btns{display:flex;gap:16px;align-items:center;margin-top:6px;}
+.btn{border-radius:999px;padding:16px 34px;font-family:var(--sans);font-weight:600;font-size:16px;border:none;}
+.btn.p{background:var(--rosewood);color:#fff;box-shadow:0 14px 30px rgba(192,115,106,.34);}
+.btn.s{background:var(--sand);color:var(--cocoa);}
+.btn.g{background:transparent;color:var(--cocoa);border:1px solid var(--taupe);}
+/* palette card */
+.card{width:360px;border-radius:26px;padding:30px;background:linear-gradient(160deg,#F7E7DE,#EBD3C6 60%,#E3C4B4);box-shadow:0 26px 54px rgba(78,46,35,.18);border:1px solid rgba(201,169,106,.5);position:relative;}
+.card .eb{color:var(--rosewood);}
+.card .season{font-family:var(--serif);font-weight:400;font-size:40px;line-height:1;color:var(--cocoa);margin:10px 0 6px;}
+.card .season em{font-style:italic;font-weight:300;}
+.card .desc{font-family:var(--serif);font-style:italic;font-weight:300;font-size:17px;color:#6E4A3E;line-height:1.4;}
+.card .tones{display:flex;gap:10px;margin-top:22px;}
+.card .tones span{width:44px;height:44px;border-radius:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.4);}
+.card .seal{margin-top:22px;font-family:var(--sans);font-size:12.5px;color:#6E4A3E;display:flex;align-items:center;gap:8px;}
+.card .dot{width:9px;height:9px;border-radius:999px;background:var(--rosewood);}
+.motion{font-family:var(--sans);font-size:14px;color:var(--taupe);line-height:1.6;max-width:360px;}
+</style></head>
+<body>
+  <div class="eyebrow">Oira · app design system v0.1</div>
+  <div class="brand">Oira</div>
+  <div class="tag">Every shade of you. Seen by no one but you.</div>
+
+  <div class="rule"></div>
+  <h3 class="sec">Palette</h3>
+  <div class="sw">
+    <div class="chip"><div class="box" style="background:#FBF5EE;border:1px solid #E4D8C9"></div><div class="nm">Ivory</div><div class="hx">#FBF5EE</div></div>
+    <div class="chip"><div class="box" style="background:#EBB9AE"></div><div class="nm">Blush</div><div class="hx">#EBB9AE</div></div>
+    <div class="chip"><div class="box" style="background:#C0736A"></div><div class="nm">Rosewood</div><div class="hx">#C0736A</div></div>
+    <div class="chip"><div class="box" style="background:#9B7787"></div><div class="nm">Mauve</div><div class="hx">#9B7787</div></div>
+    <div class="chip"><div class="box" style="background:#C9A96A"></div><div class="nm">Champagne</div><div class="hx">#C9A96A</div></div>
+    <div class="chip"><div class="box" style="background:#E9DCC9"></div><div class="nm">Sand</div><div class="hx">#E9DCC9</div></div>
+    <div class="chip"><div class="box" style="background:#B7A392"></div><div class="nm">Taupe</div><div class="hx">#B7A392</div></div>
+    <div class="chip"><div class="box" style="background:#4E2E23"></div><div class="nm">Cocoa</div><div class="hx">#4E2E23</div></div>
+  </div>
+  <div style="margin-top:28px"><h3 class="sec">Skin spectrum · deep first</h3>
+    <div class="spectrum"><span style="background:#4A2E1E"></span><span style="background:#6E4429"></span><span style="background:#9A6A45"></span><span style="background:#C99A73"></span><span style="background:#E6C9AD"></span><span style="background:#F2DFCB"></span></div>
+  </div>
+
+  <div class="rule"></div>
+  <div class="grid2">
+    <div class="specimen" style="flex:1">
+      <h3 class="sec">Type · Fraunces + Hanken Grotesk</h3>
+      <div class="big">Your <em>season</em>,<br/>read for you.</div>
+      <div class="body">Fraunces carries the brand, soft and editorial, with its italic for the tender words. Hanken Grotesk keeps the interface calm and warm. Deep tones are centered in everything.</div>
+      <div class="btns"><button class="btn p">Read my Palette</button><button class="btn s">Not now</button><button class="btn g">Learn more</button></div>
+      <div style="margin-top:34px"><h3 class="sec">Motion</h3><div class="motion">Gentle. 400–600ms ease-out, soft fades and a slow bloom on reveals. Nothing snappy or mechanical, everything settles like it belongs.</div></div>
+    </div>
+    <div>
+      <h3 class="sec">Signature · the Palette card</h3>
+      <div class="card">
+        <div class="eyebrow eb">Her Palette</div>
+        <div class="season">Deep <em>Autumn</em></div>
+        <div class="desc">Warm, rich, golden. Earth and amber suit you; icy pastels fight you.</div>
+        <div class="tones"><span style="background:#7A3B2A"></span><span style="background:#A85A32"></span><span style="background:#C98A3E"></span><span style="background:#6E5236"></span><span style="background:#3E5B4A"></span></div>
+        <div class="seal"><span class="dot"></span> Your reading is sealed. Only you hold the key.</div>
+      </div>
+    </div>
+  </div>
+</body></html>

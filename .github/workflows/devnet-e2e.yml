@@ -1,0 +1,160 @@
+name: Devnet e2e (manual/scheduled)
+
+# Slow tier, deliberately NOT run on every push: these scripts submit real transactions to
+# Solana devnet and a MagicBlock TEE endpoint, cost real (free but rate-limited) devnet SOL,
+# take real network round-trip time, and can fail on transient devnet/TEE health rather than a
+# real regression. None of that belongs gating a PR. This is best-effort visibility, not a merge
+# gate — read each step's own result rather than trusting the overall run status.
+#
+# HISTORY: a real live run on 2026-07-21 (7.24 SOL funded, ~4.4 SOL spent) found 6 of the then-12
+# scripts stale against a program hardening: match_query's on-chain signature became
+# (target_undertone, target_depth, target_season, depth_tol, offer_salt) — the PROGRAM now computes
+# the verdict from her sealed traits, and each budget-consuming query needs its own escrowed,
+# co-delegated campaign. The 6 have since been reconciled to that ABI:
+#   • night-rules-e2e, per-palette-e2e — rebuilt (they were entirely pre-campaign, pre-traits).
+#     per-palette-e2e now proves the per-epoch budget via a small her-set epoch_cap (a default-8
+#     proof would need 8 escrowed campaigns; the on-chain enforcement path is identical).
+#   • match-real-e2e — rebuilt onto committed campaigns; still owns the unique binding-rejection
+#     and read-gating assertions. The budget proof moved to per-palette-e2e to avoid redundant SOL.
+#   • model-b-e2e, perbrand-e2e — mechanical fix (target_hash = sha256(offer_salt‖shade),
+#     match_query passes the shade+salt; model-b's campaign decoder + payee_commit check corrected).
+#   • campaign-e2e — RETIRED. It proved a brand could settle by self-asserting accepted=true; that
+#     path was deliberately deleted (settle_offer now requires a real in-enclave match receipt).
+#     settle-match-e2e is the canonical campaign create→match→settle→close money-rail proof.
+# Still known-red: overnight-real-e2e failed on insufficient lamports mid-flow (a stale funding
+# amount in client/oira-chain.mjs's runOffer/seal path, NOT ABI drift) — not yet root-caused, so a
+# red X there is expected until that funding bug is fixed. See /home/dee/Oira/Sessions.md.
+#
+# Requires one repo secret: OIRA_DEPLOYER_KEY — the JSON array content of a funded devnet
+# keypair (the same shape client/oira-chain.mjs's loadDeployer() and these scripts expect).
+# Add it under Settings -> Secrets and variables -> Actions. Nothing runs without it.
+on:
+  workflow_dispatch: {} # manual trigger from the Actions tab or `gh workflow run`
+  schedule:
+    - cron: '0 6 * * 1' # weekly, Monday 06:00 UTC — cheap visibility, not meant to be tight
+
+jobs:
+  devnet-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install client deps
+        working-directory: client
+        run: npm ci
+
+      - name: Confirm the deployer secret is set
+        run: |
+          if [ -z "${{ secrets.OIRA_DEPLOYER_KEY }}" ]; then
+            echo "OIRA_DEPLOYER_KEY is not set — skipping the whole devnet suite (nothing to fund it with)."
+            echo "SKIP=1" >> "$GITHUB_ENV"
+          fi
+
+      - name: Write the deployer key to every path/shape these scripts expect
+        if: env.SKIP != '1'
+        run: |
+          mkdir -p keys
+          # most e2e scripts (match-real-e2e, model-b-e2e, night-rules-e2e, overnight-real-e2e,
+          # payout-e2e, perbrand-e2e, per-palette-e2e) read this exact path — confirmed by reading
+          # the source, not assumed.
+          printf '%s' '${{ secrets.OIRA_DEPLOYER_KEY }}' > keys/oira-deployer.json
+        # env var form covers oira-chain.mjs's loadDeployer() (used by client/server.mjs, which
+        # relay-ws-e2e.mjs needs running) and settle-match-e2e.mjs's OIRA_KEYPAIR (a file path,
+        # a different convention from the others — pointed at the same file written above).
+        env:
+          OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
+
+      - name: match-real-e2e
+        if: env.SKIP != '1'
+        working-directory: client
+        run: node match-real-e2e.mjs
+        env:
+          OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
+
+      - name: model-b-e2e
+        if: env.SKIP != '1'
+        working-directory: client
+        run: node model-b-e2e.mjs
+        env:
+          OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
+
+      - name: night-rules-e2e
+        if: env.SKIP != '1'
+        working-directory: client
+        run: node night-rules-e2e.mjs
+        env:
+          OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
+
+      - name: overnight-real-e2e
+        if: env.SKIP != '1'
+        working-directory: client
+        run: node overnight-real-e2e.mjs
+        env:
+          OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
+
+      - name: payout-e2e
+        if: env.SKIP != '1'
+        working-directory: client
+        run: node payout-e2e.mjs
+        env:
+          OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
+
+      - name: perbrand-e2e
+        if: env.SKIP != '1'
+        working-directory: client
+        run: node perbrand-e2e.mjs
+        env:
+          OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
+
+      - name: per-palette-e2e
+        if: env.SKIP != '1'
+        working-directory: client
+        run: node per-palette-e2e.mjs
+        env:
+          OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
+
+      - name: relay-seal-e2e
+        if: env.SKIP != '1'
+        working-directory: client
+        run: node relay-seal-e2e.mjs
+        env:
+          OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
+
+      - name: wallet-seal-e2e
+        if: env.SKIP != '1'
+        working-directory: client
+        run: node wallet-seal-e2e.mjs
+        env:
+          OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
+
+      - name: reseal-e2e
+        if: env.SKIP != '1'
+        working-directory: client
+        run: node reseal-e2e.mjs
+        env:
+          OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
+
+      - name: settle-match-e2e
+        if: env.SKIP != '1'
+        working-directory: client
+        run: node settle-match-e2e.mjs
+        env:
+          # relative to working-directory (client/), so ../keys — where the key was written (repo-root keys/)
+          OIRA_KEYPAIR: ../keys/oira-deployer.json
+
+      - name: relay-ws-e2e (needs the bridge server actually running)
+        if: env.SKIP != '1'
+        working-directory: client
+        run: |
+          OIRA_PORT=8779 OIRA_SERVE_STATIC=0 OIRA_DEPLOYER_KEY='${{ secrets.OIRA_DEPLOYER_KEY }}' node server.mjs &
+          SERVER_PID=$!
+          # give the bridge a moment to bind before the WS client tries to connect
+          for i in $(seq 1 15); do curl -sf http://127.0.0.1:8779/api/health >/dev/null && break; sleep 1; done
+          node relay-ws-e2e.mjs
+          RESULT=$?
+          kill $SERVER_PID 2>/dev/null || true
+          exit $RESULT

@@ -10,6 +10,34 @@ Oira runs the sensitive part of that exchange inside a MagicBlock Private Epheme
 - **Verify it yourself:** [`docs/VERIFY.md`](docs/VERIFY.md) — run the match and check the empty chain
 - **See our vision:** [`docs/PITCH.md`](docs/PITCH.md) — why this matters and where it goes
 
+## Try it
+
+- **The app:** [app.myoira.com](https://app.myoira.com) — take a reading, seal it, then run the
+  overnight flow. On the "While you sleep" screen the app reads your palette account's owner live
+  off devnet and shows you it belongs to MagicBlock's Delegation Program rather than to us. That
+  row is a live ledger read, not a label, so the enclave dependency is something you can check
+  rather than something we claim.
+- **The site:** [myoira.com](https://myoira.com)
+
+## What is new since we last showed this
+
+Judges called Oira a frontrunner last time and it did not win. This is what we did with that.
+
+- **Her skin, over time.** A one tap skin log and a private trend view. Her colour season is
+  stable by design; her skin is not. None of it leaves the device.
+- **The enclave made visible.** The dependency used to live only in docs and CLI scripts. It is
+  now in the product, verified against the ledger while she watches.
+- **Liveness at scan time.** An active head turn challenge gates sealing, so a photograph of a
+  photograph cannot mint a Palette.
+- **A Sybil hole closed.** A leftover path could mint free unauthenticated Palettes, and a
+  fallback could fabricate a perfect match identity and drain a campaign's escrow. Both shut,
+  with creation limits behind them.
+- **Patched before it bit us.** MagicBlock disclosed a flaw in the `#[ephemeral]` macro that cost
+  another team 98k USDC. We upgraded the SDK and redeployed in place the same week, then
+  re-verified the whole suite against the upgraded program.
+- **Recovery that exists.** An export and import recovery key for the one custody path that had
+  no automatic recovery, and she cannot seal until she has saved it.
+
 ## Why we built it
 
 The things that make you a good match are often the things you would rather not broadcast. Our first user is a woman choosing makeup: her undertone, her depth, her colour season decide what actually suits her, and none of it is anyone's business. A brand would pay real money to reach exactly the people its shade fits. She would take that money if it did not mean handing her face to a database.

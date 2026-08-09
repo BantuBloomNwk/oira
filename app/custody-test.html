@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Oira · device custody test</title>
+<link rel="icon" type="image/png" sizes="32x32" href="/brand/png/favicon-plum-32.png">
+<style>
+  :root{--blush:#FBF3EE;--ink:#43203B;--gold:#D6A756;--rose:#A85578;--cream:#FFFBF7}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--blush);color:var(--ink);font-family:'Karla',system-ui,sans-serif;padding:28px 20px;max-width:560px;margin:0 auto;line-height:1.5}
+  h1{font-family:'Fraunces',Georgia,serif;font-weight:500;font-size:26px;margin:0 0 4px}
+  .sub{color:#8a6d80;font-size:14px;margin:0 0 20px}
+  .card{background:var(--cream);border:1px solid #efe0d6;border-radius:20px 20px 20px 6px;padding:18px;margin:14px 0;box-shadow:0 8px 22px rgba(168,85,120,.08)}
+  button{font:inherit;font-weight:600;background:var(--ink);color:#fff;border:0;border-radius:99px;padding:11px 18px;cursor:pointer;margin:4px 6px 4px 0}
+  button.ghost{background:transparent;color:var(--ink);border:1.5px solid #d8c3cf}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  code,.mono{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;word-break:break-all}
+  .addr{background:#f6ebe3;border-radius:10px;padding:9px 11px;margin-top:8px}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:99px;margin-left:6px}
+  .ok{background:rgba(94,155,107,.16);color:#3f7a4e} .warn{background:rgba(214,167,86,.2);color:#8a6410} .bad{background:rgba(168,85,120,.16);color:#a8375a}
+  #log{white-space:pre-wrap}
+  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+  <h1>Device custody test</h1>
+  <p class="sub">Proves her owner key is created and held on <b>this device</b> by her passkey — no seed phrase, nothing on a server. Derivation is already parity-proven; this checks the biometric leg on real hardware.</p>
+
+  <div class="card">
+    <div class="row"><b>1 · Environment</b><span id="envTag" class="tag warn">checking…</span></div>
+    <div id="env" class="mono" style="margin-top:8px;color:#6b5163"></div>
+  </div>
+
+  <div class="card">
+    <b>2 · Secure this device</b>
+    <p class="sub" style="margin:6px 0 10px">Enrolls a passkey (Face / Touch ID / Windows Hello / security key).</p>
+    <button id="enroll">Create my passkey</button>
+    <button id="reset" class="ghost">Reset device (clear old passkey)</button>
+  </div>
+
+  <div class="card">
+    <b>3 · Unlock &amp; derive her owner key</b>
+    <p class="sub" style="margin:6px 0 10px">Biometric prompt → PRF secret → her Solana owner address, in memory only.</p>
+    <button id="unlock" class="ghost">Unlock (derive)</button>
+    <div id="addr1"></div>
+  </div>
+
+  <div class="card">
+    <b>4 · Recovery proof</b>
+    <p class="sub" style="margin:6px 0 10px">Unlock again — the SAME address must reappear (this is how a new phone recovers her key with no backup).</p>
+    <button id="unlock2" class="ghost">Unlock again &amp; compare</button>
+    <div id="addr2"></div>
+  </div>
+
+  <div class="card">
+    <b>5 · Sign &amp; verify</b>
+    <p class="sub" style="margin:6px 0 10px">Her device key signs a challenge; we verify the ed25519 signature.</p>
+    <button id="sign" class="ghost">Sign a challenge</button>
+    <div id="sigout" class="mono" style="margin-top:8px"></div>
+  </div>
+
+  <div class="card"><b>Log</b><div id="log" class="mono" style="margin-top:8px;color:#6b5163"></div></div>
+
+<script src="/vendor/nacl-fast.min.js"></script>
+<script src="/custody.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const log = (m) => { $('log').textContent += m + '\n'; };
+  let firstAddr = null, ownerHandle = null;
+
+  function showEnv() {
+    const C = window.OiraCustody;
+    const secure = window.isSecureContext, prf = C.prfSupported(), enrolled = C.hasEnrolled(), naclOk = !!window.nacl;
+    $('env').innerHTML =
+      `secure context: <b>${secure}</b><br>passkey API: <b>${!!(window.PublicKeyCredential)}</b><br>nacl loaded: <b>${naclOk}</b><br>already enrolled: <b>${enrolled}</b>`;
+    const tag = $('envTag');
+    if (secure && prf && naclOk) { tag.className = 'tag ok'; tag.textContent = 'ready'; }
+    else { tag.className = 'tag bad'; tag.textContent = secure ? 'no passkey/nacl' : 'needs https or localhost'; }
+  }
+
+  $('enroll').onclick = async () => {
+    try { log('enrolling passkey…'); const r = await window.OiraCustody.enroll('oira-device-test');
+      log('enrolled ✓  credentialId=' + r.credentialId.slice(0, 16) + '…');
+      log(r.prfEnabled
+        ? 'PRF available on this authenticator ✓ — derive will use your biometric key'
+        : 'PRF NOT available on this authenticator ✗ — this browser/device (often desktop Windows Hello) will use the reduced-assurance device key. Try an iOS/Android passkey or a Seed Vault for full custody.');
+      showEnv(); }
+    catch (e) { log('enroll ERROR: ' + e.message); }
+  };
+
+  async function doUnlock(target) {
+    const o = await window.OiraCustody.unlockOwner();
+    const reason = o.fallbackReason ? `<div class="tiny" style="margin-top:6px;color:#a8375a">fallback reason: ${o.fallbackReason}</div>` : '';
+    target.innerHTML = `<div class="addr">owner address <span class="tag ${o.assurance==='passkey'?'ok':'warn'}">${o.assurance}</span><br>${o.address}${reason}</div>`;
+    return o;
+  }
+
+  $('reset').onclick = () => {
+    window.OiraCustody.reset(); firstAddr = null; ownerHandle = null;
+    $('addr1').innerHTML = ''; $('addr2').innerHTML = ''; $('sigout').innerHTML = '';
+    log('device reset — old passkey/keys cleared. Enroll again for a clean run.'); showEnv();
+  };
+
+  $('unlock').onclick = async () => {
+    try { log('deriving…'); ownerHandle = await doUnlock($('addr1')); firstAddr = ownerHandle.address;
+      log('owner derived ✓  ' + firstAddr); }
+    catch (e) { log('unlock ERROR: ' + e.message); }
+  };
+
+  $('unlock2').onclick = async () => {
+    try { log('re-deriving…'); const o = await doUnlock($('addr2'));
+      const same = firstAddr && o.address === firstAddr;
+      $('addr2').innerHTML += `<div style="margin-top:8px"><span class="tag ${same?'ok':'bad'}">${same?'MATCH — recovery works':'MISMATCH'}</span></div>`;
+      log(same ? 'recovery MATCH ✓ same key regenerated' : 'MISMATCH ✗'); o.wipe(); }
+    catch (e) { log('unlock2 ERROR: ' + e.message); }
+  };
+
+  $('sign').onclick = async () => {
+    try {
+      const o = ownerHandle || await window.OiraCustody.unlockOwner();
+      const msg = new TextEncoder().encode('oira:device-custody-challenge:' + Date.now());
+      const sig = o.sign(msg);
+      const ok = window.nacl.sign.detached.verify(msg, sig, o.publicKey);
+      $('sigout').innerHTML = `signature (64B): ${window.OiraCustody._b64.enc(sig).slice(0,40)}…<br><span class="tag ${ok?'ok':'bad'}">${ok?'verified ✓':'verify failed'}</span>`;
+      log('sign+verify: ' + (ok ? 'OK ✓' : 'FAILED')); }
+    catch (e) { log('sign ERROR: ' + e.message); }
+  };
+
+  showEnv();
+</script>
+</body>
+</html>

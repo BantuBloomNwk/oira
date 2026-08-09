@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oira · Design Concepts</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400;1,9..144,600&family=Karla:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#FBF3EE; --ink:#43203B; --mauve:#C9799B; --mauve-deep:#A85578;
+    --gold:#D6A756; --lilac:#B49BE0; --petal:#F3DDD6; --cream:#FFFBF7;
+    --night:#1B1120; --nightcard:rgba(255,244,240,.07); --moon:#F3E9E4;
+    --shadow: 0 18px 40px rgba(168,85,120,.14), 0 4px 10px rgba(67,32,59,.06);
+    --iris: conic-gradient(from 210deg, #F4A7B9, #E8C79A, #BFE3C0, #A9CBEF, #C9A9EF, #F4A7B9);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:linear-gradient(160deg,#F7E7E0 0%, #FBF3EE 45%, #F2E4EE 100%);font-family:'Karla',sans-serif;color:var(--ink);padding:56px 32px}
+
+  /* floating petals in the page background */
+  .petals{position:fixed;inset:0;pointer-events:none;z-index:0}
+  .petal{position:absolute;width:14px;height:18px;background:radial-gradient(ellipse at 40% 30%, #F7CFDA, #E8A9BE);border-radius:60% 40% 55% 45%/60% 55% 45% 40%;opacity:.5;animation:drift 16s linear infinite}
+  @keyframes drift{0%{transform:translateY(-6vh) rotate(0deg)}100%{transform:translateY(108vh) rotate(300deg)}}
+
+  .wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto}
+  .head{margin-bottom:42px}
+  .eyebrow{font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--mauve-deep);font-weight:600}
+  .head h1{font-family:'Fraunces',serif;font-weight:300;font-size:52px;line-height:1.08;margin-top:12px}
+  .head h1 em{font-style:italic;color:var(--mauve-deep)}
+  .head p{max-width:600px;margin-top:14px;font-size:15px;line-height:1.65;color:#6d4a63}
+  .irisband{height:8px;border-radius:99px;margin-top:22px;background:linear-gradient(90deg,#F4A7B9,#E8C79A,#BFE3C0,#A9CBEF,#C9A9EF,#F4A7B9);background-size:300% 100%;animation:sheen 9s linear infinite}
+  @keyframes sheen{0%{background-position:0% 0}100%{background-position:300% 0}}
+
+  .concept{margin-top:64px}
+  .concept-head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+  .concept-head h2{font-family:'Fraunces',serif;font-weight:400;font-size:32px}
+  .concept-head h2 em{font-style:italic;color:var(--mauve-deep)}
+  .cdesc{max-width:640px;font-size:14px;line-height:1.65;color:#6d4a63;margin-bottom:6px}
+  .tokens{display:flex;gap:10px;margin:14px 0 30px;align-items:center;flex-wrap:wrap}
+  .tk{width:30px;height:30px;border-radius:50% 50% 50% 6px;box-shadow:var(--shadow)}
+  .tk-label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#8a6580;margin-left:4px}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:52px 34px}
+  .slot{display:flex;flex-direction:column;align-items:center;opacity:0;transform:translateY(26px);animation:rise .9s ease forwards}
+  .slot:nth-child(2){animation-delay:.12s}.slot:nth-child(3){animation-delay:.24s}
+  .slot:nth-child(4){animation-delay:.1s}.slot:nth-child(5){animation-delay:.22s}.slot:nth-child(6){animation-delay:.34s}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .note{margin-top:18px;text-align:center;max-width:290px}
+  .note b{font-family:'Fraunces',serif;font-weight:600;font-size:15px}
+  .note span{display:block;font-size:12.5px;line-height:1.6;color:#7a5570;margin-top:4px}
+
+  /* ---------- phone ---------- */
+  .phone{width:308px;height:650px;background:var(--blush);border-radius:44px;border:7px solid #3a1f34;box-shadow:0 30px 60px rgba(67,32,59,.22);overflow:hidden;position:relative;flex-shrink:0;transition:transform .5s ease, box-shadow .5s ease}
+  .slot:hover .phone{transform:translateY(-8px) rotate(-.4deg);box-shadow:0 44px 80px rgba(67,32,59,.3)}
+  .notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:94px;height:22px;background:#3a1f34;border-radius:12px;z-index:6}
+  .scr{position:absolute;inset:0;padding:50px 20px 18px;display:flex;flex-direction:column}
+  .brand{font-family:'Fraunces',serif;font-weight:600;font-size:18px;letter-spacing:.02em}
+  .brand i{font-style:italic;color:var(--mauve-deep)}
+  .seyebrow{font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--mauve-deep);font-weight:600}
+  h3.big{font-family:'Fraunces',serif;font-weight:300;font-size:31px;line-height:1.12;margin-top:8px}
+  h3.big em{font-style:italic;color:var(--mauve-deep)}
+  .sub{font-size:12.5px;line-height:1.6;color:#7a5570;margin-top:8px}
+  .btn{position:relative;overflow:hidden;display:block;width:100%;text-align:center;background:var(--ink);color:#FDF3EC;border-radius:999px;padding:14px;font-weight:600;font-size:13.5px;border:none;box-shadow:0 10px 22px rgba(67,32,59,.25)}
+  .btn::after{content:"";position:absolute;top:0;left:-70%;width:45%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,240,230,.35),transparent);animation:sweep 3.6s ease infinite}
+  @keyframes sweep{0%,55%{left:-70%}85%,100%{left:130%}}
+  .btn.rose{background:linear-gradient(120deg,var(--mauve-deep),#8E3F63)}
+  .btn.ghost{background:transparent;color:var(--ink);box-shadow:none;border:1.5px solid #d9bccb;font-weight:500}
+  .btn.ghost::after{display:none}
+  .tiny{font-size:10.5px;color:#9a7590;text-align:center;margin-top:9px}
+  .card{background:var(--cream);border-radius:20px 20px 20px 6px;padding:14px;box-shadow:var(--shadow);border:1px solid #f0dde4}
+  .chiplbl{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:#a97e93;font-weight:600}
+  .swatches{display:flex;gap:5px;margin-top:8px}
+  .sw{flex:1;height:24px;border-radius:8px}
+  .sw.on{outline:2.5px solid var(--gold);outline-offset:2px;animation:glowring 2.6s ease infinite}
+  @keyframes glowring{0%,100%{box-shadow:0 0 0 0 rgba(214,167,86,0)}50%{box-shadow:0 0 14px 2px rgba(214,167,86,.55)}}
+  .ribbon{height:11px;border-radius:999px;background:linear-gradient(90deg,#F1DCCB,#DDB699,#BC8563,#96603F,#6E4128,#4A2B1C);margin-top:10px;position:relative;overflow:hidden}
+  .ribbon::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.4) 50%,transparent 70%);background-size:220% 100%;animation:sheen 5s linear infinite}
+  .grain{position:absolute;inset:0;opacity:.5;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E")}
+
+  /* wax seal */
+  .seal{width:112px;height:112px;border-radius:48% 52% 50% 50%/50% 48% 52% 50%;background:radial-gradient(circle at 34% 30%, #E4B96B 0%, #D6A756 38%, #B4813C 75%, #96682E 100%);box-shadow:inset 0 4px 10px rgba(255,240,210,.65), inset 0 -8px 14px rgba(90,58,20,.45), 0 16px 30px rgba(150,104,46,.4);display:flex;align-items:center;justify-content:center;position:relative;animation:press 4.2s ease infinite}
+  @keyframes press{0%,100%{transform:scale(1)}6%{transform:scale(1.12) rotate(-2deg)}12%{transform:scale(.99)}18%{transform:scale(1)}}
+  .seal::before{content:"";position:absolute;inset:13px;border-radius:50%;border:1.5px solid rgba(255,244,220,.55);box-shadow:inset 0 2px 6px rgba(90,58,20,.35)}
+  .seal span{font-family:'Fraunces',serif;font-style:italic;font-weight:400;font-size:48px;color:#7A5320;text-shadow:0 1px 0 rgba(255,240,205,.6)}
+  .seal.mini{width:42px;height:42px;animation:none}
+  .seal.mini span{font-size:19px}
+  .glowring2{position:absolute;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(214,167,86,.35),transparent 65%);animation:halo 4.2s ease infinite}
+  @keyframes halo{0%,100%{opacity:.35;transform:scale(1)}10%{opacity:.9;transform:scale(1.18)}}
+
+  /* portrait stand-in "photo" */
+  .portrait{border-radius:24px;position:relative;overflow:hidden;background:
+    radial-gradient(90px 110px at 50% 42%, #8A5A3C 0%, #6E4128 55%, transparent 60%),
+    radial-gradient(150px 120px at 50% 108%, #4A2B1C 0%, transparent 62%),
+    linear-gradient(165deg,#F2D9C6 0%,#E4BCA3 55%,#D2A184 100%);box-shadow:var(--shadow)}
+  .portrait::after{content:"";position:absolute;inset:0;background:radial-gradient(140px 80px at 78% 12%, rgba(255,235,215,.75), transparent 70%)}
+  .cam{flex:1;border-radius:26px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+  .oval{position:absolute;top:50%;left:50%;transform:translate(-50%,-54%);width:164px;height:216px;border-radius:50%;border:2.5px dashed rgba(255,250,244,.92);animation:breathe 3.4s ease infinite}
+  @keyframes breathe{0%,100%{transform:translate(-50%,-54%) scale(1)}50%{transform:translate(-50%,-54%) scale(1.03)}}
+  .hint{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:rgba(255,251,247,.94);border-radius:999px;padding:6px 15px;font-size:11px;font-weight:600;color:var(--mauve-deep);white-space:nowrap;z-index:2}
+  .shutter{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);width:60px;height:60px;border-radius:50%;background:var(--cream);border:5px solid var(--mauve);animation:pulse 2.2s ease infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(201,121,155,.5)}55%{box-shadow:0 0 0 14px rgba(201,121,155,0)}}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+  .chip{background:var(--petal);border-radius:999px;padding:4px 11px;font-size:10.5px;font-weight:600;color:var(--mauve-deep)}
+  .chip.gold{background:#F4E4C4;color:#8a6420}
+  .verdict{display:flex;align-items:center;gap:10px;background:#EFF7EF;border:1px solid #cfe4cf;border-radius:15px 15px 15px 5px;padding:11px 13px;margin-top:9px}
+  .dot{width:11px;height:11px;border-radius:50%;background:#5E9B6B;animation:pulse 2.4s ease infinite}
+  .row{display:flex;justify-content:space-between;align-items:center}
+  .earn{font-family:'Fraunces',serif;font-size:28px;font-weight:600}
+  .avatarq{width:40px;height:40px;border-radius:50% 50% 50% 8px;background:linear-gradient(135deg,#BC8563,#6E4128)}
+  .prog{height:5px;border-radius:99px;background:#EBD6DE;margin-top:12px;overflow:hidden}
+  .prog i{display:block;height:100%;width:66%;background:linear-gradient(90deg,var(--mauve),var(--mauve-deep));border-radius:99px;position:relative;overflow:hidden}
+  .prog i::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);background-size:200% 100%;animation:sheen 2.6s linear infinite}
+  .budget{display:flex;gap:4px;margin-top:8px}
+  .budget b{flex:1;height:7px;border-radius:99px;background:#E7CBD7}
+  .budget b.used{background:var(--mauve-deep)}
+
+  /* ============ DARK CONCEPT ============ */
+  .darkzone{background:radial-gradient(1000px 500px at 70% -10%, #33203E 0%, var(--night) 55%);border-radius:40px;padding:52px 40px 60px;margin-top:70px;color:var(--moon);position:relative;overflow:hidden}
+  .darkzone .eyebrow{color:#D9A9C6}
+  .darkzone h2, .darkzone .concept-head h2{color:var(--moon)}
+  .darkzone .cdesc{color:#C3AEC0}
+  .darkzone .tk-label{color:#A98BA4}
+  .darkzone .note b{color:var(--moon)}
+  .darkzone .note span{color:#B49CB1}
+  .stars{position:absolute;inset:0;pointer-events:none}
+  .star{position:absolute;width:3px;height:3px;border-radius:50%;background:#F3E0D2;opacity:.7;animation:twinkle 3.8s ease infinite}
+  @keyframes twinkle{0%,100%{opacity:.15}50%{opacity:.85}}
+
+  .phone.d{background:linear-gradient(175deg,#241528 0%,#1B1120 60%);border-color:#0f0713}
+  .phone.d .notch{background:#0f0713}
+  .phone.d .brand{color:var(--moon)}
+  .phone.d h3.big{color:var(--moon)}
+  .phone.d h3.big em{color:#E9B8D2}
+  .phone.d .sub{color:#BBA5B8}
+  .phone.d .tiny{color:#96809A}
+  .phone.d .card{background:var(--nightcard);border:1px solid rgba(243,233,228,.14);box-shadow:0 14px 30px rgba(0,0,0,.4);backdrop-filter:blur(6px)}
+  .phone.d .chiplbl{color:#CBA0BE}
+  .phone.d .chip{background:rgba(233,184,210,.14);color:#EFC9DE}
+  .phone.d .chip.gold{background:rgba(214,167,86,.16);color:#E8C88C}
+  .phone.d .btn{background:linear-gradient(120deg,#E9B8D2,#C9A9EF);color:#2A1430}
+  .phone.d .btn.ghost{background:transparent;color:var(--moon);border-color:rgba(243,233,228,.3)}
+  .phone.d .earn{color:var(--moon)}
+  .phone.d .verdict{background:rgba(94,155,107,.14);border-color:rgba(94,155,107,.35);color:#CFE7D4}
+  .phone.d .verdict .tiny{color:#A6C4AC}
+  .irisrim{position:relative}
+  .irisrim::before{content:"";position:absolute;inset:-3px;border-radius:47px;background:var(--iris);filter:blur(10px);opacity:.55;z-index:-1;animation:spinIris 12s linear infinite}
+  @keyframes spinIris{to{transform:rotate(360deg)}}
+  .dew{position:absolute;border-radius:50%;background:radial-gradient(circle at 35% 30%, rgba(255,255,255,.8), rgba(255,255,255,.08) 60%);opacity:.5}
+  .moonseal{width:112px;height:112px;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;background:var(--iris);animation:spinIrisBG 14s linear infinite;box-shadow:0 0 40px rgba(201,169,239,.5)}
+  @keyframes spinIrisBG{to{filter:hue-rotate(360deg)}}
+  .moonseal::before{content:"";position:absolute;inset:6px;border-radius:50%;background:linear-gradient(160deg,#2A1430,#1B1120)}
+  .moonseal span{position:relative;font-family:'Fraunces',serif;font-style:italic;font-size:46px;color:#EFC9DE}
+  .nightbar{height:44px;border-radius:14px;background:rgba(243,233,228,.06);border:1px solid rgba(243,233,228,.12);display:flex;align-items:center;gap:10px;padding:0 12px;margin-top:8px}
+  .nightbar .tick{width:20px;height:20px;border-radius:50%;background:rgba(94,155,107,.25);border:1.5px solid #7FB98B;display:flex;align-items:center;justify-content:center;color:#BFE3C0;font-size:11px}
+  .nightbar div{font-size:11.5px;color:#D9CBD6}
+
+  /* ============ CONCEPT 3 mini ============ */
+  .atelier{margin-top:70px}
+  .phone.s{background:#F4E9DC;border-color:#2E1F18}
+  .phone.s .notch{background:#2E1F18}
+  .phone.s .brand{color:#2E1F18}
+  .phone.s h3.big{color:#2E1F18}
+  .phone.s h3.big em{color:#7A1F3D}
+  .phone.s .seyebrow{color:#9A5A2E}
+  .phone.s .sub{color:#6E5548}
+  .phone.s .card{background:#FDF8F0;border:1.5px dashed #C9A98C;border-radius:14px;box-shadow:0 10px 24px rgba(46,31,24,.1)}
+  .phone.s .btn{background:#7A1F3D}
+  .phone.s .chip{background:#EFDFC9;color:#7A4A22}
+  .stitch{border-top:1.5px dashed #C9A98C;margin:10px 0}
+
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{animation-duration:.001s !important;animation-iteration-count:1 !important;transition:none !important}
+  }
+</style>
+</head>
+<body>
+<div class="petals">
+  <div class="petal" style="left:8%;animation-delay:0s"></div>
+  <div class="petal" style="left:26%;animation-delay:4s;animation-duration:20s"></div>
+  <div class="petal" style="left:57%;animation-delay:9s"></div>
+  <div class="petal" style="left:78%;animation-delay:2s;animation-duration:22s"></div>
+  <div class="petal" style="left:92%;animation-delay:12s"></div>
+</div>
+
+<div class="wrap">
+<div class="head">
+  <div class="eyebrow">Aurora K · Oira design directions · v0.2</div>
+  <h1>Oira<em>.</em> Named for the goddess<br>who spoke in <em>rainbows.</em></h1>
+  <p>Iris carried messages between worlds on a band of colour; Oira carries hers, privately. Three directions below share one soul: the melanin ribbon, the seal, and warmth everywhere. Concept two doubles as the app's night mode.</p>
+  <div class="irisband"></div>
+</div>
+
+<!-- ==================== CONCEPT 1 ==================== -->
+<div class="concept">
+  <div class="concept-head"><span class="eyebrow">Concept 01</span><h2>The Vanity Letter · <em>soft, powdered, sealed</em></h2></div>
+  <p class="cdesc">Pressed-powder surfaces, plum ink, rose mauve actions, champagne gold spent only on the seal. Motion is gentle and purposeful: petals drift, the seal presses, gold shimmers across her sampled swatch.</p>
+  <div class="tokens">
+    <div class="tk" style="background:#FBF3EE;border:1px solid #ecd8dc"></div><div class="tk" style="background:#43203B"></div><div class="tk" style="background:#C9799B"></div><div class="tk" style="background:#D6A756"></div><div class="tk" style="background:#B49BE0"></div>
+    <span class="tk-label">Blush · Plum ink · Rose mauve · Seal gold · Lilac whisper</span>
+  </div>
+  <div class="grid">
+
+    <div class="slot">
+      <div class="phone"><div class="notch"></div>
+        <div class="scr">
+          <div class="brand">Oira<i>.</i></div>
+          <div style="margin-top:56px">
+            <div class="seyebrow">One selfie</div>
+            <h3 class="big">Your colours,<br><em>kept.</em></h3>
+            <p class="sub">Find the shades made for your skin. Your reading stays sealed; only you hold the key.</p>
+          </div>
+          <div class="ribbon" style="margin-top:24px"></div>
+          <div style="margin-top:auto">
+            <button class="btn">Continue with fingerprint</button>
+            <button class="btn ghost" style="margin-top:9px">Use a wallet instead</button>
+            <div class="tiny">No email. No password. Nothing to remember.</div>
+          </div>
+        </div>
+      </div>
+      <div class="note"><b>01 · Welcome</b><span>The melanin ribbon shimmers once as the first image she sees; the button carries a slow silk sheen.</span></div>
+    </div>
+
+    <div class="slot">
+      <div class="phone"><div class="notch"></div>
+        <div class="scr">
+          <div class="row"><div class="brand">Oira<i>.</i></div><div class="seyebrow">Step 1 of 3</div></div>
+          <div class="cam portrait" style="margin-top:14px;flex:1;border-radius:26px">
+            <div class="grain"></div>
+            <div class="hint">Lovely — hold that light</div>
+            <div class="oval"></div>
+            <div class="shutter"></div>
+          </div>
+          <p class="sub" style="text-align:center;margin-top:10px">Face the window, not the lamp.<br>Your photo never leaves this phone.</p>
+        </div>
+      </div>
+      <div class="note"><b>02 · Capture</b><span>A warm live portrait with film grain, a breathing oval guide, and a pulsing shutter. Liveness check happens here, invisibly.</span></div>
+    </div>
+
+    <div class="slot">
+      <div class="phone"><div class="notch"></div>
+        <div class="scr" style="gap:9px">
+          <div class="seyebrow">Your reading · Step 2 of 3</div>
+          <h3 class="big" style="font-size:25px;margin-top:0">Deep <em>&amp;</em> cool.</h3>
+          <div class="card">
+            <div class="row"><div class="chiplbl">Undertone</div><span class="chip">Adjust</span></div>
+            <div class="swatches">
+              <div class="sw" style="background:#F1DCCB"></div><div class="sw" style="background:#DDB699"></div><div class="sw" style="background:#BC8563"></div><div class="sw" style="background:#96603F"></div><div class="sw on" style="background:#6E4128"></div><div class="sw" style="background:#4A2B1C"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="row"><div class="chiplbl">Season · True Winter</div><span class="chip">Adjust</span></div>
+            <div class="swatches">
+              <div class="sw" style="background:#7A1F3D"></div><div class="sw" style="background:#B3123B"></div><div class="sw" style="background:#1E2A5A"></div><div class="sw" style="background:#0E6B5C"></div><div class="sw" style="background:#5A2E8A"></div><div class="sw" style="background:#FFFBF7;border:1px solid #eee"></div>
+            </div>
+          </div>
+          <div class="card" style="padding:11px 14px"><div class="chiplbl">Face</div><div class="chips" style="margin-top:5px"><span class="chip">Soft oval</span><span class="chip">Almond eyes</span><span class="chip">Full lips</span></div></div>
+          <div style="margin-top:auto"><button class="btn rose">This is me — seal it</button><div class="tiny">You confirm your Palette. It is yours to correct.</div></div>
+        </div>
+      </div>
+      <div class="note"><b>03 · Confirm her reading</b><span>New step from the devil's advocate pass: she adjusts and confirms before sealing. Her word is part of the truth.</span></div>
+    </div>
+
+    <div class="slot">
+      <div class="phone"><div class="notch"></div>
+        <div class="scr" style="align-items:center;text-align:center">
+          <div class="brand" style="align-self:flex-start">Oira<i>.</i></div>
+          <div style="margin-top:58px;position:relative;display:flex;align-items:center;justify-content:center">
+            <div class="glowring2"></div>
+            <div class="seal"><span>O</span></div>
+          </div>
+          <h3 class="big" style="margin-top:26px">Sealed.</h3>
+          <p class="sub" style="max-width:225px">Locked in a private vault. Only you hold the key; not brands, not even us.</p>
+          <div class="chips" style="justify-content:center;margin-top:12px"><span class="chip gold">Private vault · on</span><span class="chip">Open anytime</span></div>
+          <div style="margin-top:auto;width:100%"><button class="btn">Meet your agent</button></div>
+        </div>
+      </div>
+      <div class="note"><b>04 · The seal</b><span>Gold wax presses with a haptic thump and a halo of light. The signature moment of the whole app.</span></div>
+    </div>
+
+    <div class="slot">
+      <div class="phone"><div class="notch"></div>
+        <div class="scr" style="gap:9px">
+          <div class="row">
+            <div><div class="seyebrow">While you slept</div><h3 class="big" style="font-size:23px;margin-top:2px">Amara<em>.</em></h3></div>
+            <div class="seal mini"><span>O</span></div>
+          </div>
+          <div class="card">
+            <div class="row"><div class="chiplbl">Overnight · answered privately</div><span class="chip gold">Attested ✓</span></div>
+            <div class="row" style="margin-top:9px;gap:10px">
+              <div class="avatarq"></div>
+              <div style="flex:1"><div style="font-weight:600;font-size:12.5px">Deep-cool foundation · matched</div><div class="tiny" style="text-align:left;margin-top:2px">Nubia Beauty · sample claimed · $0.15</div></div>
+            </div>
+            <div class="row" style="margin-top:8px;gap:10px">
+              <div class="avatarq" style="background:linear-gradient(135deg,#7A1F3D,#4A1226)"></div>
+              <div style="flex:1"><div style="font-weight:600;font-size:12.5px">Berry lip survey · declined</div><div class="tiny" style="text-align:left;margin-top:2px">Outside your rules · no data shared</div></div>
+            </div>
+          </div>
+          <div class="card" style="padding:12px 14px">
+            <div class="row"><div class="chiplbl">Question budget · Nubia Beauty</div></div>
+            <div class="budget"><b class="used"></b><b class="used"></b><b></b></div>
+            <div class="tiny" style="text-align:left;margin-top:6px">2 of 3 questions used this month</div>
+          </div>
+          <div class="card" style="padding:12px 14px">
+            <div class="row"><div class="chiplbl">Earned so far</div><span class="tiny" style="margin:0">Cash out</span></div>
+            <div class="earn">$4.35</div>
+            <div class="prog"><i></i></div>
+          </div>
+        </div>
+      </div>
+      <div class="note"><b>05 · While you slept</b><span>The new hero screen: her delegated agent answered offers inside the enclave overnight, with the query budget visible and every answer attested.</span></div>
+    </div>
+
+    <div class="slot">
+      <div class="phone"><div class="notch"></div>
+        <div class="scr" style="gap:9px">
+          <div class="seyebrow">Check a colour</div>
+          <div class="portrait" style="flex:1;min-height:140px;background:linear-gradient(160deg,#8A2C4B,#5E1B33)">
+            <div class="grain"></div>
+            <div class="hint" style="top:12px;background:rgba(255,251,247,.94)">Berry wrap dress</div>
+          </div>
+          <div class="verdict"><div class="dot"></div><div><div style="font-weight:600;font-size:13px">In your palette</div><div class="tiny" style="text-align:left;margin:0">Cool berry · a True Winter colour</div></div></div>
+          <div class="card" style="text-align:center;padding:15px">
+            <div style="display:flex;justify-content:center"><div class="seal mini"><span>O</span></div></div>
+            <div style="font-weight:600;font-size:12.5px;margin-top:7px">Checked on your phone</div>
+            <div class="tiny" style="margin-top:2px">Free, instant, never leaves the device</div>
+          </div>
+          <div style="margin-top:auto"><button class="btn">Find it in my colours</button></div>
+        </div>
+      </div>
+      <div class="note"><b>06 · The verdict</b><span>Her own checks run on-device, free and instant; only brand questions go to the enclave. The copy teaches the difference.</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== CONCEPT 2 : DARK ==================== -->
+<div class="darkzone">
+  <div class="stars">
+    <div class="star" style="top:8%;left:12%"></div><div class="star" style="top:16%;left:64%;animation-delay:1.2s"></div><div class="star" style="top:5%;left:86%;animation-delay:2s"></div><div class="star" style="top:30%;left:38%;animation-delay:.6s"></div><div class="star" style="top:44%;left:90%;animation-delay:1.7s"></div><div class="star" style="top:60%;left:6%;animation-delay:2.4s"></div>
+  </div>
+  <div class="concept-head"><span class="eyebrow">Concept 02 · also the night mode</span><h2 style="font-family:'Fraunces',serif;font-weight:400;font-size:32px">Iris After Dark · <em style="color:#E9B8D2">dewy, iridescent, asleep and earning</em></h2></div>
+  <p class="cdesc">Aubergine night, dew-glass cards, and the rainbow of Iris as a living rim of light. This is the world of the offline story: she locks her phone, and her Palette keeps working inside the enclave.</p>
+  <div class="tokens">
+    <div class="tk" style="background:#1B1120;border:1px solid #3a2542"></div><div class="tk" style="background:#F3E9E4"></div><div class="tk" style="background:#E9B8D2"></div><div class="tk" style="background:#C9A9EF"></div><div class="tk" style="background:conic-gradient(from 210deg,#F4A7B9,#E8C79A,#BFE3C0,#A9CBEF,#C9A9EF,#F4A7B9)"></div>
+    <span class="tk-label">Night · Moonmilk · Rose glow · Lilac glow · The iris</span>
+  </div>
+  <div class="grid">
+
+    <div class="slot">
+      <div class="phone d irisrim"><div class="notch"></div>
+        <div class="scr">
+          <div class="brand">Oira<i style="color:#E9B8D2">.</i></div>
+          <div style="margin-top:54px">
+            <div class="seyebrow" style="color:#CBA0BE">Goodnight</div>
+            <h3 class="big">Sleep. Your palette<br><em>stays awake.</em></h3>
+            <p class="sub">Brands may ask questions tonight. Your rules answer them inside a sealed vault; your phone stays dark.</p>
+          </div>
+          <div class="nightbar"><div class="tick">✓</div><div>Night rules on · max 3 questions · min $0.10</div></div>
+          <div class="nightbar"><div class="tick">✓</div><div>Face &amp; photos: never shared, ever</div></div>
+          <div style="margin-top:auto"><button class="btn">Set my night rules</button></div>
+        </div>
+      </div>
+      <div class="note"><b>07 · Goodnight</b><span>Delegation made ladylike: she sets her rules like laying out tomorrow's outfit, and the iris rim breathes around the phone.</span></div>
+    </div>
+
+    <div class="slot">
+      <div class="phone d irisrim"><div class="notch"></div>
+        <div class="scr" style="align-items:center;text-align:center">
+          <div class="brand" style="align-self:flex-start">Oira<i style="color:#E9B8D2">.</i></div>
+          <div style="margin-top:60px" class="moonseal"><span>O</span></div>
+          <h3 class="big" style="margin-top:26px">3:12 am<em>.</em></h3>
+          <p class="sub" style="max-width:225px">A question arrived and was answered inside the vault. One word left: yes. Nothing else did.</p>
+          <div class="chips" style="justify-content:center;margin-top:12px"><span class="chip gold">Hardware attested</span><span class="chip">Receipt kept</span></div>
+          <div style="margin-top:auto;width:100%"><div class="tiny">She never saw this screen. That is the point.</div></div>
+        </div>
+      </div>
+      <div class="note"><b>08 · The 3am match</b><span>The demo beat that makes the enclave load-bearing: an answer a brand can trust, produced while her phone was locked.</span></div>
+    </div>
+
+    <div class="slot">
+      <div class="phone d irisrim"><div class="notch"></div>
+        <div class="scr" style="gap:9px">
+          <div class="seyebrow" style="color:#CBA0BE">Good morning</div>
+          <h3 class="big" style="font-size:24px;margin-top:0">While you slept<em>.</em></h3>
+          <div class="card">
+            <div class="row"><div class="chiplbl">2 questions · 1 match</div><span class="chip gold">All attested ✓</span></div>
+            <div class="verdict" style="margin-top:10px"><div class="dot"></div><div><div style="font-weight:600;font-size:12.5px;color:#DFF0E2">Foundation sample · $0.15</div><div class="tiny" style="text-align:left;margin:0">Arrives Thursday</div></div></div>
+          </div>
+          <div class="card" style="padding:12px 14px">
+            <div class="chiplbl">Receipts</div>
+            <div class="tiny" style="text-align:left;margin-top:6px">03:12 · Nubia Beauty · undertone · yes · ✓<br>04:40 · Velour Paris · season · declined · ✓</div>
+          </div>
+          <div class="card" style="padding:12px 14px">
+            <div class="row"><div class="chiplbl">Earned overnight</div></div>
+            <div class="earn">+$0.30</div>
+          </div>
+          <div style="margin-top:auto"><button class="btn">See every receipt</button></div>
+        </div>
+      </div>
+      <div class="note"><b>09 · Morning digest</b><span>Total transparency in her language: every question, every answer, every coin, every attestation, auditable in one glance.</span></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ==================== CONCEPT 3 mini ==================== -->
+<div class="concept atelier">
+  <div class="concept-head"><span class="eyebrow">Concept 03 · a third road</span><h2>The Silk Atelier · <em>couture, stitched, heirloom</em></h2></div>
+  <p class="cdesc">Champagne silk, espresso ink, burgundy actions, and hand-stitch borders in place of hairlines; the Palette treated like a garment being fitted. Quieter motion: only the stitch draws itself in. Shown small; say the word and I will develop it fully.</p>
+  <div class="tokens">
+    <div class="tk" style="background:#F4E9DC;border:1px solid #dcc8ae"></div><div class="tk" style="background:#2E1F18"></div><div class="tk" style="background:#7A1F3D"></div><div class="tk" style="background:#C9A98C"></div>
+    <span class="tk-label">Silk · Espresso · Burgundy · Thread</span>
+  </div>
+  <div class="grid">
+    <div class="slot">
+      <div class="phone s"><div class="notch"></div>
+        <div class="scr">
+          <div class="brand">Oira<i style="color:#7A1F3D">.</i></div>
+          <div style="margin-top:62px">
+            <div class="seyebrow">Maison of one</div>
+            <h3 class="big">Fitted to you,<br><em>and only you.</em></h3>
+          </div>
+          <div class="stitch" style="margin-top:22px"></div>
+          <p class="sub">Every colour tried against your own cloth.</p>
+          <div style="margin-top:auto"><button class="btn">Begin the fitting</button></div>
+        </div>
+      </div>
+      <div class="note"><b>10 · Welcome</b><span>The fitting-room voice: couture vocabulary, stitched rules.</span></div>
+    </div>
+    <div class="slot">
+      <div class="phone s"><div class="notch"></div>
+        <div class="scr" style="gap:9px">
+          <div class="seyebrow">The fitting</div>
+          <h3 class="big" style="font-size:24px;margin-top:0">Deep <em>&amp;</em> cool.</h3>
+          <div class="card"><div class="chiplbl">Undertone</div>
+            <div class="swatches"><div class="sw" style="background:#F1DCCB"></div><div class="sw" style="background:#DDB699"></div><div class="sw" style="background:#BC8563"></div><div class="sw" style="background:#96603F"></div><div class="sw on" style="background:#6E4128"></div><div class="sw" style="background:#4A2B1C"></div></div>
+          </div>
+          <div class="card"><div class="chiplbl">Your cloth · True Winter</div>
+            <div class="swatches"><div class="sw" style="background:#7A1F3D"></div><div class="sw" style="background:#B3123B"></div><div class="sw" style="background:#1E2A5A"></div><div class="sw" style="background:#0E6B5C"></div><div class="sw" style="background:#5A2E8A"></div></div>
+          </div>
+          <div style="margin-top:auto"><button class="btn">Pin it in place</button></div>
+        </div>
+      </div>
+      <div class="note"><b>11 · The fitting</b><span>Swatches as fabric bolts; sealing becomes pinning.</span></div>
+    </div>
+    <div class="slot">
+      <div class="phone s"><div class="notch"></div>
+        <div class="scr" style="align-items:center;text-align:center">
+          <div class="brand" style="align-self:flex-start">Oira<i style="color:#7A1F3D">.</i></div>
+          <div style="margin-top:70px" class="seal"><span style="color:#5E1B33">O</span></div>
+          <h3 class="big" style="margin-top:26px">Kept in<br><em>the atelier.</em></h3>
+          <div class="stitch" style="width:70%;margin:16px auto"></div>
+          <p class="sub" style="max-width:210px">Your measurements never leave the house.</p>
+        </div>
+      </div>
+      <div class="note"><b>12 · The keep</b><span>The seal survives in every concept; here it reads as a house crest.</span></div>
+    </div>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

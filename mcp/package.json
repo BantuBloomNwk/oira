@@ -1,0 +1,17 @@
+{
+  "name": "oira-mcp-server",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Governed MCP tool layer for the Oira concierge (advisory, read-only).",
+  "bin": {
+    "oira-mcp": "oira-mcp-server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.8"
+  },
+  "scripts": {
+    "test": "node test-mcp.mjs"
+  }
+}

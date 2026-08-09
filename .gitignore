@@ -1,0 +1,34 @@
+node_modules/
+.env
+.env.*
+dist/
+out/
+.DS_Store
+*.log
+target/
+.superstack/
+keys/
+target/
+scratchpad/
+*.keystore
+*keystore-password*
+
+# Local Netlify folder
+.netlify
+
+# Internal planning docs — not for public release
+docs/patents/
+docs/PATENT-AND-FHE-ANALYSIS.md
+docs/BRAND-EFFICACY-ARCHITECTURE.md
+docs/HEALTH-NAVIGATOR-THESIS.md
+client/campaigns.json
+client/genesis-redemptions.json
+
+# Internal analysis — not for public release
+analysis/leakage/
+
+# Internal session log — keep local, never public origin
+Sessions.md
+
+# e2e run artifacts — contain ephemeral secret keys
+client/*-e2e-state.json

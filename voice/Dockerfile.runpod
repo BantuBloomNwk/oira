@@ -1,0 +1,13 @@
+# RunPod Serverless worker for Oira STT (faster-whisper). Build, push, point a Serverless
+# endpoint at it. Uses a CUDA base so large-v3 runs on GPU.
+FROM runpod/base:0.6.2-cuda12.2.0
+
+RUN pip install --no-cache-dir faster-whisper==1.0.3 runpod==1.7.0
+
+# Pre-bake the model into the image so cold starts don't re-download it (optional but faster).
+# Comment out to keep the image small and download on first run instead.
+ENV WHISPER_MODEL=large-v3 WHISPER_DEVICE=cuda WHISPER_COMPUTE=float16
+RUN python -c "from faster_whisper import WhisperModel; WhisperModel('large-v3')" || true
+
+COPY runpod_handler.py /handler.py
+CMD ["python", "-u", "/handler.py"]

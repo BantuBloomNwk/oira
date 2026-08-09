@@ -1,0 +1,64 @@
+name: CI
+
+# Fast tier only: syntax checks + everything that runs free and deterministic, no devnet, no
+# secrets, no external service. Runs on every push and PR so it actually catches regressions
+# before they ship, unlike the devnet e2e suite (see devnet-e2e.yml), which is real money/time
+# on a live network and is deliberately NOT run here.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  fast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install client deps
+        working-directory: client
+        run: npm ci
+
+      - name: Install mcp deps
+        working-directory: mcp
+        run: npm install --no-audit --no-fund # mcp/.gitignore excludes its lockfile, so npm ci can't run in CI
+
+      - name: Syntax check every .js/.mjs file
+        run: |
+          set -e
+          fail=0
+          while IFS= read -r -d '' f; do
+            node --check "$f" || fail=1
+          done < <(find app client mcp netlify scripts -name '*.js' -o -name '*.mjs' 2>/dev/null | grep -v node_modules | tr '\n' '\0')
+          exit $fail
+
+      - name: Concierge LLM seam tests (mocked, no weights/GPU needed)
+        run: node scripts/test-llm.mjs
+
+      - name: Custody derivation proof (deterministic recovery, uniqueness, signing)
+        working-directory: client
+        run: node test-custody.mjs
+
+      - name: Custody browser/node parity proof
+        working-directory: client
+        run: node test-custody-parity.mjs
+
+      - name: Fallback-recovery roundtrip proof
+        working-directory: client
+        run: node test-custody-recovery.mjs
+
+      - name: App PWA smoke test (headless Chromium; skips clean if no browser)
+        working-directory: client
+        run: node test-app-smoke.mjs
+
+      - name: Self-seal Sybil-gate proof (off by default)
+        working-directory: client
+        run: node test-self-seal-gate.mjs
+
+      - name: MCP tool-boundary tests
+        working-directory: mcp
+        run: npm test

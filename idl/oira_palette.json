@@ -1,0 +1,1986 @@
+{
+  "address": "CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP",
+  "metadata": {
+    "name": "oira_palette",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Oira Palette vault — private beauty/colour traits matched inside a MagicBlock Private ER (TEE)"
+  },
+  "instructions": [
+    {
+      "name": "close_campaign",
+      "discriminator": [
+        65,
+        49,
+        110,
+        7,
+        63,
+        238,
+        206,
+        77
+      ],
+      "accounts": [
+        {
+          "name": "brand",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "campaign"
+          ]
+        },
+        {
+          "name": "campaign",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "brand"
+              },
+              {
+                "kind": "account",
+                "path": "campaign.offer_id",
+                "account": "Campaign"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign"
+              }
+            ]
+          }
+        },
+        {
+          "name": "brand_token",
+          "writable": true
+        },
+        {
+          "name": "treasury_token",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "commit_receipt",
+      "docs": [
+        "Commit the (hashed) receipt + budget state to base. Traits are NOT part of this account."
+      ],
+      "discriminator": [
+        151,
+        113,
+        134,
+        175,
+        215,
+        19,
+        239,
+        23
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "palette",
+          "writable": true
+        },
+        {
+          "name": "magic_context",
+          "writable": true
+        },
+        {
+          "name": "magic_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_campaign",
+      "discriminator": [
+        111,
+        131,
+        187,
+        98,
+        160,
+        193,
+        114,
+        244
+      ],
+      "accounts": [
+        {
+          "name": "brand",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mint"
+        },
+        {
+          "name": "campaign",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "brand"
+              },
+              {
+                "kind": "arg",
+                "path": "offer_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign"
+              }
+            ]
+          }
+        },
+        {
+          "name": "brand_token",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "offer_id",
+          "type": "u64"
+        },
+        {
+          "name": "category",
+          "type": "u8"
+        },
+        {
+          "name": "per_query_cost",
+          "type": "u64"
+        },
+        {
+          "name": "per_accept_payout",
+          "type": "u64"
+        },
+        {
+          "name": "target_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "escrow_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "delegate_campaign",
+      "discriminator": [
+        179,
+        37,
+        210,
+        58,
+        116,
+        38,
+        10,
+        173
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "brand"
+        },
+        {
+          "name": "buffer_campaign",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  102,
+                  102,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                174,
+                227,
+                59,
+                234,
+                99,
+                60,
+                238,
+                110,
+                171,
+                152,
+                179,
+                181,
+                72,
+                120,
+                11,
+                4,
+                248,
+                245,
+                217,
+                149,
+                215,
+                229,
+                24,
+                144,
+                71,
+                181,
+                65,
+                7,
+                46,
+                237,
+                142,
+                34
+              ]
+            }
+          }
+        },
+        {
+          "name": "delegation_record_campaign",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "delegation_metadata_campaign",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  100,
+                  97,
+                  116,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "campaign",
+          "writable": true
+        },
+        {
+          "name": "owner_program",
+          "address": "CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP"
+        },
+        {
+          "name": "delegation_program",
+          "address": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "offer_id",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "delegate_palette",
+      "docs": [
+        "Delegate the Palette (receipt + budget state) into the ER (TEE validator first remaining account)."
+      ],
+      "discriminator": [
+        126,
+        47,
+        50,
+        199,
+        51,
+        127,
+        163,
+        176
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "buffer_palette",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  102,
+                  102,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "palette"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                174,
+                227,
+                59,
+                234,
+                99,
+                60,
+                238,
+                110,
+                171,
+                152,
+                179,
+                181,
+                72,
+                120,
+                11,
+                4,
+                248,
+                245,
+                217,
+                149,
+                215,
+                229,
+                24,
+                144,
+                71,
+                181,
+                65,
+                7,
+                46,
+                237,
+                142,
+                34
+              ]
+            }
+          }
+        },
+        {
+          "name": "delegation_record_palette",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "palette"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "delegation_metadata_palette",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  100,
+                  97,
+                  116,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "palette"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "palette",
+          "writable": true
+        },
+        {
+          "name": "owner_program",
+          "address": "CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP"
+        },
+        {
+          "name": "delegation_program",
+          "address": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "delegate_traits",
+      "docs": [
+        "Delegate the TraitsSession into the ER. This account is marked private and NEVER",
+        "undelegated — her bucketed traits live only inside the enclave."
+      ],
+      "discriminator": [
+        250,
+        131,
+        51,
+        145,
+        218,
+        23,
+        197,
+        224
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "buffer_traits",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  98,
+                  117,
+                  102,
+                  102,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "traits"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                174,
+                227,
+                59,
+                234,
+                99,
+                60,
+                238,
+                110,
+                171,
+                152,
+                179,
+                181,
+                72,
+                120,
+                11,
+                4,
+                248,
+                245,
+                217,
+                149,
+                215,
+                229,
+                24,
+                144,
+                71,
+                181,
+                65,
+                7,
+                46,
+                237,
+                142,
+                34
+              ]
+            }
+          }
+        },
+        {
+          "name": "delegation_record_traits",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "traits"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "delegation_metadata_traits",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110,
+                  45,
+                  109,
+                  101,
+                  116,
+                  97,
+                  100,
+                  97,
+                  116,
+                  97
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "traits"
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "delegation_program"
+            }
+          }
+        },
+        {
+          "name": "traits",
+          "writable": true
+        },
+        {
+          "name": "owner_program",
+          "address": "CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP"
+        },
+        {
+          "name": "delegation_program",
+          "address": "DELeGGvXpWV2fqJUhqcF5ZSYMS4JTLjteaAMARRSaeSh"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "init_palette",
+      "docs": [
+        "Create her Palette vault on base. Stores an opaque recovery blob, her owner pubkey,",
+        "and the COMMITMENT ROOT keccak(salt‖traits) the phone computed over her confirmed",
+        "reading. Plaintext traits never touch this account. WRITE-ONCE per owner."
+      ],
+      "discriminator": [
+        126,
+        208,
+        211,
+        12,
+        182,
+        218,
+        169,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "palette",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  108,
+                  101,
+                  116,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "enc_traits",
+          "type": "bytes"
+        },
+        {
+          "name": "commitment_root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "init_traits",
+      "docs": [
+        "Create the (empty) TraitsSession account on base. It holds NO traits yet — traits are",
+        "written only later, inside the enclave, by `set_traits`, so plaintext buckets never",
+        "exist on public base even for one slot."
+      ],
+      "discriminator": [
+        249,
+        231,
+        124,
+        233,
+        7,
+        76,
+        130,
+        97
+      ],
+      "accounts": [
+        {
+          "name": "traits",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  105,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "match_query",
+      "docs": [
+        "THE match. Runs INSIDE the TEE, signed by the agent session key (owner offline). READS",
+        "her sealed traits and computes the verdict itself — the client supplies only the offer,",
+        "never the answer. Enforces the query budget and her night rules on-chain. Commits only",
+        "a HASHED receipt so the public base never learns which offer matched."
+      ],
+      "discriminator": [
+        226,
+        250,
+        79,
+        34,
+        74,
+        54,
+        64,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "agent",
+          "docs": [
+            "The agent SESSION KEY — least privilege, only this instruction. Owner may be offline."
+          ],
+          "signer": true
+        },
+        {
+          "name": "palette",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  108,
+                  101,
+                  116,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "palette.owner",
+                "account": "PaletteVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "traits",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  105,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "palette.owner",
+                "account": "PaletteVault"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "relations": [
+            "traits"
+          ]
+        },
+        {
+          "name": "campaign",
+          "docs": [
+            "The brand's campaign, co-delegated into this ER — the ONLY offer the agent can query her",
+            "against (L2). Mutated in-enclave (answered/receipt/payee/queries), then undelegated to base."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign.brand",
+                "account": "Campaign"
+              },
+              {
+                "kind": "account",
+                "path": "campaign.offer_id",
+                "account": "Campaign"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "target_undertone",
+          "type": "u8"
+        },
+        {
+          "name": "target_depth",
+          "type": "u8"
+        },
+        {
+          "name": "target_season",
+          "type": "u8"
+        },
+        {
+          "name": "depth_tol",
+          "type": "u8"
+        },
+        {
+          "name": "offer_salt",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "process_undelegation",
+      "discriminator": [
+        196,
+        28,
+        41,
+        206,
+        48,
+        37,
+        51,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "base_account",
+          "writable": true
+        },
+        {
+          "name": "buffer"
+        },
+        {
+          "name": "payer",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "account_seeds",
+          "type": {
+            "vec": "bytes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_night_rules",
+      "docs": [
+        "Her standing NIGHT RULES, enforced in-enclave while she sleeps."
+      ],
+      "discriminator": [
+        161,
+        135,
+        100,
+        23,
+        107,
+        129,
+        89,
+        4
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "palette"
+          ]
+        },
+        {
+          "name": "palette",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  108,
+                  101,
+                  116,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "min_payout",
+          "type": "u64"
+        },
+        {
+          "name": "max_q_per_brand",
+          "type": "u8"
+        },
+        {
+          "name": "blocked_cats",
+          "type": "u32"
+        },
+        {
+          "name": "active",
+          "type": "bool"
+        },
+        {
+          "name": "lifetime_cap",
+          "type": "u32"
+        },
+        {
+          "name": "epoch_cap",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "set_palette_privacy",
+      "docs": [
+        "Mark the delegated Palette private inside the TEE, whitelisting exactly one reader."
+      ],
+      "discriminator": [
+        23,
+        10,
+        225,
+        28,
+        237,
+        42,
+        180,
+        150
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "palette",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  108,
+                  101,
+                  116,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "permission",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "permission_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "reader",
+          "type": "pubkey"
+        },
+        {
+          "name": "is_private",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "set_traits",
+      "docs": [
+        "Write her bucketed traits INTO the private TraitsSession — runs inside the enclave,",
+        "owner-signed. BINDS them to the commitment root: recomputes keccak(salt‖traits) and",
+        "requires it to equal the root the phone published at init. Traits that don't match",
+        "what she confirmed are rejected, so no one (agent or server) can substitute them."
+      ],
+      "discriminator": [
+        121,
+        106,
+        27,
+        166,
+        239,
+        199,
+        114,
+        184
+      ],
+      "accounts": [
+        {
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "traits",
+            "palette"
+          ]
+        },
+        {
+          "name": "traits",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  105,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "palette",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  108,
+                  101,
+                  116,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "undertone",
+          "type": "u8"
+        },
+        {
+          "name": "depth",
+          "type": "u8"
+        },
+        {
+          "name": "season",
+          "type": "u8"
+        },
+        {
+          "name": "salt",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_traits_privacy",
+      "docs": [
+        "Mark the delegated TraitsSession private inside the TEE, whitelisting only the agent.",
+        "This is what makes her traits readable by the match engine but no one else."
+      ],
+      "discriminator": [
+        85,
+        27,
+        236,
+        136,
+        54,
+        30,
+        113,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "traits",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  116,
+                  114,
+                  97,
+                  105,
+                  116,
+                  115
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "permission",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "magic_program"
+        },
+        {
+          "name": "permission_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "reader",
+          "type": "pubkey"
+        },
+        {
+          "name": "is_private",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "settle_offer",
+      "docs": [
+        "Settle an accepted offer — the payout is now AUTHORIZED BY THE REAL ON-CHAIN MATCH,",
+        "not a brand-supplied boolean. The brand presents (offer_hash, verdict, nonce); the",
+        "program requires the offer to be this campaign's target, the verdict to be MATCH, and",
+        "sha256(offer_hash‖verdict‖nonce) to equal the committed match receipt on her Palette.",
+        "She (the payee) must own the Palette. No match, no money."
+      ],
+      "discriminator": [
+        40,
+        52,
+        19,
+        31,
+        0,
+        165,
+        52,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "brand",
+          "signer": true,
+          "relations": [
+            "campaign"
+          ]
+        },
+        {
+          "name": "campaign",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "brand"
+              },
+              {
+                "kind": "account",
+                "path": "campaign.offer_id",
+                "account": "Campaign"
+              }
+            ]
+          }
+        },
+        {
+          "name": "escrow",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  101,
+                  115,
+                  99,
+                  114,
+                  111,
+                  119
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign"
+              }
+            ]
+          }
+        },
+        {
+          "name": "her_token",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "offer_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "verdict",
+          "type": "u8"
+        },
+        {
+          "name": "nonce",
+          "type": {
+            "array": [
+              "u8",
+              16
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "undelegate_campaign",
+      "discriminator": [
+        104,
+        38,
+        176,
+        37,
+        217,
+        238,
+        54,
+        150
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "campaign",
+          "writable": true
+        },
+        {
+          "name": "magic_context",
+          "writable": true
+        },
+        {
+          "name": "magic_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "undelegate_palette",
+      "discriminator": [
+        35,
+        232,
+        76,
+        217,
+        225,
+        61,
+        228,
+        115
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "palette",
+          "writable": true
+        },
+        {
+          "name": "magic_context",
+          "writable": true
+        },
+        {
+          "name": "magic_program"
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Campaign",
+      "discriminator": [
+        50,
+        40,
+        49,
+        11,
+        157,
+        220,
+        229,
+        192
+      ]
+    },
+    {
+      "name": "PaletteVault",
+      "discriminator": [
+        245,
+        92,
+        215,
+        147,
+        137,
+        190,
+        250,
+        89
+      ]
+    },
+    {
+      "name": "TraitsSession",
+      "discriminator": [
+        69,
+        103,
+        113,
+        132,
+        171,
+        123,
+        15,
+        154
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "EncTooLong",
+      "msg": "encrypted traits too long"
+    },
+    {
+      "code": 6001,
+      "name": "EncEmpty",
+      "msg": "encrypted traits empty"
+    },
+    {
+      "code": 6002,
+      "name": "NotPrivate",
+      "msg": "palette is not marked private"
+    },
+    {
+      "code": 6003,
+      "name": "TraitsNotSealed",
+      "msg": "traits are not sealed"
+    },
+    {
+      "code": 6004,
+      "name": "BadTrait",
+      "msg": "bad trait bucket value"
+    },
+    {
+      "code": 6005,
+      "name": "BindingMismatch",
+      "msg": "sealed traits do not match the published commitment"
+    },
+    {
+      "code": 6006,
+      "name": "TraitsOwnerMismatch",
+      "msg": "traits owner mismatch"
+    },
+    {
+      "code": 6007,
+      "name": "StaleEpoch",
+      "msg": "stale epoch"
+    },
+    {
+      "code": 6008,
+      "name": "QueryBudgetExceeded",
+      "msg": "query budget exceeded for this epoch"
+    },
+    {
+      "code": 6009,
+      "name": "LifetimeBudgetExceeded",
+      "msg": "lifetime query budget exceeded"
+    },
+    {
+      "code": 6010,
+      "name": "PerBrandCapExceeded",
+      "msg": "per-brand distinct-offer cap exceeded"
+    },
+    {
+      "code": 6011,
+      "name": "OfferMismatch",
+      "msg": "offer does not match this campaign target"
+    },
+    {
+      "code": 6012,
+      "name": "NotAMatch",
+      "msg": "verdict is not a match"
+    },
+    {
+      "code": 6013,
+      "name": "UnauthorizedAgent",
+      "msg": "caller is not her authorized agent"
+    },
+    {
+      "code": 6014,
+      "name": "AlreadySettled",
+      "msg": "offer already settled"
+    },
+    {
+      "code": 6015,
+      "name": "NotAnswered",
+      "msg": "offer has not been answered in-enclave"
+    },
+    {
+      "code": 6016,
+      "name": "ReceiptMismatch",
+      "msg": "match receipt does not verify"
+    },
+    {
+      "code": 6017,
+      "name": "PayeeMismatch",
+      "msg": "payee does not own the palette"
+    },
+    {
+      "code": 6018,
+      "name": "EscrowTooSmall",
+      "msg": "escrow smaller than one payout"
+    },
+    {
+      "code": 6019,
+      "name": "CampaignClosed",
+      "msg": "campaign is closed"
+    },
+    {
+      "code": 6020,
+      "name": "InsufficientEscrow",
+      "msg": "insufficient escrow for this settlement"
+    },
+    {
+      "code": 6021,
+      "name": "BadTokenOwner",
+      "msg": "brand token account owner mismatch"
+    },
+    {
+      "code": 6022,
+      "name": "BadMint",
+      "msg": "brand token account mint mismatch"
+    }
+  ],
+  "types": [
+    {
+      "name": "BrandCount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "brand",
+            "type": "pubkey"
+          },
+          {
+            "name": "count",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Campaign",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "brand",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "offer_id",
+            "type": "u64"
+          },
+          {
+            "name": "category",
+            "type": "u8"
+          },
+          {
+            "name": "per_query_cost",
+            "type": "u64"
+          },
+          {
+            "name": "per_accept_payout",
+            "type": "u64"
+          },
+          {
+            "name": "target_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "escrowed",
+            "type": "u64"
+          },
+          {
+            "name": "spent",
+            "type": "u64"
+          },
+          {
+            "name": "paid",
+            "type": "u64"
+          },
+          {
+            "name": "queries",
+            "type": "u32"
+          },
+          {
+            "name": "accepts",
+            "type": "u32"
+          },
+          {
+            "name": "active",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "answered",
+            "type": "bool"
+          },
+          {
+            "name": "receipt",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "payee_commit",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "PaletteVault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "enc_traits",
+            "type": "bytes"
+          },
+          {
+            "name": "commitment_root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "query_count",
+            "type": "u32"
+          },
+          {
+            "name": "lifetime_queries",
+            "type": "u32"
+          },
+          {
+            "name": "epoch",
+            "type": "u32"
+          },
+          {
+            "name": "is_private",
+            "type": "bool"
+          },
+          {
+            "name": "last_verdict",
+            "type": "u8"
+          },
+          {
+            "name": "last_nonce",
+            "type": {
+              "array": [
+                "u8",
+                16
+              ]
+            }
+          },
+          {
+            "name": "updated_at",
+            "type": "i64"
+          },
+          {
+            "name": "min_payout",
+            "type": "u64"
+          },
+          {
+            "name": "max_q_per_brand",
+            "type": "u8"
+          },
+          {
+            "name": "blocked_cats",
+            "type": "u32"
+          },
+          {
+            "name": "rules_active",
+            "type": "bool"
+          },
+          {
+            "name": "lifetime_cap",
+            "type": "u32"
+          },
+          {
+            "name": "epoch_cap",
+            "type": "u32"
+          },
+          {
+            "name": "agent",
+            "type": "pubkey"
+          },
+          {
+            "name": "brands",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "BrandCount"
+                  }
+                },
+                8
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TraitsSession",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "undertone",
+            "type": "u8"
+          },
+          {
+            "name": "depth",
+            "type": "u8"
+          },
+          {
+            "name": "season",
+            "type": "u8"
+          },
+          {
+            "name": "is_sealed",
+            "type": "bool"
+          },
+          {
+            "name": "salt",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

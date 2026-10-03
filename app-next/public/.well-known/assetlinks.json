@@ -1,0 +1,15 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls",
+      "delegate_permission/common.get_login_creds"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.oira.twa",
+      "sha256_cert_fingerprints": [
+        "F0:03:9D:FD:9D:9E:B8:B5:63:CF:CA:82:53:B4:1B:AA:9B:14:16:03:FA:8B:12:98:67:45:46:03:FE:8C:41:AD"
+      ]
+    }
+  }
+]

@@ -1,0 +1,18 @@
+{
+  "name": "Oira",
+  "short_name": "Oira",
+  "description": "Your colours, your features, your hair. Read on your phone, sealed to you, never uploaded.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1B1120",
+  "theme_color": "#FBF3EE",
+  "categories": ["beauty", "lifestyle"],
+  "icons": [
+    { "src": "/brand/svg/oira-mark-silk-edge-light.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/brand/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

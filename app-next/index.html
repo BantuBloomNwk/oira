@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Oira</title>
+    <meta name="description" content="Your colours, your features, your hair. Read on your phone, sealed to you, never uploaded." />
+    <meta name="theme-color" content="#FBF3EE" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/brand/svg/oira-mark-silk-edge-light.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/brand/icon-192.png" />
+    <!-- The two faces that paint first. Everything else in the family loads with the
+         stylesheet; these are ahead of it so the wordmark and the body never flash. -->
+    <link rel="preload" href="/fonts/fraunces-latin-normal-8f90dc.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/karla-latin-normal-272db4.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- What a shared link looks like when it unfurls.
+         A card shared as an image carries itself; a bare link does not, and half of what
+         gets pasted into a chat is a bare link. og:image is the brand mark on blush until
+         there is a server that can render her actual season per link. -->
+    <meta property="og:title" content="Oira. Find your season." />
+    <meta property="og:description" content="One reading of your own face, on your own phone. Your undertone, your depth, your shades. It never leaves the device." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/brand/icon-512.png" />
+    <meta property="og:image:alt" content="Oira" />
+    <meta property="og:site_name" content="Oira" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Oira. Find your season." />
+    <meta name="twitter:description" content="One reading of your own face, on your own phone. It never leaves the device." />
+    <meta name="twitter:image" content="/brand/icon-512.png" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -39,4 +39,4 @@ cd client && node campaign-e2e.mjs
 
 semgrep 0 findings on `lib.rs` + `campaign-e2e.mjs`; cargo-audit / npm-audit only the
 known MagicBlock-SDK transitive warnings (do NOT autofix — downgrades the SDK / web3.js
-and breaks the PER path). See `scratchpad/sec.log`.
+and breaks the PER path).

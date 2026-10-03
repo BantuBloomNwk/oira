@@ -1,0 +1,386 @@
+@import "tailwindcss";
+/* Fraunces and Karla, from our own origin. See src/fonts.css for why. */
+@import "./fonts.css";
+/* The pieces of the shipping app that survive the revamp untouched. */
+@import "./preserved.css";
+
+/* Oira's design system, straight from DESIGN.md. The AI Studio export arrived with a
+   palette of its own (crimson #A81838, ink #331425, ground #FAF5F0) and four Google
+   serifs. None of that is Oira. The layout it brought is what we kept; the colour and
+   the type come from brand/ and DESIGN.md, which the shipping app and the seal already
+   speak. Where this file and brand/README.md disagree, brand/README.md wins. */
+
+@theme {
+  /* Daylight */
+  --color-ink: #43203B;          /* plum. all text, the still mark, primary buttons */
+  --color-blush: #FBF3EE;        /* daylight page ground */
+  --color-paper: #FFFBF7;        /* raised daylight surface: receipt, season card */
+  --color-mauve: #C9799B;        /* rose mauve. primary action, links */
+  --color-mauve-deep: #A85578;   /* eyebrows, emphasis, hover */
+  --color-gold: #D6A756;         /* seal gold. sealed and attested states ONLY */
+  --color-gold-deep: #B4813C;
+  --color-lilac: #B49BE0;        /* secondary accent, rules and sliders */
+  --color-petal: #F3DDD6;
+  --color-line: #EFDDE2;
+  --color-muted: #8A6580;
+
+  /* After Dark */
+  --color-night: #1B1120;        /* after dark ground */
+  --color-moon: #F3E9E4;         /* moonmilk. text on night, the dark mark */
+  --color-rose-glow: #E9B8D2;    /* petals, glow on night */
+
+  /* Melanin ribbon. Daylight surfaces, the human skin range. One ribbon per
+     composition, and never both this and the iris in the same view. */
+  --color-skin-1: #F1DCCB;
+  --color-skin-2: #DDB699;
+  --color-skin-3: #BC8563;
+  --color-skin-4: #96603F;
+  --color-skin-5: #6E4128;
+  --color-skin-6: #4A2B1C;
+
+  /* Never #000, never #fff: neutrals are plum-tinted. Rather than rewrite 250 call sites,
+     redefine what white and black mean here, so every bg-white/70 and border-white/10 the
+     layout already carries comes out on-system. */
+  --color-white: #FFFBF7;
+  --color-black: #1B1120;
+
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Karla', system-ui, -apple-system, sans-serif;
+
+  /* The house curve. Ease out only, exponential. No bounce, no elastic. */
+  --ease-house: cubic-bezier(.16, 1, .3, 1);
+}
+
+/* The iris gradient is a light source, not a fill. Night surfaces only, and it never sits
+   behind text. Declared on :root rather than in @theme because it is a gradient, not a colour
+   token, and nothing should be generating bg-iris utilities off it. */
+:root {
+  --iris: conic-gradient(from 210deg, #F4A7B9, #E8C79A, #BFE3C0, #A9CBEF, #C9A9EF, #F4A7B9);
+}
+
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    color: var(--color-ink);
+    background-color: var(--color-blush);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Neutrals are plum-tinted. Never #000, never #fff. */
+  ::selection {
+    background: var(--color-petal);
+    color: var(--color-ink);
+  }
+
+  /* She is on a phone, and every interactive thing has to be findable by keyboard too. */
+  :focus-visible {
+    outline: 2px solid var(--color-mauve);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+/* Display type. Fraunces at 300 to 500; the italic carries emotional weight, one or two
+   words at a time, never a whole sentence. */
+.font-display {
+  font-family: var(--font-display);
+  font-weight: 300;
+  letter-spacing: -0.01em;
+}
+
+.font-display em,
+.font-display .em {
+  font-style: italic;
+  color: var(--color-mauve-deep);
+}
+
+/* The eyebrow. 13px on the marketing pages, smaller inside the phone frame. */
+.eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--color-mauve-deep);
+  font-weight: 700;
+}
+
+/* The brand's one structural signature: an asymmetric radius, on genuinely raised
+   surfaces only. Never nested. */
+.surface {
+  background: var(--color-paper);
+  border: 1px solid var(--color-line);
+  border-radius: 20px 20px 20px 6px;
+  box-shadow: 0 20px 44px rgba(67, 32, 59, .12);
+}
+
+/* Swatch dishes read as pressed pans of pigment, so the rim catches light at the top
+   and the well falls away underneath. */
+.swatch-dish {
+  box-shadow:
+    inset 0 3px 6px rgba(67, 32, 59, 0.35),
+    inset 0 -2px 4px rgba(255, 251, 247, 0.15),
+    0 4px 10px rgba(67, 32, 59, 0.18);
+}
+
+.swatch-dish-light {
+  box-shadow:
+    inset 0 3px 6px rgba(67, 32, 59, 0.12),
+    inset 0 -2px 4px rgba(255, 251, 247, 0.8),
+    0 4px 10px rgba(67, 32, 59, 0.08);
+}
+
+.luxury-card-shadow {
+  box-shadow: 0 16px 40px -10px rgba(67, 32, 59, 0.08), 0 4px 16px -4px rgba(67, 32, 59, 0.04);
+}
+
+/* ---------------------------------------------------------------------------
+   Typing must not zoom the page.
+
+   iOS Safari zooms the whole viewport whenever a form control smaller than 16px takes focus.
+   It is not a bug in the app and there is no way to opt out of it: the only thing that stops
+   it is the font actually being 16px. The chat box in Ask Oira is 12.5px, so tapping it threw
+   the page into a zoom she then had to pinch her way back out of, mid sentence.
+
+   Fixed for every input in the app rather than that one, because there are fourteen of them
+   and the next one added would have the same problem.
+
+   Deliberately NOT fixed with maximum-scale or user-scalable=no on the viewport, which is the
+   other answer you find and which works by taking pinch zoom away from everybody, including
+   the women who need it to read. Making the text bigger costs nothing and helps them too.
+
+   Scoped to coarse pointers so the desktop presentation keeps the size it was designed at.
+   --------------------------------------------------------------------------- */
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   No phone drawn inside a phone.
+
+   #phone-frame is a device mockup: an 8px near-black border, a 46px radius, a fixed 844px
+   height and a drop shadow. On a desktop browser that is the whole point, it is what makes
+   the app read as something held rather than something browsed.
+
+   On an actual handset it was wrong in a way that is obvious the moment you see it and
+   invisible on the machine it was built on. A phone was being drawn around a phone, the
+   rounded corners cut into real content at all four edges, and the fixed height fought the
+   browser's own chrome. Worse in the installed app, which has no browser chrome to explain
+   the black band and is supposed to look like it belongs to the device.
+
+   So the mockup is desktop-only. Two triggers, and both are needed: a narrow viewport
+   catches the phone browser, and display-mode standalone catches the installed app on a
+   tablet or a foldable that is wide enough to miss the width test.
+
+   100dvh, not 100vh. On mobile Safari and Chrome vh is the tallest the viewport ever gets,
+   so the bottom of the app sits underneath the address bar until she scrolls. dvh tracks the
+   bar as it hides and shows, which is the whole reason it exists.
+   --------------------------------------------------------------------------- */
+@media (max-width: 480px), (display-mode: standalone) {
+  #phone-frame {
+    max-width: none;
+    width: 100%;
+    height: 100dvh;
+    max-height: none;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  /* The stage is scenery for the desktop presentation. On a handset the app IS the page, so
+     the surround would only be a strip of oxblood behind the address bar. */
+  .stage {
+    padding: 0;
+    background: #FBF3EE;
+  }
+}
+
+/* The notch, the camera cutout and the home indicator.
+ *
+ * viewport-fit=cover in index.html lets the page paint under all three, which is what makes a
+ * full bleed camera view possible. The cost is that anything at the very top or bottom sits
+ * under hardware unless it says otherwise, so the two fixed chrome elements ask for the inset
+ * and nothing else does. Deliberately not applied to #phone-frame itself: the scan view is
+ * absolutely positioned to inset-0 and is supposed to run edge to edge, and padding on the
+ * frame would letterbox the viewfinder.
+ */
+@supports (padding: env(safe-area-inset-top)) {
+  #phone-frame > header {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  #phone-frame > nav:last-child,
+  #phone-frame > footer {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The stage. What sits OUTSIDE the phone on a desktop browser.
+
+   It arrived as night plus a plum wash plus a rose wash, and plum is a purple: the whole
+   surround read violet where the AI Studio page read maroon. The fix is not a new colour,
+   it is a warmer one already in the system. The melanin ribbon's two deepest bands are
+   Oira's browns, and night laid under skin-6 at forty five percent composites to a deep
+   oxblood that the phone's blush face sits on the way the reference did. */
+.stage {
+  background:
+    radial-gradient(120% 85% at 50% -10%, rgba(110, 65, 40, .42), transparent 62%),
+    radial-gradient(90% 60% at 12% 105%, rgba(74, 43, 28, .55), transparent 70%),
+    radial-gradient(80% 55% at 92% 82%, rgba(168, 85, 120, .22), transparent 72%),
+    linear-gradient(168deg, #2E1B1B 0%, #241419 46%, #1B1120 100%);
+}
+
+/* ---------------------------------------------------------------------------
+   The carved control. One slider vocabulary, used everywhere a value slides.
+
+   The pigment does not sit ON the track, it sits IN it: a groove cut into a polished
+   surface, dark at the upper lip where the light cannot reach and bright along the lower
+   wall where it bounces back out. The bead is turned metal, lit from the same upper left
+   the seal is lit from, so the two objects agree about where the light is.
+   --------------------------------------------------------------------------- */
+.oira-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+  /* Set per instance. The channel carries whatever this slider is actually choosing. */
+  --oira-track: linear-gradient(to right, var(--color-petal), var(--color-mauve));
+  --oira-land: rgba(255, 251, 247, .92);
+  --oira-cut: rgba(27, 17, 32, .5);
+  --oira-bounce: rgba(255, 251, 247, .55);
+  --oira-bead: radial-gradient(circle at 34% 26%,
+    #FFFDFA 0%, #F7E9DE 16%, #DCC4B6 44%, #F3E1D6 60%, #AC8F81 86%, #6E5347 100%);
+}
+
+.oira-range::-webkit-slider-runnable-track {
+  height: 15px;
+  border-radius: 999px;
+  background: var(--oira-track);
+  box-shadow:
+    inset 0 3px 6px var(--oira-cut),
+    inset 0 -2px 3px var(--oira-bounce),
+    inset 0 0 0 1px rgba(27, 17, 32, .2),
+    0 1px 0 var(--oira-land);
+}
+
+.oira-range::-moz-range-track {
+  height: 15px;
+  border-radius: 999px;
+  background: var(--oira-track);
+  box-shadow:
+    inset 0 3px 6px var(--oira-cut),
+    inset 0 -2px 3px var(--oira-bounce),
+    inset 0 0 0 1px rgba(27, 17, 32, .2),
+    0 1px 0 var(--oira-land);
+}
+
+.oira-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  margin-top: -5px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--oira-bead);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 251, 247, .95),
+    inset 0 -1px 2px rgba(67, 32, 59, .4),
+    0 0 0 1px rgba(67, 32, 59, .22),
+    0 3px 8px rgba(67, 32, 59, .38);
+  transition: transform .16s var(--ease-house);
+}
+
+.oira-range::-moz-range-thumb {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--oira-bead);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 251, 247, .95),
+    inset 0 -1px 2px rgba(67, 32, 59, .4),
+    0 0 0 1px rgba(67, 32, 59, .22),
+    0 3px 8px rgba(67, 32, 59, .38);
+  transition: transform .16s var(--ease-house);
+}
+
+.oira-range:active::-webkit-slider-thumb { transform: scale(1.08) }
+.oira-range:active::-moz-range-thumb { transform: scale(1.08) }
+
+/* On aubergine the land is dark and the bounce comes off gold rather than off paper. */
+.oira-range.on-night {
+  --oira-land: rgba(243, 233, 228, .16);
+  --oira-cut: rgba(0, 0, 0, .68);
+  --oira-bounce: rgba(214, 167, 86, .3);
+  --oira-bead: radial-gradient(circle at 34% 26%,
+    #FFF6E2 0%, #F0D9A6 18%, #D6A756 46%, #E9C784 60%, #9C7231 86%, #5C4118 100%);
+}
+
+/* ---------------------------------------------------------------------------
+   The chroma wheel. A pressed pan of pigment the size of a compact, not a pie chart.
+
+   Depth comes from three real things rather than a drop shadow: a bevelled outer rim that
+   catches light at the top, a specular sweep across the upper left quadrant, and a well in
+   the middle that the live colour sits down inside.
+   --------------------------------------------------------------------------- */
+.chroma-rim {
+  box-shadow:
+    inset 0 2px 3px rgba(255, 251, 247, .75),
+    inset 0 -3px 6px rgba(67, 32, 59, .4),
+    0 1px 0 rgba(255, 251, 247, .9),
+    0 14px 30px -8px rgba(67, 32, 59, .45),
+    0 3px 10px -2px rgba(67, 32, 59, .25);
+}
+
+/* Light falling across the pan from above and to the left. Screen so it can only add. */
+.chroma-sheen {
+  background: radial-gradient(58% 50% at 27% 17%,
+    rgba(255, 251, 247, .34) 0%,
+    rgba(255, 251, 247, .1) 40%,
+    rgba(255, 251, 247, 0) 68%);
+  mix-blend-mode: screen;
+}
+
+/* And the shadow the rim throws down into the pigment on the far side. */
+.chroma-shade {
+  background: radial-gradient(70% 62% at 75% 87%,
+    rgba(27, 17, 32, .3) 0%,
+    rgba(27, 17, 32, .1) 44%,
+    rgba(27, 17, 32, 0) 72%);
+  mix-blend-mode: multiply;
+}
+
+/* The well the live colour sits in, dished like the swatch pans. */
+.chroma-well {
+  box-shadow:
+    inset 0 4px 9px rgba(67, 32, 59, .38),
+    inset 0 -3px 5px rgba(255, 251, 247, .95),
+    0 1px 0 rgba(255, 251, 247, .9);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Nothing here moves for anyone who asked the OS not to move things. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,109 @@
+# Security headers. Netlify reads this file from the publish directory; Vite copies
+# everything in public/ there verbatim.
+#
+# The whole app is same-origin except for one file. No fonts from Google, no photographs
+# from a CDN, no script from anywhere but here. That is not tidiness: this app tells a
+# woman her face never leaves her phone, and a stylesheet request to fonts.googleapis.com
+# told Google she had opened Oira before she agreed to anything. Self-hosting closes that,
+# and it costs nothing on speed. It is faster: two origins fewer means two DNS lookups and
+# two TLS handshakes off the critical path, and the files arrive multiplexed on the
+# connection we already have. The fonts are 332KB for both families, latin and latin-ext.
+#
+# THE ONE EXCEPTION, and it is named in connect-src below: models.myoira.com, which serves
+# the three gigabytes of Gemma weights for the on-device concierge and serves nothing else.
+# It is our own machine, the Contabo box that already runs the bridge, not a third party.
+# The file could not live on this origin: Netlify meters bandwidth at 20 credits per GB
+# against a 1000 credit monthly pool shared with every Ilowa and Oira site, so sixteen
+# downloads would take app.ilowa.app offline along with this app, and a Netlify rewrite
+# times out at 26 seconds regardless. See infra/oira.caddy for the whole argument.
+
+/*
+  # Nothing loads from anywhere but here.
+  #
+  # 'wasm-unsafe-eval' is required and is not a loosening of script-src: it permits
+  # WebAssembly compilation and nothing else. The face landmarker and the hair segmenter
+  # are WASM, and without it the scan cannot run at all. The shipping app at app/index.html
+  # carries the same allowance for the same reason.
+  #
+  # 'unsafe-inline' on style-src only. React sets style attributes on elements (the petal
+  # drift, the iris gradient, the model swatches) and CSP has no way to hash those. It is
+  # the weak line here; script-src, which is the one that matters, has no such allowance.
+  #
+  # blob: on worker-src and media-src because the WASM runtime spawns workers from blobs
+  # and the camera preview is a blob stream. Both same-origin.
+  #
+  # connect-src IS LOAD BEARING, and not for the reason you would guess.
+  # The MediaPipe vision bundle POSTs telemetry to https://odml.pa.googleapis.com/v1/log
+  # every time it starts a graph. There is no option to turn that off. It is blocked here,
+  # and it is blocked a second time in src/lib/scan.ts, deliberately, so that relaxing this
+  # line for some future integration cannot quietly start telling Google when a woman opens
+  # her scanner. That second block is still in place and must stay there.
+  #
+  # This directive has been widened three times, and every one is ours or her own phone.
+  #
+  # models.myoira.com serves the Gemma weights, for the reason given at the top of this file.
+  # One host, one immutable public file, fetched only after she taps a button telling her how
+  # big it is.
+  #
+  # wss://oira.161-97-74-212.sslip.io is the sealing bridge, and it is here only because a
+  # WebSocket cannot go through the /api rewrite in netlify.toml the way every other call to
+  # that same bridge does. Netlify's proxy does not carry an upgrade. So the HTTPS traffic
+  # stays same-origin and proxied, and only the socket is named. What crosses it is a message
+  # to sign and a signature coming back: no image, no landmarks, no Lab values, no key. See
+  # src/lib/seal.ts.
+  #
+  # ws://localhost and ws://127.0.0.1 are her wallet, on her own phone. Mobile Wallet Adapter
+  # talks to the wallet app over a local socket, and without these the wallet opens, she
+  # approves, and the page never hears back. Nothing on that socket leaves the device.
+  #
+  # Read all three as the standard for widening this again rather than as permission. A host that
+  # would carry anything identifying about her does not belong on this line, and the
+  # odml.pa.googleapis.com telemetry endpoint blocked in src/lib/scan.ts stays blocked.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' https://models.myoira.com wss://oira.161-97-74-212.sslip.io ws://localhost:* ws://127.0.0.1:*; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests
+
+  # The camera and the microphone, from ourselves only. Everything else is denied outright
+  # rather than left to default.
+  #
+  # The microphone is here for Ask Oira, and it is fenced on the script side rather than
+  # only here: src/lib/dictation.ts refuses to open a session unless the browser can pin
+  # recognition to an on-device model, because Chrome's default SpeechRecognition streams
+  # her voice to Google and this app is not going to do that quietly. This header opens the
+  # door; that file decides whether anyone walks through it.
+  Permissions-Policy: camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=(), display-capture=()
+
+  Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+
+  # NOT set: Cross-Origin-Embedder-Policy. Adding `require-corp` would make the page
+  # crossOriginIsolated, which unlocks SharedArrayBuffer and lets the MediaPipe runtime go
+  # multithreaded, so the scan would get faster. It is deliberately left off until someone
+  # has tested a real deploy on a real phone: MediaPipe runs single threaded without it, so
+  # the gain is an optimisation, while getting it wrong breaks the camera flow outright.
+  # Turn it on once, verify a scan end to end, and keep it. Do not turn it on blind.
+
+# The scan models, the WASM runtime and the fonts are content-addressed or versioned and
+# never change under the same name. Cache them hard so the scan's 16MB is a one-off.
+# (The Gemma weights are not here. They are served by models.myoira.com, and their caching
+# headers live in infra/oira.caddy.)
+/models/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/mediapipe/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/portraits/*
+  Cache-Control: public, max-age=604800
+
+/products/*
+  Cache-Control: public, max-age=604800
+
+# Vite fingerprints these, so they are safe to pin forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

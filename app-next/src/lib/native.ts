@@ -1,10 +1,9 @@
 import { Capacitor } from '@capacitor/core';
 
-/* Inside the installed app the page is served from https://localhost, out of the APK
- * itself. That is right for loading, and wrong for every place that uses the page's own
- * address to mean "Oira": a passkey made for localhost is not her Oira passkey, a wallet
- * shown "localhost" is being asked to trust nobody, and a relative /api goes nowhere because
- * there is no Netlify in front of it. These name the real address for those cases.
+/* Inside the installed app the page is served from the APK itself, under the hostname
+ * app.myoira.com (capacitor.config.ts). The address matches the web, so passkeys and the
+ * wallet see Oira, but nothing behind that address is the real site: a relative /api inside
+ * the app is answered from the APK and goes nowhere. These name the real places for that.
  *
  * Synchronous on purpose. Capacitor installs its bridge before the page runs, and the
  * callers (a passkey prompt, a wallet connect) cannot wait on an import mid gesture. */

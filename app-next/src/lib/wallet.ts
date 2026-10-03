@@ -127,10 +127,10 @@ export function unavailableMessage(): string {
   try {
     const cannotSign = connectable().filter((w) => !w.features['solana:signMessage']);
     if (cannotSign.length) {
-      return `${cannotSign.map((w) => w.name).join(', ')} cannot sign messages here, which Oira needs to set up your seal. Phantom, Solflare or Backpack will. Or just carry on with your fingerprint, a wallet is never required.`;
+      return `${cannotSign.map((w) => w.name).join(', ')} can't be used here, sorry. Your fingerprint works just as well, and you never need a wallet for Oira.`;
     }
   } catch { /* fall through to the generic line */ }
-  return 'I could not find a Solana wallet in this browser. Install Phantom, Solflare or Backpack and reload, or just carry on with your fingerprint, a wallet is never required.';
+  return "I couldn't find a wallet app on this phone. No worries, your fingerprint works just as well, and you never need a wallet for Oira.";
 }
 
 export async function connect(walletName?: string): Promise<{ address: string; walletName: string }> {

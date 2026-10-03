@@ -1,7 +1,8 @@
+import { isLowEnd } from '../lib/lite';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   consolidate, getMeshEdges, MESH_LINES, placeFindings, readFrame, warmUp,
-  type Finding, type ScanFrame,
+  type Finding, type ScanFrame, scanError, scanStatus, scanStage
 } from '../lib/scan';
 import {
   HEADWEAR_NUDGE, HEADWEAR_PROMPT, LIGHT_NUDGE, LIGHT_WHY, SCAN_COPY, SCAN_STAGES,
@@ -22,6 +23,9 @@ const HOLD_MS = 3200;
 
 /* Long enough for a slow phone to load the models on its processor, short enough that a
    hang is named before she gives up on it. */
+/* Readings per second: about eight on a low end phone, every frame elsewhere. */
+const READ_GAP_MS = isLowEnd() ? 120 : 0;
+
 const SLOW_MS = 12_000;
 
 export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) => {
@@ -42,6 +46,15 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
   const [waitingOn, setWaitingOn] = useState<'camera' | 'eyes' | null>('camera');
   const [slow, setSlow] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const lastReadRef = useRef(0);
+  /* The loader's stage lives outside React, so while the scan is slow the hint re-reads it
+     every second rather than freezing on whatever it said at the twelve second mark. */
+  const [, setBeat] = useState(0);
+  useEffect(() => {
+    if (!slow) return;
+    const id = setInterval(() => setBeat((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [slow]);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [nudge, setNudge] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
@@ -186,6 +199,14 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
       return;
     }
     if (!scratchRef.current) scratchRef.current = document.createElement('canvas');
+
+    /* Read at most this often. A phone that cannot finish a reading in one frame used to
+       queue them up, so the mesh drew where her face had been rather than where it is. */
+    if (now - lastReadRef.current < READ_GAP_MS) {
+      rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
+      return;
+    }
+    lastReadRef.current = now;
 
     const frame = readFrame(video, scratchRef.current, now);
     latestRef.current = frame;
@@ -396,6 +417,12 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
             ? SCAN_COPY.looking
             : SCAN_COPY.reading}
         </p>
+
+        {phase === 'warming' && slow && waitingOn === 'eyes' && (
+          <p className="relative z-10 text-[10.5px] text-moon/45 mt-2 max-w-[260px] mx-auto break-words">
+            {scanStatus()} at {scanStage()}{scanError() ? `: ${scanError()}` : ''}
+          </p>
+        )}
 
         {phase === 'warming' && slow && (
           <button

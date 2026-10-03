@@ -385,19 +385,17 @@
   }
 }
 
-/* Lite mode. See src/lib/lite.ts. Decorative loops play once and rest, frosted glass turns
-   plain, and the things that tell her something keep moving: the scan sweep and any
-   spinner or pulse that means "working". */
+/* Lite mode. See src/lib/lite.ts. Only what is expensive goes: frosted glass, which re-blurs
+   whatever is behind it on every frame, and the iris hue rotation, a filter animated forever.
+   Transforms and opacity are cheap on any phone, so the falling leaves and the glows stay.
+   (The first version stopped every loop, and the leaves went with it. They were never the
+   problem.) */
 html.lite *,
 html.lite *::before,
 html.lite *::after {
-  animation-iteration-count: 1 !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
-html.lite .scanline,
-html.lite .animate-spin,
-html.lite .animate-pulse,
-html.lite .animate-ping {
-  animation-iteration-count: infinite !important;
+html.lite .moonseal {
+  animation: moonemit 3.8s ease-in-out infinite !important;
 }

@@ -324,6 +324,8 @@ export const SEAL_COPY = {
   chips: ['Your vault is on', 'Open it whenever'] as const,
   cta: 'Come and meet me properly',
   /* What she reads instead of a transaction id. */
-  saved: (when: string) => `Saved ${when}, for good. Nobody can change it or read it, not even us.`,
+  saved: (when: string) => when === 'already'
+    ? 'Your colours are already sealed, for good. Nobody can change them or read them, not even us.'
+    : `Saved ${when}, for good. Nobody can change it or read it, not even us.`,
   proof: 'See the proof',
 };

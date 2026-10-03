@@ -180,7 +180,7 @@ export const initialUserProfile: UserProfile = {
   name: "",
   avatarUrl: "",
   walletId: "DQxy...hQ7w",
-  isSealed: true,
+  isSealed: false,
   sealedDate: "Nov 14, 2025",
   seasonId: "dark-winter",
 };

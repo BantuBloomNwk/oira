@@ -53,6 +53,15 @@ export interface CaptureSession {
    wrong exposure perfectly still for the entire reading. */
 const SETTLE_MS = 900;
 
+/* How long any one question to the camera plugin may take. On some phones a call about
+   exposure or white balance never answers at all, neither yes nor no, and a .catch does
+   nothing for a promise that never settles. Without this the scan waited on it forever: a
+   Galaxy A13 sat on a blank scanner for minutes. Past this the camera opens unlocked, which
+   is a slightly less exact reading rather than no reading. */
+const PLUGIN_TIMEOUT_MS = 1500;
+const inTime = <T,>(p: Promise<T>, fallback: T): Promise<T> =>
+  Promise.race([p, new Promise<T>((r) => setTimeout(() => r(fallback), PLUGIN_TIMEOUT_MS))]);
+
 /* The constraints the browser path has always used, kept here so both paths ask for the same
    framing and the only difference between them is the control we get afterwards. */
 const VIDEO: MediaStreamConstraints = {
@@ -124,9 +133,9 @@ async function openNative(): Promise<CaptureSession> {
 
     /* Asked for rather than assumed. The modes a device offers vary, and setting one it does
        not support is how a scan ends up silently unlocked while the code believes otherwise. */
-    const exposure = await CameraPreview.getExposureModes().catch(() => ({ modes: [] as string[] }));
+    const exposure = await inTime(CameraPreview.getExposureModes().catch(() => ({ modes: [] as string[] })), { modes: [] as string[] });
     const canLockExposure = !!exposure.modes?.includes('LOCK');
-    if (canLockExposure) await CameraPreview.setExposureMode({ mode: 'LOCK' });
+    if (canLockExposure) await inTime(CameraPreview.setExposureMode({ mode: 'LOCK' }), undefined);
 
     /* White balance. Available since the plugin's 8 line, which is why this project is on
        Capacitor 8 and Node 22 at all.
@@ -139,9 +148,9 @@ async function openNative(): Promise<CaptureSession> {
        outright if the room is not worth trusting. A frozen white balance under a light we
        have separately verified is exactly the condition this pipeline wants. Without that
        check it would be the wrong call. */
-    const balance = await CameraPreview.getWhiteBalanceModes().catch(() => ({ modes: [] as string[] }));
+    const balance = await inTime(CameraPreview.getWhiteBalanceModes().catch(() => ({ modes: [] as string[] })), { modes: [] as string[] });
     const canLockBalance = !!balance.modes?.includes('LOCK');
-    if (canLockBalance) await CameraPreview.setWhiteBalanceMode({ mode: 'LOCK' });
+    if (canLockBalance) await inTime(CameraPreview.setWhiteBalanceMode({ mode: 'LOCK' }), undefined);
 
     /* `locked` claims only what is actually held. On the pinned plugin that means exposure
        alone, and the reading should not be scored as though the camera were fully still. */

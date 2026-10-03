@@ -1,0 +1,22 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# On-device model weights and the MediaPipe WASM runtime. Around 16MB of binaries that
+# npm and a one-line fetch can both reproduce, so they are vendored on disk and kept out
+# of git. Run scripts/fetch-models.sh after cloning.
+public/models/
+public/mediapipe/
+public/calib/
+# The GenAI runtime, 27MB of WASM, reproduced by the same script from the npm package.
+public/vendor/genai/
+
+# Locally trusted development certificates. Regenerate with scripts/dev-https.sh rather
+# than sharing them: the key signs for localhost and this machine's LAN address, and a
+# leaked dev key plus the CA is a working man-in-the-middle against anyone who trusted it.
+.certs/

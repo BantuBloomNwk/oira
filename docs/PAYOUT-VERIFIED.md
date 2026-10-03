@@ -15,7 +15,7 @@ Mirrors `magicblock-labs/private-payments-demo`, adapted from SDK 0.8.5 → **0.
 
 ## Reproduce
 ```bash
-cd /home/dee/Oira/client && node payout-e2e.mjs   # fresh brand/her, mints from the deployer
+cd client && node payout-e2e.mjs   # fresh brand/her, mints from the deployer
 ```
 
 ## Both make-or-break on-chain pieces are now green

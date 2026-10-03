@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Oira · residuals</title>
+    <style>
+      body { font: 13px ui-monospace, Menlo, monospace; background: #FBF3EE; color: #43203B; padding: 16px; margin: 0; }
+      h1 { font: 600 16px system-ui; margin: 0 0 4px; }
+      p  { font: 12px system-ui; color: #8A6580; max-width: 70ch; line-height: 1.5; }
+      table { border-collapse: collapse; width: 100%; margin-top: 12px; }
+      td, th { padding: 4px 8px; border-bottom: 1px solid #EFDDE2; text-align: left; white-space: nowrap; }
+      th { font: 600 11px system-ui; color: #8A6580; }
+      .wrap { overflow-x: auto; }
+      .sw { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #EFDDE2; display: inline-block; vertical-align: middle; }
+      .k { display: inline-block; min-width: 148px; color: #8A6580; }
+      .big { font: 600 15px ui-monospace, monospace; }
+      button { font: 12px system-ui; padding: 7px 12px; border-radius: 999px; border: 1px solid #EFDDE2; background: #fff; color: #43203B; cursor: pointer; margin-right: 6px; }
+      button:hover { border-color: #C9799B; }
+      textarea { width: 100%; height: 160px; margin-top: 10px; font: 11px ui-monospace, monospace; border: 1px solid #EFDDE2; border-radius: 8px; padding: 8px; background: #fff; }
+      .empty { color: #8A6580; font: 12px system-ui; margin-top: 14px; }
+    </style>
+  </head>
+  <body>
+    <h1>Residuals on this device</h1>
+    <p>
+      Every row is one photograph of a product whose colour the catalogue already states,
+      measured through this phone's camera. The difference between the two is a measurement
+      of the camera, not of anybody's face. This page reads only this device's own store and
+      sends nothing anywhere. It is not linked from the app.
+    </p>
+    <div id="summary"></div>
+    <div id="actions" style="margin-top:12px"></div>
+    <div class="wrap"><table id="out"><thead><tr>
+      <th>when</th><th>sku</th><th>read</th><th>catalogue</th>
+      <th>dL*</th><th>da*</th><th>db*</th><th>dE</th><th>CCT</th><th>q</th><th>capture</th><th>device</th>
+    </tr></thead><tbody></tbody></table></div>
+    <textarea id="dump" hidden readonly></textarea>
+    <script type="module" src="/src/residuals.ts"></script>
+  </body>
+</html>

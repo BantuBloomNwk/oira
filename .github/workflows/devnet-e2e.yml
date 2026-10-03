@@ -23,7 +23,7 @@ name: Devnet e2e (manual/scheduled)
 #     settle-match-e2e is the canonical campaign create→match→settle→close money-rail proof.
 # Still known-red: overnight-real-e2e failed on insufficient lamports mid-flow (a stale funding
 # amount in client/oira-chain.mjs's runOffer/seal path, NOT ABI drift) — not yet root-caused, so a
-# red X there is expected until that funding bug is fixed. See /home/dee/Oira/Sessions.md.
+# red X there is expected until that funding bug is fixed.
 #
 # Requires one repo secret: OIRA_DEPLOYER_KEY — the JSON array content of a funded devnet
 # keypair (the same shape client/oira-chain.mjs's loadDeployer() and these scripts expect).

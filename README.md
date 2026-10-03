@@ -5,14 +5,15 @@
 Oira runs the sensitive part of that exchange inside a MagicBlock Private Ephemeral Rollup (a TEE), and settles the money on Solana. Your traits never leave the enclave. What lands on the base chain is a set of commitments and a payout, nothing that can be read back into you.
 
 - **Program (devnet):** [`CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP`](https://explorer.solana.com/address/CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP?cluster=devnet)
+- **Android app:** [`app-next/`](app-next), see [the Android app](#the-android-app-built-for-the-seeker)
 - **IDL:** [`idl/oira_palette.json`](idl/oira_palette.json)
 - **End-to-end proof:** [`client/settle-match-e2e.mjs`](client/settle-match-e2e.mjs)
-- **Verify it yourself:** [`docs/VERIFY.md`](docs/VERIFY.md) — run the match and check the empty chain
-- **See our vision:** [`docs/PITCH.md`](docs/PITCH.md) — why this matters and where it goes
+- **Verify it yourself:** [`docs/VERIFY.md`](docs/VERIFY.md) to run the match and check the empty chain
+- **See our vision:** [`docs/PITCH.md`](docs/PITCH.md) on why this matters and where it goes
 
 ## Try it
 
-- **The app:** [app.myoira.com](https://app.myoira.com) — take a reading, seal it, then run the
+- **The app:** [app.myoira.com](https://app.myoira.com): take a reading, seal it, then run the
   overnight flow. On the "While you sleep" screen the app reads your palette account's owner live
   off devnet and shows you it belongs to MagicBlock's Delegation Program rather than to us. That
   row is a live ledger read, not a label, so the enclave dependency is something you can check
@@ -73,15 +74,43 @@ The match itself, `match_query`, runs inside the enclave. It opens the campaign'
 
 The full walkthrough, including the five privacy fixes and their honest limits, is in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
-## On Solana Mobile Seeker
+## The Android app, built for the Seeker
 
-Oira is being built for the Seeker, and the fit is not cosmetic. The protocol already runs its sensitive computation inside a server-side TEE. The Seeker adds a second, hardware root of trust on the device, and the two close the loop.
+`app-next/` is a new app, written from the ground up as a native Android app on Capacitor. It is
+not the website in a wrapper: the whole app ships inside the APK, runs offline, and drives the
+phone's camera directly, because a browser camera hands you whatever the phone decided after it
+has already guessed the white balance.
 
-- **Her keys live in Seed Vault.** Her owner key and the agent session key sit in the Seeker's secure element. The key that opens her payee commitment, the one that finally links a wallet to a payout, never touches app memory. Approving a payout is a Seed Vault signature, not a hot key in a browser.
-- **The agent is a scoped session key, which is exactly what Seed Vault is for.** Oira already limits the agent to a single instruction, `match_query`, so a stolen agent key can do nothing but ask about one escrowed campaign. Provisioning and revoking that scoped key through Seed Vault turns least privilege from a convention into a hardware guarantee, and it lets her stay offline while the agent runs.
-- **Two enclaves, one story.** Her traits are protected by the rollup's TEE. Her keys are protected by the phone's secure element. At no point, on the device or on the server, does anything that identifies her exist in plaintext outside a TEE.
+- **One scan reads her whole face.** Shade, undertone and depth, skin state, facial features and
+  hair, all measured on the phone by models that ship inside the app. The photo never leaves the
+  device. MediaPipe's habit of reporting usage to Google is blocked twice over, once in the
+  content policy and once in our own code.
+- **Her wallet is the way in.** On Android and the Seeker she connects through Mobile Wallet
+  Adapter, so on a Seeker the wallet she signs with is the one her phone shipped with. Women
+  who have never owned a wallet can use a passkey instead, and get the same kind of address.
+- **Sealing is a real Solana transaction she signs.** Only the reading crosses to be sealed,
+  never the image. Her palette account is delegated to MagicBlock's rollup, and the app shows
+  her that the account belongs to the Delegation Program and not to us.
+- **Ask Oira can run on her phone too.** A small Gemma model downloads once, after she is told
+  how big it is, and then answers on the device. Without it, questions go to our own server
+  with her coarse palette only, never her face or her reading in full.
 
-This is the device integration we are building toward. The on-chain protocol and the enclave match are live today. The Seed Vault signing path is the next piece, and it slots into the existing agent-session-key model without any change to the program.
+### Build the APK
+
+You need Node 22, a JDK (17 or newer) and the Android SDK.
+
+```bash
+cd app-next
+npm install
+./scripts/fetch-models.sh     # the face and hair models and the WASM runtimes, kept out of git
+npm run build
+npx cap sync android
+cd android && ./gradlew assembleDebug
+adb install app/build/outputs/apk/debug/app-debug.apk
+```
+
+To try it in a browser first: `npm run dev` inside `app-next`, then open it on a phone over
+HTTPS (`scripts/dev-https.sh` makes a local certificate), since the camera needs a secure page.
 
 ## Run it yourself
 
@@ -102,7 +131,7 @@ npm install
 OIRA_KEYPAIR=/path/to/funded-devnet-id.json node settle-match-e2e.mjs
 ```
 
-The client mints a small test token, spins up throwaway her / agent / brand actors, runs the whole seal → match → settle flow against the TEE endpoint, and checks every assertion above. Your funded keypair only pays the fees. For a step-by-step account of what each line proves and how to confirm the empty chain on the explorer, see [`docs/VERIFY.md`](docs/VERIFY.md).
+The client mints a small test token, spins up throwaway her / agent / brand actors, runs the whole seal, match, settle flow against the TEE endpoint, and checks every assertion above. Your funded keypair only pays the fees. For a step-by-step account of what each line proves and how to confirm the empty chain on the explorer, see [`docs/VERIFY.md`](docs/VERIFY.md).
 
 ## Repository layout
 
@@ -111,6 +140,7 @@ program/            the on-chain program (Rust, Anchor + ephemeral-rollups-sdk)
   src/lib.rs        the whole thing: vault, traits, campaigns, match, settle
 idl/                generated IDL for the deployed program
 client/             the end-to-end proof against devnet + the TEE
+app-next/           the Android app (React + Capacitor), the scan and both ways in
 docs/ARCHITECTURE.md  the technical walkthrough
 docs/VERIFY.md        prove the private match yourself against devnet
 docs/PITCH.md         the product story and where this goes

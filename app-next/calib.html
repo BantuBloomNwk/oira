@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Oira · skin calibration</title>
+    <style>
+      body { font: 13px ui-monospace, Menlo, monospace; background: #FBF3EE; color: #43203B; padding: 16px; }
+      table { border-collapse: collapse; }
+      td, th { padding: 5px 10px; border-bottom: 1px solid #EFDDE2; text-align: left; vertical-align: middle; }
+      img { width: 64px; height: 80px; object-fit: cover; border-radius: 6px; display: block; }
+      .sw { width: 34px; height: 34px; border-radius: 50%; border: 1px solid #EFDDE2; }
+      .band { font-weight: 700; }
+    </style>
+  </head>
+  <body>
+    <h1 style="font:600 16px system-ui">Skin reading, across the range</h1>
+    <p style="font:12px system-ui;color:#8A6580;max-width:60ch">
+      Every portrait below goes through the same path the scan uses: face mesh, skin mask,
+      sclera white point, linear light, ITA. The swatch is where the reading lands on the
+      melanin ribbon. Check the band against the face, not against the number.
+    </p>
+    <table id="out"><thead><tr><th>face</th><th>band</th><th>ITA</th><th>undertone</th><th>L*</th><th>a*</th><th>b*</th><th>WB</th><th>px</th><th>ribbon</th></tr></thead><tbody></tbody></table>
+    <script type="module" src="/src/calib.ts"></script>
+  </body>
+</html>

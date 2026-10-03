@@ -1,0 +1,137 @@
+# Codemagic CI, for the builds this machine cannot produce.
+#
+# WHY THIS FILE EXISTS. There is no Mac here and there is not going to be one soon. An iOS
+# build needs macOS and Xcode, so it happens on somebody else's macOS machine or it does not
+# happen. Codemagic was picked over the obvious alternatives on current facts rather than
+# reputation: Microsoft App Center was retired in March 2025, Ionic Appflow is in a
+# multi-year wind-down, and GitHub Actions bills macOS runners at a ten times multiplier on a
+# private repo, which is the wrong shape for a company watching its Netlify credits. The free
+# tier here is around 500 macOS minutes a month, which is more than enough at this cadence.
+#
+# WHAT IT CANNOT DO, and this is worth being honest about before anyone relies on it. CI
+# produces builds, not debugging. Nobody can step through the iOS Simulator or attach a
+# debugger to a handset from here, so an iOS camera problem gets diagnosed from logs and
+# TestFlight reports. docs/IOS-PATH.md already documents live WebKit camera bugs on iOS, so
+# that is not a hypothetical limitation for this app in particular. A second-hand Mac mini
+# remains the real fix and this is the thing that ships without one.
+
+definitions:
+  env_versions: &env_versions
+    node: 22
+    xcode: latest
+    cocoapods: default
+
+workflows:
+  # ── iOS, to TestFlight ────────────────────────────────────────────────────────
+  ios:
+    name: Oira iOS
+    max_build_duration: 45
+    instance_type: mac_mini_m2
+    environment:
+      <<: *env_versions
+      groups:
+        # Set these in Codemagic under Teams or App settings > Environment variables.
+        # APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_IDENTIFIER,
+        # APP_STORE_CONNECT_PRIVATE_KEY, CERTIFICATE_PRIVATE_KEY
+        - appstore_credentials
+      vars:
+        # Must match ios/App/App.xcodeproj. Change both together or signing fails with an
+        # error that talks about profiles rather than about this.
+        BUNDLE_ID: 'com.myoira.oira'
+        # Project, not workspace. Capacitor 8 uses Swift Package Manager, so no .xcworkspace
+        # is generated and pointing at one fails with a confusing "does not exist".
+        XCODE_PROJECT: 'ios/App/App.xcodeproj'
+        XCODE_SCHEME: 'App'
+
+    scripts:
+      - name: Install dependencies
+        script: |
+          npm ci
+
+      - name: Build the web app
+        script: |
+          npm run build
+          # The models and the GenAI runtime are gitignored and fetched by this script, so a
+          # clean CI checkout has neither until it runs. Without it the app builds and then
+          # cannot scan, which is the kind of failure that reaches TestFlight looking fine.
+          bash scripts/fetch-models.sh
+
+      - name: Sync Capacitor
+        script: |
+          npx cap sync ios
+
+      - name: Set up signing
+        script: |
+          # Capacitor 8 uses Swift Package Manager, not CocoaPods, so there is deliberately no
+          # `pod install` here. If a future plugin drags CocoaPods back in, it goes above the
+          # signing step and not below it.
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE --create
+          keychain initialize
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build the ipa
+        script: |
+          # Build number comes from Codemagic rather than the project file, so two builds can
+          # never collide in App Store Connect the way a hardcoded CURRENT_PROJECT_VERSION
+          # eventually does.
+          xcode-project use-profiles
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME" \
+            --archive-flags="-destination 'generic/platform=iOS'"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        # TestFlight only. Nothing goes to review automatically: this app tells a woman her
+        # face never leaves her phone, and that claim deserves a human reading the build notes
+        # before it reaches the store.
+        submit_to_testflight: true
+        submit_to_app_store: false
+
+  # ── Android, signed release ───────────────────────────────────────────────────
+  #
+  # The APK builds fine on the dev machine, so this is not load-bearing the way the iOS
+  # workflow is. It is here so a release is reproducible off one person's laptop, and so the
+  # signing key is exercised somewhere that is not a single disk.
+  android:
+    name: Oira Android
+    max_build_duration: 45
+    instance_type: linux_x2
+    environment:
+      node: 22
+      java: 21
+      groups:
+        # CM_KEYSTORE, CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS, CM_KEY_PASSWORD.
+        # The keystore is the existing oira-release.keystore, alias `oira`. Its SHA-256 must
+        # stay F0:03:9D:FD:... (android-twa/README.md): that fingerprint is what
+        # app.myoira.com/.well-known/assetlinks.json trusts and what makes a build install as
+        # an update rather than as a second app. A new key means never updating the installed
+        # app again, so this uploads the real one and does not generate its own.
+        - oira_keystore
+
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+
+      - name: Build the web app
+        script: |
+          npm run build
+          bash scripts/fetch-models.sh
+
+      - name: Sync Capacitor
+        script: npx cap sync android
+
+      - name: Build signed release
+        script: |
+          cd android
+          ./gradlew assembleRelease
+
+    artifacts:
+      - android/app/build/outputs/**/*.apk

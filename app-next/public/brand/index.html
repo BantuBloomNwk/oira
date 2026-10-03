@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Oira Brand Studio</title>
+<link rel="icon" href="/brand/icon-192.png" />
+<style>
+  :root{
+    --ink:#2A1C4E; --plum:#3A2358; --aurora:#6C4BD8; --teal:#1E5F5B;
+    --gold:#C89B4B; --copper:#B4633A; --cream:#F5EFE4; --paper:#FAF6EF;
+    --line:#e6ddf0; --muted:#6a5d84;
+    --display:'Sora',system-ui,sans-serif; --serif:'Newsreader',Georgia,serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--serif);line-height:1.5;}
+  a{color:var(--aurora);text-decoration:none;}
+  .bar{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;background:var(--ink);color:var(--cream);}
+  .brandmark{font-family:var(--display);font-weight:800;letter-spacing:-.5px;font-size:22px;}
+  .brandmark span{color:var(--gold);}
+  .studio{font-family:var(--display);font-weight:600;letter-spacing:.22em;text-transform:uppercase;font-size:11px;color:rgba(245,239,228,.6);}
+  .pill{font-family:var(--display);font-size:10.5px;letter-spacing:.08em;border:1px solid rgba(200,155,75,.5);color:var(--gold);border-radius:999px;padding:4px 11px;text-transform:uppercase;}
+  .hero{max-width:1080px;margin:0 auto;padding:34px 28px 8px;}
+  .hero h1{font-family:var(--display);font-weight:800;font-size:31px;line-height:1.12;margin:0 0 8px;letter-spacing:-.5px;}
+  .hero p{font-family:var(--serif);font-style:italic;font-size:18px;color:#4a3d63;margin:0;max-width:640px;}
+  .privacy{max-width:1080px;margin:18px auto 0;padding:0 28px;}
+  .privacy .card{border:1px solid rgba(30,95,91,.28);background:rgba(30,95,91,.06);border-radius:14px;padding:12px 18px;font-family:var(--serif);font-size:14.5px;color:#274c48;}
+  .privacy b{font-family:var(--display);font-weight:700;color:var(--teal);}
+  .grid{max-width:1080px;margin:22px auto 60px;padding:0 28px;display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:26px;}
+  @media(max-width:820px){.grid{grid-template-columns:1fr;}}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;}
+  .panel h2{font-family:var(--display);font-weight:700;font-size:16px;margin:0 0 4px;color:var(--plum);}
+  .panel .sub{font-family:var(--serif);font-size:13px;color:var(--muted);margin:0 0 16px;}
+  label{display:block;font-family:var(--display);font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--plum);margin:14px 0 5px;}
+  input,select{width:100%;font-family:var(--serif);font-size:15px;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 12px;}
+  input[type=range]{padding:0;background:transparent;}
+  .row{display:flex;gap:12px;}
+  .row>div{flex:1;}
+  .depthval{font-family:var(--display);font-weight:700;color:var(--copper);font-size:13px;}
+  .post{margin-top:20px;width:100%;font-family:var(--display);font-weight:700;font-size:14px;letter-spacing:.02em;color:var(--cream);background:linear-gradient(90deg,var(--plum),var(--aurora));border:none;border-radius:12px;padding:13px;cursor:pointer;}
+  .post:disabled{opacity:.55;cursor:default;}
+  .note{font-family:var(--serif);font-size:12.5px;color:var(--muted);margin-top:10px;}
+  .board h2{font-family:var(--display);font-weight:700;font-size:16px;color:var(--plum);margin:0 0 14px;}
+  .empty{font-family:var(--serif);font-style:italic;color:var(--muted);padding:26px 0;text-align:center;}
+  .camp{border:1px solid var(--line);border-radius:14px;padding:15px 17px;margin-bottom:12px;background:#fff;}
+  .camp .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+  .camp .name{font-family:var(--display);font-weight:700;font-size:15px;color:var(--ink);}
+  .camp .pay{font-family:var(--display);font-weight:700;font-size:15px;color:var(--teal);}
+  .camp .meta{font-family:var(--serif);font-size:13px;color:var(--muted);margin-top:3px;}
+  .camp .actions{display:flex;align-items:center;gap:12px;margin-top:12px;}
+  .badge{font-family:var(--display);font-weight:700;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;border-radius:999px;padding:4px 10px;}
+  .b-open{background:rgba(108,75,216,.12);color:var(--aurora);}
+  .b-matching{background:rgba(200,155,75,.16);color:#8a6d12;}
+  .b-matched{background:rgba(30,95,91,.14);color:var(--teal);}
+  .b-nomatch{background:rgba(180,99,58,.14);color:var(--copper);}
+  .run{font-family:var(--display);font-weight:700;font-size:12.5px;color:var(--cream);background:var(--plum);border:none;border-radius:9px;padding:8px 14px;cursor:pointer;}
+  .run:disabled{opacity:.5;cursor:default;}
+  .ex{font-family:var(--display);font-size:12px;letter-spacing:.04em;}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--ink);color:var(--cream);font-family:var(--serif);font-size:14px;padding:11px 18px;border-radius:12px;box-shadow:0 8px 30px rgba(42,28,78,.3);opacity:0;transition:opacity .25s;pointer-events:none;}
+  .toast.show{opacity:1;}
+  .foot{max-width:1080px;margin:0 auto;padding:0 28px 40px;font-family:var(--display);font-size:11px;letter-spacing:.06em;color:var(--muted);}
+</style>
+</head>
+<body>
+  <div class="bar">
+    <div class="brandmark">OIR<span>A</span></div>
+    <div class="studio">Brand Studio</div>
+    <div class="pill">Solana devnet · live</div>
+  </div>
+
+  <div class="hero">
+    <h1>Reach exactly who fits. Pay only on a match.</h1>
+    <p>Post the shade you are looking for. Her agent checks it against her real palette inside a hardware enclave, and you settle a payout only when it genuinely matches.</p>
+  </div>
+
+  <div class="privacy"><div class="card">
+    <b>You never see her.</b> Not her identity, not her shade, not her yes or no. The match happens inside the enclave and only a payout reaches the chain. That is the whole point.
+  </div></div>
+
+  <div class="grid">
+    <div class="panel">
+      <h2>Post a campaign</h2>
+      <p class="sub">Commit a target shade and an escrow. Nothing about it lands on the public chain in the clear.</p>
+      <label>Brand name</label>
+      <input id="label" maxlength="40" placeholder="Aurora Cosmetics" />
+
+      <label>Category</label>
+      <select id="category">
+        <option value="0">Foundation</option>
+        <option value="1">Concealer</option>
+        <option value="2">Lipstick</option>
+        <option value="3">Blush</option>
+        <option value="4">Skincare</option>
+        <option value="5">Other</option>
+      </select>
+
+      <label>Who you are looking for</label>
+      <div class="row">
+        <div>
+          <select id="undertone" title="Undertone">
+            <option value="0">Warm</option>
+            <option value="1">Neutral</option>
+            <option value="2" selected>Cool</option>
+            <option value="3">Olive</option>
+          </select>
+        </div>
+        <div>
+          <select id="season" title="Colour season"></select>
+        </div>
+      </div>
+
+      <label>Depth (Monk scale) · <span class="depthval" id="depthval">8</span></label>
+      <input type="range" id="depth" min="1" max="10" value="8" />
+
+      <label>Depth tolerance · ±<span class="depthval" id="tolval">1</span></label>
+      <input type="range" id="tol" min="0" max="5" value="1" />
+
+      <label>Payout per match (oUSDC)</label>
+      <input id="payout" type="number" min="1" max="50" step="1" value="5" />
+
+      <button class="post" id="postBtn">Post campaign &amp; fund escrow</button>
+      <p class="note">Posting runs three real devnet transactions: commit the target, fund the escrow, and delegate the campaign into the enclave. Give it a moment.</p>
+    </div>
+
+    <div class="board">
+      <h2>Your campaigns</h2>
+      <div id="board"><div class="empty">No campaigns yet. Post one to see it here.</div></div>
+    </div>
+  </div>
+
+  <div class="foot">OIRA · private attribute matching · her traits never leave the enclave</div>
+  <div class="toast" id="toast"></div>
+
+<script src="/brand/studio.js"></script>
+</body>
+</html>

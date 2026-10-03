@@ -1,0 +1,44 @@
+# Deploy config for the revamped app.
+#
+# This file exists mainly to STOP the repo-root netlify.toml applying to this directory.
+# That one was written for app/ and its policy is now actively wrong here: it allows
+# fonts.gstatic.com and omits 'self' from font-src, so on the first draft deploy every
+# self-hosted font was blocked and the app fell back to system type. It also carries
+# 'unsafe-inline' on script-src, which this build does not need and should not have.
+#
+# Headers are NOT declared here on purpose. They live in public/_headers, as one source of
+# truth, and netlify.toml would silently win over that file if it named the same keys.
+
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# The governed concierge, proxied so it stays same-origin.
+#
+# Ask Oira answers in three tiers, best privacy first: Gemma on her own phone, then this,
+# then a deterministic floor. Until now app-next had no tier two at all: OIRA_BRIDGE_URL
+# was never set and public/concierge/oira-remote.js reported unavailable, so every answer
+# came off the floor. Real reasoning was one redirect away and nobody had written it.
+#
+# A server-side rewrite rather than a CORS call on purpose. To the browser this is a request
+# to our own origin, so `connect-src 'self'` in public/_headers stays exactly as strict as it
+# is and does not have to name a third party. That matters more here than it usually would:
+# the moment that directive lists an external host, the MediaPipe telemetry argument in
+# src/lib/scan.ts gets harder to hold, and a policy that has been widened once is easier to
+# widen again.
+#
+# What crosses this line is only window.oiraBuildContext(): season, undertone, a coarse depth
+# word, her palette hexes, her rules and an overnight count. No selfie, no landmarks, no Lab,
+# no ITA, no key, no wallet. The bridge enforces the same boundary again server-side. If the
+# bridge is down, available() comes back false and she drops to the floor with no error.
+#
+# Host is the sslip.io address the shipping app's root netlify.toml already proxies to.
+# Change both when the real domain lands.
+[[redirects]]
+  from = "/api/*"
+  to = "https://oira.161-97-74-212.sslip.io/api/:splat"
+  status = 200
+  force = true

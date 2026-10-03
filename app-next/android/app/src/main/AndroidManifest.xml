@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      allowBackup is FALSE, and it must stay false.
+
+      The default is true, which opts the app into Android's cloud backup. That would copy the
+      WebView's storage, and the WebView's storage is where her sealed reading and the residual
+      log live, off this phone and onto Google's servers. An app whose entire claim is that the
+      reading never leaves her device cannot ship with the platform quietly shipping it for us.
+      It also closes the adb backup route off an unlocked handset. The cost is that reinstalling
+      loses her local history, which is the right trade here and should be said plainly in the
+      copy rather than hidden.
+    -->
+    <application
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"></meta-data>
+        </provider>
+    </application>
+
+    <!-- Permissions -->
+
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- The reading. Without this the native path cannot open the camera at all and every
+         scan silently falls back to the browser path, which is the failure that would be
+         hardest to notice: the app would work, and every reading would be the weaker kind. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <!-- Ask Oira listens when she taps the mic, and dictation.ts refuses to open a session
+         unless recognition can be pinned to an on-device model. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+</manifest>

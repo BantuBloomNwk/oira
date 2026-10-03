@@ -26,7 +26,7 @@ IMPORTANT: the brand marks live in `Oira/brand/` (OUTSIDE `app/`), so `--dir=app
 404s every `/brand/*` asset. Publish a COMBINED dir instead. Redeploy after any app/brand
 change:
 ```bash
-cd /home/dee/Oira
+cd oira   (the repository root)
 rm -rf /tmp/oira-publish && cp -r app /tmp/oira-publish && cp -r brand /tmp/oira-publish/brand
 netlify deploy --dir=/tmp/oira-publish --functions=/tmp/oira-empty-fns          # draft
 netlify deploy --dir=/tmp/oira-publish --functions=/tmp/oira-empty-fns --prod   # promote

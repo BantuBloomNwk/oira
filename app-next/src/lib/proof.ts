@@ -16,8 +16,9 @@ export interface Proof {
   palette: string;
   /** Where to check it. */
   url: string;
-  /** When it was sealed, ms since epoch. */
-  at: number;
+  /** When it was sealed, ms since epoch. Unknown when we found an earlier seal rather than
+      watched this one happen. */
+  at?: number;
 }
 
 const KEY = 'oira_proof';
@@ -49,9 +50,29 @@ export function clearProof(): void {
 }
 
 /** "today at 3:42 pm", or the date if it was another day. */
-export function whenSealed(at: number): string {
+export function whenSealed(at?: number): string {
+  if (at === undefined) return 'already';
   const d = new Date(at);
   const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).toLowerCase();
   const today = new Date().toDateString() === d.toDateString();
   return today ? `today at ${time}` : `${d.toLocaleDateString([], { day: 'numeric', month: 'long' })} at ${time}`;
+}
+
+/* Has this owner sealed before?
+ *
+ * Her seal lives at an address worked out from her key, so anyone can check whether it exists.
+ * The bridge does the read, because this app only talks to its own server. Asked as soon as
+ * she is identified, so a woman who sealed on another phone, or in the browser before she
+ * installed the app, is recognised instead of being asked to seal all over again. */
+export async function findExistingSeal(address: string, bridgeBase: string): Promise<Proof | null> {
+  try {
+    const r = await fetch(`${bridgeBase}/api/privacy-proof?owner=${encodeURIComponent(address)}`);
+    if (!r.ok) return null;
+    const j = (await r.json()) as { sealed?: boolean; explorer?: string };
+    if (!j.sealed || typeof j.explorer !== 'string' || !j.explorer.startsWith(EXPLORER)) return null;
+    const palette = j.explorer.slice(EXPLORER.length).split('?')[0];
+    return { palette, url: j.explorer };
+  } catch {
+    return null;
+  }
 }

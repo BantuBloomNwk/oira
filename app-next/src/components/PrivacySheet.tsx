@@ -78,7 +78,7 @@ export const PrivacySheet: React.FC<PrivacySheetProps> = ({ isOpen, onClose, ans
               <p className="text-[12px] leading-[1.6] text-ink mt-1">
                 {proof ? (
                   <>
-                    Your colours were sealed {whenSealed(proof.at)}. Everything below is all
+                    {proof.at ? `Your colours were sealed ${whenSealed(proof.at)}.` : 'Your colours are sealed.'} Everything below is all
                     the world can see about you, and you can check it yourself.{' '}
                     <a href={proof.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 text-mauve-deep">
                       See the proof

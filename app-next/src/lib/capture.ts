@@ -32,6 +32,7 @@
  * Kotlin work and it should be costed as such rather than assumed to come free with the shell.
  */
 
+import { isLowEnd } from './lite';
 import type { CapturePath } from './confidence';
 
 export type { CapturePath };
@@ -64,9 +65,12 @@ const inTime = <T,>(p: Promise<T>, fallback: T): Promise<T> =>
 
 /* The constraints the browser path has always used, kept here so both paths ask for the same
    framing and the only difference between them is the control we get afterwards. */
-const VIDEO: MediaStreamConstraints = {
-  video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 960 } },
-};
+/* A smaller frame on a low end phone. Every reading is a pass over the whole frame, and on
+   a Galaxy A13 the models run on the processor, so half the pixels is close to half the
+   wait. A face still fills enough of 480 by 640 for the skin and colour reads. */
+const VIDEO: MediaStreamConstraints = isLowEnd()
+  ? { video: { facingMode: 'user', width: { ideal: 480 }, height: { ideal: 640 } } }
+  : { video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 960 } } };
 
 /* Is there a native shell around this page at all?
  *

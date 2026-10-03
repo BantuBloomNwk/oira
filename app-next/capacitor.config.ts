@@ -44,6 +44,24 @@ const config: CapacitorConfig = {
      a native shell is the thin wrapper guideline 4.2 rejects, and it would put the whole app
      behind the network again after all the work to make it run offline. The build ships
      inside the app and the bridge talks to the VPS for the concierge only. */
+  /* Served from inside the APK, but under Oira's own name. Capacitor's default address for
+     the bundled files is https://localhost, and a passkey for app.myoira.com cannot be asked
+     for from a page at localhost: the WebView refuses before the phone's biometrics ever
+     appear, so on the A13 the fingerprint step did nothing and nothing could be sealed.
+     With the hostname set, the same files carry app.myoira.com as their origin, Credential
+     Manager checks it against assetlinks.json on that domain, and the passkey is the one
+     she has on the web.
+
+     This is not server.url. Nothing is loaded from the network; Capacitor answers every
+     request for this host from the files in the APK. The one cost is that a request to
+     app.myoira.com from inside the app never reaches Netlify, so nothing here may call the
+     site's own /api: the concierge and the seal lookup go to the bridge by name instead
+     (src/lib/native.ts). */
+  server: {
+    hostname: 'app.myoira.com',
+    androidScheme: 'https',
+  },
+
   android: {
     /* Everything the app talks to is HTTPS: the concierge bridge and the weights host both
        are. Leaving mixed content off means a plain http request cannot quietly start working

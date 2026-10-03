@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { isNativeApp } from './lib/native';
 import { applyLite } from './lib/lite';
 
 applyLite();
@@ -16,13 +17,28 @@ createRoot(document.getElementById('root')!).render(
    on-device models on the phone once they have been fetched. Registered after load so it
    never competes with the first paint, and only in production: in development it would
    serve a stale bundle and make every change look like it did not take. */
+/* Never inside the Android app. The app already carries every file it needs, and Capacitor
+   serves them to the page but not to a service worker, so a worker's request for the face
+   models went looking for a real server at localhost and never came back. The camera opened
+   and the scanner waited for ever. On the web the worker stays, and in the app any worker an
+   earlier build left behind is removed, because a registration outlives an app update. */
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      /* No worker means no offline and no cached models. Everything else still works, and
-         there is nothing she could do about it, so it is not worth a message. */
+  if (isNativeApp()) {
+    navigator.serviceWorker.getRegistrations()
+      .then((regs) => Promise.all(regs.map((r) => r.unregister())))
+      .then((gone) => {
+        /* Reload once if one was in control, so this launch is not still going through it. */
+        if (gone.length && navigator.serviceWorker.controller) location.reload();
+      })
+      .catch(() => { /* nothing registered */ });
+  } else {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        /* No worker means no offline and no cached models. Everything else still works, and
+           there is nothing she could do about it, so it is not worth a message. */
+      });
     });
-  });
+  }
 }
 
 /* Whoever sent her here.

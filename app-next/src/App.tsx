@@ -8,7 +8,8 @@ import { boot, currentOwner, type Owner } from './lib/identity';
 import { warmUp } from './lib/scan';
 import { load as loadHer, save as saveHer, hasBeenReadBefore } from './lib/remember';
 import { sealViaDevice } from './lib/seal';
-import { proofFrom, saveProof, loadProof, type Proof } from './lib/proof';
+import { proofFrom, saveProof, loadProof, findExistingSeal, type Proof } from './lib/proof';
+import { isNativeApp, BRIDGE_ORIGIN } from './lib/native';
 import { monkFromIta } from './lib/monk';
 import { SEAL_FAIL } from './lib/voice';
 
@@ -90,7 +91,13 @@ export default function App() {
   const [activeView, setActiveView] = useState<AppNavView>('home');
 
   // User & Palette State
-  const [profile, setProfile] = useState<UserProfile>(() => her?.profile ?? initialUserProfile);
+  /* Sealed only if there is a real seal behind it: one this phone made, or one found on chain
+     for her address (below). The sample profile used to start sealed, so the badge showed for
+     women who had never sealed anything. */
+  const [profile, setProfile] = useState<UserProfile>(() => ({
+    ...(her?.profile ?? initialUserProfile),
+    isSealed: loadProof() !== null,
+  }));
   const [activeSeason, setActiveSeason] = useState<SeasonPalette>(() => {
     const id = her?.seasonId ?? initialUserProfile.seasonId;
     return seasonalPalettes.find((p) => p.id === id) || seasonalPalettes[0];
@@ -233,6 +240,7 @@ export default function App() {
          saw a sealed screen with nothing on it. */
       const p = proofFrom(done);
       if (p) { saveProof(p); setProof(p); }
+      setProfile((prev) => ({ ...prev, isSealed: true }));
       setShowSeal(true);
     } catch (e) {
       setSealError((e as Error)?.message || SEAL_FAIL.generic);
@@ -383,6 +391,21 @@ export default function App() {
   /* Silent, and it must stay silent. unlockLocal never touches WebAuthn, so nothing here can
      put a biometric sheet in front of a woman who has just opened the app. */
   useEffect(() => { boot().then(setOwner).catch(() => { /* private mode; she seals later */ }); }, []);
+
+  /* Recognise a seal she already made. As soon as we know who she is, ask whether her
+     address has sealed before, on this phone or any other, so she is not asked to seal
+     what is already sealed. A reading she takes now still updates it. */
+  useEffect(() => {
+    if (!owner) return;
+    let live = true;
+    findExistingSeal(owner.address, isNativeApp() ? BRIDGE_ORIGIN : '').then((found) => {
+      if (!live || !found) return;
+      setProof((prev) => prev ?? found);
+      if (!loadProof()) saveProof(found);
+      setProfile((prev) => (prev.isSealed ? prev : { ...prev, isSealed: true }));
+    });
+    return () => { live = false; };
+  }, [owner]);
   const [scanResult, setScanResult] = useState<ScanFrame | null>(null);
   const [scanStill, setScanStill] = useState('');
 

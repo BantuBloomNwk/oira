@@ -1,3 +1,4 @@
+import { isLowEnd } from './lite';
 import type {
   FaceLandmarker as FaceLandmarkerT,
   ImageSegmenter as ImageSegmenterT,
@@ -42,6 +43,10 @@ let lastError = '';
 
 export const scanStatus = () => status;
 export const scanError = () => lastError;
+
+/* Which step of loading is running, so a phone that stalls can say where. */
+let stage = 'not started';
+export const scanStage = () => stage;
 
 /* MediaPipe phones home, and the only thing stopping it is a header.
  *
@@ -90,8 +95,11 @@ async function load(): Promise<void> {
   refuseTelemetry();
   loading = (async () => {
     /* Loaded on demand so the 16MB never lands on anyone who does not open the scan. */
+    stage = 'engine';
     const vision = await import('@mediapipe/tasks-vision');
+    stage = 'runtime files';
     const files = await vision.FilesetResolver.forVisionTasks(WASM_PATH);
+    stage = isLowEnd() ? 'face model, processor' : 'face model';
 
     /* GPU first, CPU if the phone will not give us one. Plenty of cheap Android devices
        have no usable WebGL2, and on those the GPU delegate does not error so much as
@@ -99,6 +107,11 @@ async function load(): Promise<void> {
        forever. Racing it against a timeout and falling back is the difference between
        a slower scan and no scan at all. */
     const withFallback = async <T,>(create: (delegate: 'GPU' | 'CPU') => Promise<T>): Promise<T> => {
+      /* On a low end phone, straight to the processor. A GPU attempt there does not always
+         fail; on a Galaxy A13 it appears to stall the shared runtime, so the CPU fallback
+         queued behind it and never started, and the scanner waited for ever with the camera
+         open. A slower first frame beats no frame. */
+      if (isLowEnd()) return create('CPU');
       try {
         return await Promise.race([
           create('GPU'),
@@ -150,6 +163,7 @@ async function load(): Promise<void> {
        hair is a fraction of the face model's size, so it is almost always there before the
        first frame that matters, and when it is not the reading simply has no hair note. */
     status = 'ready';
+    stage = 'ready';
     void hairReady;
   })().catch((e) => {
     status = 'error';
@@ -337,6 +351,9 @@ const CONDITION_EVERY_MS = 400;
 let lastConditionAt = -Infinity;
 let lastCondition: ConditionReading | null = null;
 
+let hairTurn = 0;
+let lastHair: HairReading | null = null;
+
 export function readFrame(
   video: HTMLVideoElement,
   scratch: HTMLCanvasElement,
@@ -378,6 +395,13 @@ export function readFrame(
   /* Hair, as its own mask, read as a silhouette. See src/lib/hair.ts for what the three
      numbers are and, more importantly, for what they cannot tell us. */
   let hair: HairReading | null = null;
+  /* On a low end phone the hair model runs on one reading in four and the last answer
+     stands in between. Hair does not change in a quarter of a second, and running both
+     models on every frame is most of why the mesh trailed her face on a Galaxy A13. */
+  hairTurn = (hairTurn + 1) % (isLowEnd() ? 4 : 1);
+  if (hairTurn !== 0 && lastHair) {
+    hair = lastHair;
+  } else {
   /* Null until the second model lands, which is a normal early-frame state rather than an
      error. consolidate() takes the plurality across the hold, so a few hairless opening
      frames cost nothing. */
@@ -391,6 +415,8 @@ export function readFrame(
       { x0: fb.x0, y0: fb.y0, x1: fb.x1, y1: fb.y1 }
     );
     mask.close();
+  }
+  lastHair = hair;
   }
   const hairCoverage = hair?.coverage ?? 0;
 

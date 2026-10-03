@@ -119,6 +119,9 @@ export const SLEEP_HOW_CLOSE = 'Alright, close that';
 export const SCAN_COPY = {
   eyebrow: 'Reading you',
   warming: 'One second, love, let me get my eyes on.',
+  slowCamera: "Your camera's taking its time to wake up. Give it a moment, or tap below and I'll ask again.",
+  slowEyes: "Your phone's still getting my eyes ready. Older phones take a little longer the first time, and it's quicker after.",
+  retry: 'Try again',
   looking: 'Bring your face in for me, somewhere soft and bright if you can.',
   reading: "All of this happens on your phone and stays here. Hold still for me, it's only a few seconds.",
   denied: "I need your camera for this one. Turn it on whenever you're ready, I'm not going anywhere.",

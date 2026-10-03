@@ -20,6 +20,10 @@ interface DeepScanViewProps {
    findings settle, short enough that it does not feel like a medical test. */
 const HOLD_MS = 3200;
 
+/* Long enough for a slow phone to load the models on its processor, short enough that a
+   hang is named before she gives up on it. */
+const SLOW_MS = 12_000;
+
 export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -33,6 +37,11 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
   const lastSampleRef = useRef(0);
 
   const [phase, setPhase] = useState<'warming' | 'looking' | 'reading' | 'denied' | 'unsupported'>('warming');
+  /* Which half of the warm up is still out, so a slow phone says what it is waiting on
+     rather than spinning with nothing to show. Logged too, for anyone debugging a device. */
+  const [waitingOn, setWaitingOn] = useState<'camera' | 'eyes' | null>('camera');
+  const [slow, setSlow] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [nudge, setNudge] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
@@ -173,7 +182,7 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
   const tick = useCallback((now: number) => {
     const video = videoRef.current;
     if (!video || video.readyState < 2) {
-      rafRef.current = requestAnimationFrame(tick);
+      rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
       return;
     }
     if (!scratchRef.current) scratchRef.current = document.createElement('canvas');
@@ -201,7 +210,7 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
         heldSinceRef.current = null;
         samplesRef.current = [];
         setProgress(0);
-        rafRef.current = requestAnimationFrame(tick);
+        rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
         return;
       }
 
@@ -243,8 +252,10 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
       setPhase('looking');
     }
 
-    rafRef.current = requestAnimationFrame(tick);
+    rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
   }, [onDone, paint]);
+  const tickRef = useRef(tick);
+  tickRef.current = tick;
 
   useEffect(() => {
     let stream: MediaStream | null = null;
@@ -257,7 +268,14 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
       }
       /* Start the models downloading and the camera warming at the same time, so the
          wait is one wait rather than two. */
-      const warming = warmUp();
+      const t0 = performance.now();
+      setWaitingOn('camera');
+      setSlow(false);
+      const slowTimer = setTimeout(() => { if (!cancelled) setSlow(true); }, SLOW_MS);
+      const warming = warmUp().then((ok) => {
+        console.info('[scan] models ready', ok, Math.round(performance.now() - t0), 'ms');
+        return ok;
+      });
       let session: CaptureSession;
       try {
         /* One seam for both paths. Inside the native shell this locks exposure and white
@@ -265,9 +283,12 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
            is the same getUserMedia call it has always been. Which one she got travels with
            the sealed reading rather than being guessed at afterwards. See src/lib/capture.ts. */
         session = await openCamera();
+        console.info('[scan] camera open', session.path, session.locked ? 'locked' : 'unlocked', Math.round(performance.now() - t0), 'ms');
+        if (!cancelled) setWaitingOn('eyes');
         stream = session.stream;
         setCapture(session.path);
       } catch {
+        clearTimeout(slowTimer);
         if (!cancelled) setPhase('denied');
         return;
       }
@@ -281,13 +302,16 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
         await video.play().catch(() => {});
       }
       const ok = await warming;
+      clearTimeout(slowTimer);
       if (cancelled) return;
+      setWaitingOn(null);
+      setSlow(false);
       if (!ok) {
         setPhase('unsupported');
         return;
       }
       setPhase('looking');
-      rafRef.current = requestAnimationFrame(tick);
+      rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
     })();
 
     return () => {
@@ -295,7 +319,14 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
       cancelAnimationFrame(rafRef.current);
       stream?.getTracks().forEach((t) => t.stop());
     };
-  }, [tick]);
+  /* Only a retry restarts the camera. This used to depend on `tick`, which depends on
+     `onDone`, which the parent recreates on every render, so every redraw of the app
+     stopped the camera and opened it again. On a fast laptop that was one wasted restart.
+     On a slower phone, where the app redraws while the camera is still waking, it could
+     restart for ever and the scanner never came up. The loop reads the latest tick
+     through a ref instead. */
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attempt]);
 
   return (
     <div className="absolute inset-0 bg-night text-moon flex flex-col overflow-hidden">
@@ -360,11 +391,21 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
             : phase === 'unsupported'
             ? SCAN_COPY.unsupported
             : phase === 'warming'
-            ? SCAN_COPY.warming
+            ? (slow ? (waitingOn === 'camera' ? SCAN_COPY.slowCamera : SCAN_COPY.slowEyes) : SCAN_COPY.warming)
             : phase === 'looking'
             ? SCAN_COPY.looking
             : SCAN_COPY.reading}
         </p>
+
+        {phase === 'warming' && slow && (
+          <button
+            type="button"
+            onClick={() => setAttempt((n) => n + 1)}
+            className="relative z-10 mt-3 text-[12px] px-4 py-2 rounded-full border border-moon/30 text-moon/90 cursor-pointer"
+          >
+            {SCAN_COPY.retry}
+          </button>
+        )}
 
         {phase === 'reading' && (
           <>

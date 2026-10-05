@@ -630,7 +630,17 @@ export async function matchCampaign({ campaignRec, ownerPubkey, agentSecret, tra
   const brand = brandKeyFor(offerId);
   const offerSalt = Buffer.from(rec.offerSalt);
   const targetHash = sha(offerSalt, Buffer.from([target.tu, target.td, target.ts, target.tol]));
-  await sendAndConfirmTransaction(base, new Transaction().add(createTopUpEscrowInstruction(escrowPdaFromEscrowAuthority(agent.publicKey, 255), agent.publicKey, agent.publicKey, 20_000_000, 255)), [agent], opts);
+  /* The agent's ER fee escrow. The relayed seal already prepays it (ESCROW_TOPUP) and leaves
+     the agent's own wallet nearly empty, so an unconditional top-up here, paid by the agent,
+     failed with "insufficient lamports" on every match after a real phone seal (found in the
+     2026-10-06 dry run; the older self-seal path had funded the agent generously, which hid
+     it). Same rule as the seal: only when the escrow is low, and the deployer funds the agent
+     first. */
+  const agentEscrow = escrowPdaFromEscrowAuthority(agent.publicKey, 255);
+  if ((await base.getBalance(agentEscrow)) < 20_000_000) {
+    await fund(agent, ESCROW_TOPUP + ESCROW_RENT + TOPUP_MARGIN);
+    await sendAndConfirmTransaction(base, new Transaction().add(createTopUpEscrowInstruction(agentEscrow, agent.publicKey, agent.publicKey, ESCROW_TOPUP, 255)), [agent], opts);
+  }
   // her payout ATA must exist for settle_offer to land (self-seal path never created one)
   await sendAndConfirmTransaction(base, new Transaction().add(createAssociatedTokenAccountIdempotentInstruction(deployer.publicKey, herAta, ownerPk, MINT)), [deployer], opts);
   const matchIx = new TransactionInstruction({ programId: PROGRAM, keys: [

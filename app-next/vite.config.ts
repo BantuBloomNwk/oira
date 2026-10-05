@@ -106,6 +106,11 @@ export default defineConfig(() => {
              have to be taken on real handsets in real rooms, and a page that only ran on a
              laptop would measure the one device whose answer does not matter. */
           study: path.resolve(__dirname, 'study.html'),
+          /* The open study, for women: consent, her shade, five scans, and a send she
+             chooses. Reached as myoira.com/study and app.myoira.com/join. */
+          join: path.resolve(__dirname, 'join.html'),
+          /* The study's live totals, public: myoira.com/study/live. */
+          progress: path.resolve(__dirname, 'progress.html'),
         },
       },
     },

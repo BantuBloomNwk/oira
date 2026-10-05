@@ -176,6 +176,9 @@ export interface SkinReading {
      check itself against. */
   lab: { L: number; a: number; b: number };
   ribbonHex: string;
+  /* Her skin in linear light BEFORE the sclera correction, so the study can correct it against
+     a different white (paper beside her face) and compare. Never sealed. */
+  raw: Lin;
   /* How many skin pixels the reading rests on. Under a few hundred and it is a guess. */
   samples: number;
   /* True when the sclera gave us a white point. False means the frame was left
@@ -189,7 +192,99 @@ export interface SkinReading {
   white: { r: number; g: number; b: number } | null;
   /* Share of skin pixels with no detail left at the top of the range. Direct sun and a
      lamp pointed at her both show up here. */
-  clipped: number;
+  clipped: number;  /* Small fixed patches on both cheeks, the forehead and the chin, corrected for the light
+     the same way as the whole-face reading. Logged by the study page next to the
+     whole-face number; the app does not use them yet. The whole face takes in the darker
+     skin round the eyes and mouth, at the hairline and down the sides, which a
+     spectrophotometer never reads. Whether the patches are closer is for the data to say. */
+  patches: Partial<Record<PatchName, PatchReading | null>>;
+  /* Where each patch sat, normalised 0..1 with its radius as a share of the frame width, so
+     the study page can draw them on her face and anyone can see what was read. */
+  patchAt: Partial<Record<PatchName, { x: number; y: number; r: number }>>;
+  /* The whole-face reading again, with its brightness rescaled so the sclera sits at a fixed
+     level. The camera's exposure moves every reading; this takes that out in software. On an
+     A13 a dark background read her about 7 L* darker than a white wall did, and almost all of
+     it was exposure: rescaled, the gap fell to about 2. Logged beside the plain reading until
+     the data says which to trust. Null without a sclera. */
+  exposureNorm: { lab: { L: number; a: number; b: number }; ita: number } | null;
+}
+
+/* The sclera level exposureNorm rescales to, in linear light. The same level camera control
+   aims the camera at. */
+export const SCLERA_TARGET = 0.55;
+
+export type PatchName = 'cheekL' | 'cheekR' | 'forehead' | 'chin';
+export interface PatchReading { lab: { L: number; a: number; b: number }; ita: number; n: number }
+
+/* Centre landmarks on the MediaPipe face mesh. cheekL and cheekR are left and right as the
+   picture shows them, not as she would say it. */
+/* The cheeks sit on the cheekbones, below the outer corner of each eye. They were first put
+   at nose height (205, 425), which on a bearded face is beard: an A13 bench read hair there.
+   The cheekbone is also where a skin colour instrument usually goes. They stay on the outer
+   cheekbone rather than nearer the nose: skin round the nose is often lighter than the cheeks
+   and forehead, so a patch there would read her lighter than she is. The chin is kept but is
+   only skin on a clean shaven face, so it is never the one to trust. */
+const PATCH_CENTRES: Record<PatchName, number> = { cheekL: 117, cheekR: 346, forehead: 151, chin: 199 };
+
+
+/* The sclera as a white point, from the pixels inside the eye contours. Shared by the
+   scan's reading (on its 256 pixel wide frame) and scleraFullRes below, so the two can only
+   differ in what they were given, never in how they choose. */
+export function whiteFrom(eyePixels: Lin[]): Lin | null {
+  if (eyePixels.length < 40) return null;
+  /* The sclera is the brightest thing inside the eye contour. Take the top slice, but
+     not the very top, which is a catchlight rather than a surface. */
+  const sorted = [...eyePixels].sort((p, q) => luma(q) - luma(p));
+  const from = Math.floor(sorted.length * 0.05);
+  const to = Math.floor(sorted.length * 0.25);
+  const slice = sorted.slice(from, Math.max(from + 1, to));
+  const c: Lin = {
+    r: median(slice.map((p) => p.r)),
+    g: median(slice.map((p) => p.g)),
+    b: median(slice.map((p) => p.b)),
+  };
+  /* A sclera that came back nearly black means the eyes are shut or in deep shadow. */
+  return luma(c) > 0.05 ? c : null;
+}
+
+/**
+ * The same white point, read from the eyes at the camera's own resolution.
+ *
+ * The scan reads every frame shrunk to 256 pixels wide, where an eye is about a dozen pixels
+ * across and the brightest slice inside its contour takes in eyelid and skin. On a deep
+ * skinned face that pulls the white warm: on a Galaxy A13 it read about 3000K warmer than a
+ * sheet of white paper in the same light. Study only for now: logged beside the low
+ * resolution white so the data can say how much of that warmth this removes.
+ */
+export function scleraFullRes(
+  source: HTMLVideoElement,
+  pts: NormalizedLandmark[],
+  canvas: HTMLCanvasElement
+): { white: Lin; pixels: number } | null {
+  const W = source.videoWidth, H = source.videoHeight;
+  if (!W || !H || pts.length < 468) return null;
+  const all: Lin[] = [];
+  for (const idx of [LEFT_EYE, RIGHT_EYE]) {
+    const poly = toPoly(idx, pts, W, H);
+    const b = bounds(poly);
+    const x0 = Math.max(0, Math.floor(b.x0)), y0 = Math.max(0, Math.floor(b.y0));
+    const cw = Math.min(W, Math.ceil(b.x1)) - x0, ch = Math.min(H, Math.ceil(b.y1)) - y0;
+    if (cw < 4 || ch < 2) continue;
+    canvas.width = cw; canvas.height = ch;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    ctx.drawImage(source, x0, y0, cw, ch, 0, 0, cw, ch);
+    const d = ctx.getImageData(0, 0, cw, ch).data;
+    for (let y = 0; y < ch; y++) {
+      for (let x = 0; x < cw; x++) {
+        if (!inside(poly, x0 + x + 0.5, y0 + y + 0.5)) continue;
+        const i = (y * cw + x) * 4;
+        all.push({ r: toLinear(d[i]), g: toLinear(d[i + 1]), b: toLinear(d[i + 2]) });
+      }
+    }
+  }
+  const white = whiteFrom(all);
+  return white ? { white, pixels: all.length } : null;
 }
 
 export function readSkin(
@@ -222,22 +317,7 @@ export function readSkin(
     }
   }
 
-  let white: Lin | null = null;
-  if (eyePixels.length >= 40) {
-    /* The sclera is the brightest thing inside the eye contour. Take the top slice, but
-       not the very top, which is a catchlight rather than a surface. */
-    const sorted = eyePixels.sort((p, q) => luma(q) - luma(p));
-    const from = Math.floor(sorted.length * 0.05);
-    const to = Math.floor(sorted.length * 0.25);
-    const slice = sorted.slice(from, Math.max(from + 1, to));
-    const c: Lin = {
-      r: median(slice.map((p) => p.r)),
-      g: median(slice.map((p) => p.g)),
-      b: median(slice.map((p) => p.b)),
-    };
-    /* A sclera that came back nearly black means the eyes are shut or in deep shadow. */
-    if (luma(c) > 0.05) white = c;
-  }
+  const white = whiteFrom(eyePixels);
 
   /* --- the skin ---------------------------------------------------------------------- */
   const { x0, y0, x1, y1 } = bounds(oval);
@@ -273,6 +353,7 @@ export function readSkin(
     b: median(core.map((p) => p.b)),
   };
 
+  const raw: Lin = { ...px };
   let whiteBalanced = false;
   let strongCast = false;
   if (white) {
@@ -308,16 +389,61 @@ export function readSkin(
   const ita = (Math.atan2(lab.L - 50, lab.b) * 180) / Math.PI;
   const band = bandFromITA(ita);
 
+  /* --- the patches ------------------------------------------------------------------- */
+  /* Same trim and the same light correction as the whole face, over a small disc. The disc
+     scales with the face so a near and a far face sample the same patch of skin. */
+  const faceW = Math.hypot((pts[454].x - pts[234].x) * w, (pts[454].y - pts[234].y) * h);
+  const radius = Math.max(3, faceW * 0.06);
+  const correct = (c: Lin): Lin => {
+    if (!white) return c;
+    const wl = luma(white) || 1;
+    const gain = (v: number) => Math.min(1.25, Math.max(0.8, wl / (v || wl)));
+    return { r: c.r * gain(white.r), g: c.g * gain(white.g), b: c.b * gain(white.b) };
+  };
+  const patch = (centre: number): PatchReading | null => {
+    const cx = pts[centre].x * w, cy = pts[centre].y * h;
+    const px2: Lin[] = [];
+    for (let y = Math.max(0, Math.floor(cy - radius)); y <= Math.min(h - 1, Math.ceil(cy + radius)); y++) {
+      for (let x = Math.max(0, Math.floor(cx - radius)); x <= Math.min(w - 1, Math.ceil(cx + radius)); x++) {
+        if ((x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= radius * radius) px2.push(at(x, y));
+      }
+    }
+    if (px2.length < 20) return null;
+    const sorted = px2.sort((p, q) => luma(p) - luma(q));
+    const keep = sorted.slice(Math.floor(sorted.length * 0.08), Math.max(1, Math.floor(sorted.length * 0.85)));
+    const m = correct({ r: median(keep.map((p) => p.r)), g: median(keep.map((p) => p.g)), b: median(keep.map((p) => p.b)) });
+    const pl = linearToLab(m);
+    return { lab: pl, ita: (Math.atan2(pl.L - 50, pl.b) * 180) / Math.PI, n: px2.length };
+  };
+  const patches: Partial<Record<PatchName, PatchReading | null>> = {};
+  const patchAt: Partial<Record<PatchName, { x: number; y: number; r: number }>> = {};
+  for (const [name, idx] of Object.entries(PATCH_CENTRES) as [PatchName, number][]) {
+    patches[name] = patch(idx);
+    patchAt[name] = { x: pts[idx].x, y: pts[idx].y, r: radius / w };
+  }
+
+  /* Exposure taken out: scale the corrected skin so the sclera would sit at SCLERA_TARGET. */
+  let exposureNorm: SkinReading['exposureNorm'] = null;
+  if (white) {
+    const k = SCLERA_TARGET / (luma(white) || SCLERA_TARGET);
+    const nl = linearToLab({ r: px.r * k, g: px.g * k, b: px.b * k });
+    exposureNorm = { lab: nl, ita: (Math.atan2(nl.L - 50, nl.b) * 180) / Math.PI };
+  }
+
   return {
     band,
     ita,
     undertone: undertoneFrom(lab.a, lab.b),
     lab,
     ribbonHex: RIBBON[band],
+    raw,
     samples: skin.length,
     whiteBalanced,
     strongCast,
     white,
     clipped,
+    patches,
+    patchAt,
+    exposureNorm,
   };
 }

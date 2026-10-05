@@ -35,7 +35,13 @@ import type { SkinReading } from './skin';
    first sealed reading, because the whole point of the native capture work is to be able to
    say which readings came through it, and a field added later cannot describe the readings
    taken before it existed. */
-export type CapturePath = 'browser' | 'native';
+export type CapturePath = 'browser' | 'native' | 'controlled';
+/* browser: a web page, camera fully automatic.
+   native: the app shell, camera still fully automatic. Before 2026-10-04 this label was also
+   written when the shell had "locked" the camera through a plugin that never held anything,
+   so older readings labelled native were not locked either.
+   controlled: exposure was held still on the stream we read, and the camera itself reported
+   it (lib/camera-control.ts). White balance is never locked. */
 
 export type ConfidenceBand =
   | 'firm'   /* corrected against a real white point in light worth trusting */
@@ -132,6 +138,14 @@ export function assess({ skin, light, frames, capture = 'browser' }: ConfidenceI
   }
 
   score = Math.max(0, Math.min(1, score));
+
+  /* Warm side of the light gate (light.ts). Passed, because on darker eyes the sclera reads
+     warm and refusing here refused deep skinned women in daylight; never firm, because some
+     of these really are warm rooms. A cap, not a penalty: what sealed before still seals. */
+  if (light?.warmish) {
+    score = Math.min(score, FIRM - 0.01);
+    reasons.push('warm-edge');
+  }
 
   const band: ConfidenceBand = score >= FIRM ? 'firm' : score >= FLOOR ? 'fair' : 'thin';
 

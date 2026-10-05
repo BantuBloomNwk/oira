@@ -21,6 +21,10 @@
 
 import { warmUp, readFrame, consolidate, type ScanFrame } from './lib/scan';
 import { monkFromIta } from './lib/monk';
+import { toLinear, scleraFullRes, linearToLab, type PatchName, type Lin } from './lib/skin';
+import { readPaper, paperZone, type PaperSide } from './lib/paper';
+import { readLight } from './lib/light';
+import { CameraControl } from './lib/camera-control';
 
 const STORE = 'oira.study';
 
@@ -62,7 +66,61 @@ interface Trial {
   de2000: number | null;
   /* Signed per axis, because the sign is the correction. */
   dL: number | null; da: number | null; db: number | null;
+  /* Added 2026-10-04. Optional so rows taken before then still load. */
+  /* Which camera and what it actually delivered, not what was asked for. */
+  facing?: string;
+  res?: string;
+  /* What the camera says it can control, once per session. If exposure and white balance
+     are not listed here, camera control is not an option on this phone. */
+  caps?: string;
+  /* The light check's verdict and the eye-white correction it rested on. */
+  lightVerdict?: string | null;
+  lightLevel?: number | null;
+  clipped?: number | null;
+  whiteBalanced?: boolean;
+  strongCast?: boolean;
+  gains?: string | null;
+  /* The fixed patches, median over the hold, next to the whole-face reading above. */
+  patches?: Partial<Record<PatchName, (Lab & { ita: number }) | null>>;
+  /* Camera control asked for on this trial, and what it actually did. */
+  camctl?: 'on' | 'off';
+  camctlNote?: string;
+  /* The whole-face reading with exposure taken out (skin.ts exposureNorm), median over the hold. */
+  norm?: (Lab & { ita: number }) | null;
+  /* The sclera read at the camera's full resolution (skin.ts scleraFullRes), median over the
+     hold, against `cct` above, which is the scan's own low resolution read. With a paper
+     reading in the same light seconds later, this says how much of the sclera's warmth was
+     resolution. */
+  eyeFullCct?: number | null;
+  eyeFullVerdict?: string | null;
+  eyeFullGains?: string | null;
+  eyeFullPx?: number | null;
+  /* Paper held beside her face, read in the SAME frames as her skin (lib/paper.ts). */
+  paperSide?: string;
+  /* Exposure compensation asked for on paper trials, in stops. */
+  paperEv?: string;
+  paperFrames?: string;          /* frames where paper passed / frames read */
+  paperWhy?: string;             /* why it failed, on the last failing frame */
+  paperCct?: number | null;
+  paperVerdict?: string | null;
+  paperGains?: string | null;
+  paperCoverage?: number | null;
+  paperSpread?: number | null;
+  paperClip?: number | null;
+  /* The paper's brightness (linear luminance) and her skin's, same frames, so a reading can
+     later be scaled to the paper's brightness as well as corrected to its colour. */
+  paperY?: number | null;
+  skinY?: number | null;
+  /* Sclera minus paper in mired (1e6/K). Positive: the sclera read warmer than the paper. */
+  miredGap?: number | null;
+  /* Her skin corrected against the paper instead of the sclera: within the wider clamp
+     Fable proposed (0.7 to 1.45), and with no clamp at all. */
+  byPaper?: (Lab & { ita: number }) | null;
+  byPaperFree?: (Lab & { ita: number }) | null;
 }
+
+const PATCHES: PatchName[] = ['cheekL', 'cheekR', 'forehead', 'chin'];
+const f1 = (v: number | null | undefined, d = 1) => (typeof v === 'number' && Number.isFinite(v) ? v.toFixed(d) : '-');
 
 /* ---------------------------------------------------------------------------------------
    CIEDE2000.
@@ -140,11 +198,28 @@ const write = (t: Trial[]) => {
    --------------------------------------------------------------------------------------- */
 
 let stream: MediaStream | null = null;
+const session = { facing: '', res: '', caps: '' };
+let control: CameraControl | null = null;
+const eyeCanvas = document.createElement('canvas');
+let eyeWhites: Lin[] = [];
+let eyePx: number[] = [];
+const paperCanvas = document.createElement('canvas');
+let paperWhites: Lin[] = [];
+let paperReads: { coverage: number; spread: number; clipped: number }[] = [];
+let paperTried = 0;
+let paperLastWhy = '';
+let raws: Lin[] = [];
+let heldZone: { x: number; y: number; w: number; h: number } | null = null;
 const video = document.getElementById('cam') as HTMLVideoElement;
 const scratch = document.createElement('canvas');
 const $ = (id: string) => document.getElementById(id)!;
 const val = (id: string) => ($(id) as HTMLInputElement).value.trim();
-const num = (id: string) => Number(($(id) as HTMLInputElement).value);
+/* An empty box is NaN, not 0. Number('') is 0, so an empty instrument reading used to count
+   as a reading of pure black and every repeatability-only trial was graded against it. */
+const num = (id: string) => {
+  const v = ($(id) as HTMLInputElement).value.trim();
+  return v === '' ? NaN : Number(v);
+};
 
 function say(msg: string, bad = false) {
   const el = $('say');
@@ -157,34 +232,190 @@ async function start() {
   const ok = await warmUp();
   if (!ok) { say('the scan pipeline would not load on this device', true); return; }
   try {
-    /* Rear camera by default. The study is about measuring skin accurately, and the rear
-       sensor on almost every handset is better than the front one, so it is the honest
-       upper bound. Switch to user in the field if the protocol calls for it. */
+    /* The app's own camera by default: front, asking for 720x960, the same request
+       lib/capture.ts makes. Measuring a better camera than the one she scans with gave a
+       number about a setup nobody uses. Rear stays one tap away, for the front versus rear
+       comparison, and every trial records which it was and what the camera delivered. */
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: val('facing') || 'environment', width: { ideal: 1280 }, height: { ideal: 960 } },
+      video: { facingMode: val('facing') || 'user', width: { ideal: 720 }, height: { ideal: 960 } },
     });
+    const track = stream.getVideoTracks()[0];
+    const st = track?.getSettings?.() ?? {};
+    session.facing = st.facingMode || val('facing') || 'user';
+    session.res = `${st.width ?? '?'}x${st.height ?? '?'}`;
+    const caps = (track as MediaStreamTrack & { getCapabilities?: () => Record<string, unknown> })?.getCapabilities?.() ?? {};
+    const keys = ['exposureMode', 'whiteBalanceMode', 'exposureCompensation', 'exposureTime', 'colorTemperature', 'iso', 'focusMode', 'pointsOfInterest'];
+    session.caps = keys.filter((k) => k in caps).map((k) => {
+      const v = caps[k];
+      if (Array.isArray(v)) return `${k}=${v.join('/')}`;
+      if (v && typeof v === 'object') return `${k}=${(v as { min?: number }).min}..${(v as { max?: number }).max}`;
+      return k;
+    }).join(' ') || 'none';
   } catch {
     say('camera refused', true); return;
   }
   video.srcObject = stream;
   await video.play().catch(() => {});
   $('capture').removeAttribute('disabled');
-  say('ready. Fill the form, put the instrument on the same spot, then capture.');
+  $('paper').removeAttribute('disabled');
+  startOverlay();
+  say(`ready, ${session.facing} camera at ${session.res}. Camera controls: ${session.caps}. Fill the form, put the instrument on the same spot if there is one, then capture.`);
+}
+
+/* ---------------------------------------------------------------------------------------
+   What is being read, drawn on her face.
+
+   A few times a second between trials: the patch circles where skin.ts will read them, and the
+   box for the paper test. The first A13 bench read the background through a cheek patch and
+   nobody could see it; now anyone can.
+   --------------------------------------------------------------------------------------- */
+let busy = false;
+function startOverlay() {
+  const cv = $('overlay') as HTMLCanvasElement;
+  const draw = () => {
+    if (!stream) return;
+    const W = video.clientWidth, H = video.clientHeight;
+    if (cv.width !== W) cv.width = W;
+    if (cv.height !== H) cv.height = H;
+    const ctx = cv.getContext('2d')!;
+    ctx.clearRect(0, 0, W, H);
+    ctx.setLineDash([6, 5]); ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1.5;
+    ctx.strokeRect(W * 0.25, H * 0.25, W * 0.5, H * 0.5);
+    ctx.setLineDash([]);
+    if (!busy) {
+      const f = readFrame(video, scratch, performance.now());
+      const side = val('paperSide');
+      if (f.landmarks && (side === 'left' || side === 'right')) {
+        const z = heldZone ?? paperZone(f.landmarks, side as PaperSide);
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
+        ctx.strokeRect(z.x * W, z.y * H, z.w * W, z.h * H); ctx.setLineDash([]);
+        ctx.fillStyle = '#fff'; ctx.font = '11px system-ui'; ctx.fillText('paper here', z.x * W + 2, z.y * H - 3);
+      }
+      const at = f.skin?.patchAt;
+      if (at) {
+        for (const [name, p] of Object.entries(at)) {
+          if (!p) continue;
+          ctx.strokeStyle = name.startsWith('cheek') ? '#E8BE60' : '#7FD1C1'; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(p.x * W, p.y * H, p.r * W, 0, Math.PI * 2); ctx.stroke();
+          ctx.fillStyle = '#fff'; ctx.font = '10px system-ui'; ctx.fillText(name, p.x * W + p.r * W + 2, p.y * H);
+        }
+      }
+    }
+    setTimeout(draw, 350);
+  };
+  draw();
+}
+
+/* The paper test. A sheet of plain white paper filling the dashed box is a white reference
+   that is not her eye. If the paper reads as daylight while her sclera reads as a warm bulb,
+   the light check is being fooled by the sclera, not by the room. */
+async function measurePaper() {
+  for (const f of ['subject', 'light', 'device']) {
+    if (!val(f)) { say(`${f} is required`, true); return; }
+  }
+  const W = video.videoWidth, H = video.videoHeight;
+  scratch.width = W; scratch.height = H;
+  const ctx = scratch.getContext('2d', { willReadFrequently: true })!;
+  ctx.drawImage(video, 0, 0, W, H);
+  const x0 = Math.floor(W * 0.25), y0 = Math.floor(H * 0.25), bw = Math.floor(W * 0.5), bh = Math.floor(H * 0.5);
+  const d = ctx.getImageData(x0, y0, bw, bh).data;
+  const rs: number[] = [], gs: number[] = [], bs: number[] = [];
+  let clip = 0;
+  for (let i = 0; i < d.length; i += 4 * 3) {
+    rs.push(toLinear(d[i])); gs.push(toLinear(d[i + 1])); bs.push(toLinear(d[i + 2]));
+    if (d[i] > 250 || d[i + 1] > 250 || d[i + 2] > 250) clip++;
+  }
+  const white = { r: median(rs), g: median(gs), b: median(bs) };
+  const light = readLight(white, clip / rs.length);
+  const wl = 0.2126 * white.r + 0.7152 * white.g + 0.0722 * white.b;
+  const lin2lab = (c: number) => (c > 0.008856 ? Math.cbrt(c) : 7.787 * c + 16 / 116);
+  const X = (white.r * 0.4124 + white.g * 0.3576 + white.b * 0.1805) / 0.95047, Y = wl, Z = (white.r * 0.0193 + white.g * 0.1192 + white.b * 0.9505) / 1.08883;
+  const lab = { L: 116 * lin2lab(Y) - 16, a: 500 * (lin2lab(X) - lin2lab(Y)), b: 200 * (lin2lab(Y) - lin2lab(Z)) };
+  const t: Trial = {
+    id: (crypto.randomUUID?.() ?? String(Math.random())).slice(0, 8), at: Date.now(),
+    subject: val('subject'), monkVisual: num('monkVisual') || 0, site: 'paper', light: val('light'), device: val('device'),
+    ref: null, app: lab, appIta: NaN, appMonk: null, confidence: null, band: null, capture: null,
+    cct: Math.round(light.cct), samples: rs.length, de2000: null, dL: null, da: null, db: null,
+    facing: session.facing, res: session.res, caps: session.caps,
+    lightVerdict: light.verdict, lightLevel: light.level, clipped: clip / rs.length,
+    gains: [white.r, white.g, white.b].map((c) => (wl / (c || wl)).toFixed(3)).join('/'),
+    camctl: 'off', camctlNote: 'paper',
+  };
+  const all = read(); all.push(t); write(all); render();
+  say(`paper: ${Math.round(light.cct)}K, ${light.verdict}, level ${light.level.toFixed(2)}, gains ${t.gains}`);
 }
 
 /* One trial: hold, sample, consolidate, exactly as the app does. */
-async function capture(): Promise<ScanFrame | null> {
+async function capture(): Promise<{ final: ScanFrame; frames: ScanFrame[] } | null> {
+  busy = true;
+  try { return await captureInner(); } finally { busy = false; heldZone = null; }
+}
+async function captureInner(): Promise<{ final: ScanFrame; frames: ScanFrame[] } | null> {
+  /* With camera control on, every trial starts from automatic and meters and locks again,
+     exactly as a scan in the app does, so on and off trials can sit side by side. */
+  control = new CameraControl(stream!, val('camctl') === 'on');
+  if (val('camctl') === 'on') {
+    const track = stream!.getVideoTracks()[0];
+    try { await track.applyConstraints({ advanced: [{ exposureMode: 'continuous', whiteBalanceMode: 'continuous', exposureCompensation: 0 } as MediaTrackConstraintSet] }); } catch { /* not supported */ }
+    /* Let automatic exposure settle from the reset before metering, or the hunt it starts
+       runs on into the hold. The first A13 bench did exactly that. */
+    say('settling...');
+    await new Promise((r) => setTimeout(r, 1500));
+    say('metering...');
+    while (!control.settled) {
+      const now = performance.now();
+      const f = readFrame(video, scratch, now);
+      control.feed(f.light?.level ?? null, now);
+      await new Promise((r) => setTimeout(r, SAMPLE_MS));
+    }
+    say('hold still...');
+  }
+  /* Paper trials can ask for less exposure so a white sheet beside a deep skinned face does
+     not blow out. Exposure compensation only, which a Galaxy A13 honours; never a manual
+     white balance, which turned its frames magenta. Back to 0 for trials without paper. */
+  {
+    const track = stream!.getVideoTracks()[0];
+    const wantEv = val('paperSide') === 'none' ? 0 : Number(val('paperEv') || 0);
+    const caps = (track.getCapabilities?.() ?? {}) as { exposureCompensation?: { min: number; max: number } };
+    if (caps.exposureCompensation) {
+      try {
+        await Promise.race([
+          track.applyConstraints({ advanced: [{ exposureCompensation: Math.max(caps.exposureCompensation.min, Math.min(caps.exposureCompensation.max, wantEv)) } as MediaTrackConstraintSet] }),
+          new Promise((r) => setTimeout(r, 1500)),
+        ]);
+      } catch { /* not honoured; the trial records what was asked */ }
+      if (wantEv !== 0) { say('settling exposure...'); await new Promise((r) => setTimeout(r, 1200)); }
+    }
+  }
   const frames: ScanFrame[] = [];
+  eyeWhites = []; eyePx = [];
+  paperWhites = []; paperReads = []; paperTried = 0; paperLastWhy = ''; raws = []; heldZone = null;
   const t0 = performance.now();
   return new Promise((resolve) => {
     const tick = () => {
       const now = performance.now();
       const f = readFrame(video, scratch, now);
-      if (f.skin) frames.push(f);
+      if (f.skin) {
+        frames.push(f);
+        if (f.landmarks) {
+          const e = scleraFullRes(video, f.landmarks, eyeCanvas);
+          if (e) { eyeWhites.push(e.white); eyePx.push(e.pixels); }
+          const side = val('paperSide');
+          if (side === 'left' || side === 'right') {
+            paperTried++;
+            /* The zone is fixed at the first frame of the hold, so the box does not move. */
+            if (!heldZone) heldZone = paperZone(f.landmarks, side as PaperSide);
+            const pr = readPaper(video, f.landmarks, side as PaperSide, paperCanvas, heldZone);
+            if (pr?.ok) { paperWhites.push(pr.white); paperReads.push(pr); if (pr.why !== 'ok') paperLastWhy = pr.why; }
+            else if (pr) { paperLastWhy = `${pr.why}; coverage ${Math.round(pr.coverage * 100)}%, blown ${Math.round(pr.clipped * 100)}%`; }
+          }
+        }
+        if (f.skin?.raw) raws.push(f.skin.raw);
+      }
       $('count').textContent = String(frames.length);
       if (now - t0 < HOLD_MS) { setTimeout(tick, SAMPLE_MS); return; }
       if (!frames.length) { resolve(null); return; }
-      resolve(consolidate(frames, frames[frames.length - 1]));
+      resolve({ final: consolidate(frames, frames[frames.length - 1]), frames });
     };
     tick();
   });
@@ -207,10 +438,69 @@ async function record() {
 
   $('capture').setAttribute('disabled', 'true');
   say('hold still...');
-  const frame = await capture();
+  const got = await capture();
   $('capture').removeAttribute('disabled');
+  const frame = got?.final;
 
   if (!frame?.skin) { say('no skin reading, nothing recorded. Try again.', true); return; }
+
+  /* Each patch is the median over the hold, the same way consolidate() takes the whole face. */
+  const patches: Trial['patches'] = {};
+  for (const name of PATCHES) {
+    const ps = got!.frames.map((f) => f.skin?.patches?.[name]).filter((p): p is NonNullable<typeof p> => !!p);
+    patches[name] = ps.length
+      ? { L: median(ps.map((p) => p.lab.L)), a: median(ps.map((p) => p.lab.a)), b: median(ps.map((p) => p.lab.b)), ita: median(ps.map((p) => p.ita)) }
+      : null;
+  }
+  const ns = got!.frames.map((f) => f.skin?.exposureNorm).filter((p): p is NonNullable<typeof p> => !!p);
+  const norm = ns.length
+    ? { L: median(ns.map((p) => p.lab.L)), a: median(ns.map((p) => p.lab.a)), b: median(ns.map((p) => p.lab.b)), ita: median(ns.map((p) => p.ita)) }
+    : null;
+  let eyeFull: Pick<Trial, 'eyeFullCct' | 'eyeFullVerdict' | 'eyeFullGains' | 'eyeFullPx'> = { eyeFullCct: null, eyeFullVerdict: null, eyeFullGains: null, eyeFullPx: null };
+  if (eyeWhites.length) {
+    const ew = { r: median(eyeWhites.map((c) => c.r)), g: median(eyeWhites.map((c) => c.g)), b: median(eyeWhites.map((c) => c.b)) };
+    const el = readLight(ew, 0);
+    const lv = 0.2126 * ew.r + 0.7152 * ew.g + 0.0722 * ew.b;
+    eyeFull = {
+      eyeFullCct: Math.round(el.cct), eyeFullVerdict: el.verdict,
+      eyeFullGains: [ew.r, ew.g, ew.b].map((c) => (lv / (c || lv)).toFixed(3)).join('/'),
+      eyeFullPx: Math.round(median(eyePx)),
+    };
+  }
+  /* Paper, same frames. */
+  const side = val('paperSide');
+  let paper: Partial<Trial> = { paperSide: side || 'none' };
+  if (side === 'left' || side === 'right') {
+    paper.paperFrames = `${paperWhites.length}/${paperTried}`;
+    paper.paperWhy = paperWhites.length ? (paperLastWhy.startsWith('partly') ? paperLastWhy : 'ok') : paperLastWhy || 'no paper found';
+    paper.paperEv = val('paperEv');
+    if (paperWhites.length >= 3 && raws.length) {
+      const pw = { r: median(paperWhites.map((c) => c.r)), g: median(paperWhites.map((c) => c.g)), b: median(paperWhites.map((c) => c.b)) };
+      const pl = readLight(pw, 0);
+      const pv = 0.2126 * pw.r + 0.7152 * pw.g + 0.0722 * pw.b;
+      const rawSkin = { r: median(raws.map((c) => c.r)), g: median(raws.map((c) => c.g)), b: median(raws.map((c) => c.b)) };
+      const correct = (lo: number, hi: number) => {
+        const g = (c: number) => Math.min(hi, Math.max(lo, pv / (c || pv)));
+        const lab = linearToLab({ r: rawSkin.r * g(pw.r), g: rawSkin.g * g(pw.g), b: rawSkin.b * g(pw.b) });
+        return { ...lab, ita: (Math.atan2(lab.L - 50, lab.b) * 180) / Math.PI };
+      };
+      paper = {
+        ...paper,
+        paperCct: Math.round(pl.cct), paperVerdict: pl.verdict,
+        paperGains: [pw.r, pw.g, pw.b].map((c) => (pv / (c || pv)).toFixed(3)).join('/'),
+        paperCoverage: median(paperReads.map((r) => r.coverage)),
+        paperSpread: median(paperReads.map((r) => r.spread)),
+        paperClip: median(paperReads.map((r) => r.clipped)),
+        paperY: pv,
+        skinY: 0.2126 * rawSkin.r + 0.7152 * rawSkin.g + 0.0722 * rawSkin.b,
+        miredGap: frame.light?.cct ? Math.round(1e6 / frame.light.cct - 1e6 / pl.cct) : null,
+        byPaper: correct(0.7, 1.45),
+        byPaperFree: correct(0, Infinity),
+      };
+    }
+  }
+  const w = frame.skin.white;
+  const wl = w ? 0.2126 * w.r + 0.7152 * w.g + 0.0722 * w.b : 0;
 
   const app: Lab = frame.skin.lab;
   const t: Trial = {
@@ -222,22 +512,38 @@ async function record() {
     appMonk: monkFromIta(frame.skin.ita),
     confidence: frame.confidence?.score ?? null,
     band: frame.confidence?.band ?? null,
-    capture: frame.confidence?.capture ?? null,
+    capture: control?.report().locked ? 'controlled' : (frame.confidence?.capture ?? null),
     cct: frame.light ? Math.round(frame.light.cct) : null,
     samples: frame.skin.samples,
     de2000: ref ? ciede2000(ref, app) : null,
     dL: ref ? app.L - ref.L : null,
     da: ref ? app.a - ref.a : null,
     db: ref ? app.b - ref.b : null,
+    facing: session.facing, res: session.res, caps: session.caps,
+    lightVerdict: frame.light?.verdict ?? null,
+    lightLevel: frame.light?.level ?? null,
+    clipped: frame.skin.clipped,
+    whiteBalanced: frame.skin.whiteBalanced,
+    strongCast: frame.skin.strongCast,
+    /* The raw gains the eye-white asks for, before the clamp. */
+    gains: w ? [w.r, w.g, w.b].map((c) => (wl / (c || wl)).toFixed(3)).join('/') : null,
+    patches,
+    norm,
+    ...eyeFull,
+    ...paper,
+    camctl: val('camctl') === 'on' ? 'on' : 'off',
+    camctlNote: control?.report().note ?? '',
   };
 
   const all = read();
   all.push(t);
   write(all);
   render();
-  say(t.de2000 === null
-    ? `recorded, no instrument reading. L* ${app.L.toFixed(1)} a* ${app.a.toFixed(1)} b* ${app.b.toFixed(1)}, ITA ${t.appIta.toFixed(1)}`
-    : `recorded. dE2000 ${t.de2000.toFixed(2)}  (dL ${t.dL!.toFixed(1)} da ${t.da!.toFixed(1)} db ${t.db!.toFixed(1)})`);
+  say(t.paperSide && t.paperSide !== 'none'
+    ? (t.paperCct ? `same frame: eyes ${t.cct ?? '?'}K, paper ${t.paperCct}K (${t.paperFrames} frames). Monk by eyes ${t.appMonk}, by paper ${monkFromIta(t.byPaper!.ita)}` : `paper not read: ${t.paperWhy} (${t.paperFrames} frames). Recorded anyway.`)
+    : t.de2000 === null
+    ? `${t.eyeFullCct ? `eyes ${t.cct ?? '?'}K / ${t.eyeFullCct}K full res. ` : ''}recorded, no instrument reading. L* ${app.L.toFixed(1)} a* ${app.a.toFixed(1)} b* ${app.b.toFixed(1)}, ITA ${t.appIta.toFixed(1)}`
+    : `recorded. dE2000 ${t.de2000!.toFixed(2)}  (dL ${t.dL!.toFixed(1)} da ${t.da!.toFixed(1)} db ${t.db!.toFixed(1)})`);
 }
 
 /* ---------------------------------------------------------------------------------------
@@ -260,10 +566,13 @@ function render() {
     tr.innerHTML = `
       <td>${t.subject}</td><td>${t.monkVisual}</td><td>${t.site}</td><td>${t.light}</td>
       <td>${t.device}</td>
-      <td><b>${t.de2000.toFixed(2)}</b></td>
-      <td>${t.dL.toFixed(1)}</td><td>${t.da.toFixed(1)}</td><td>${t.db.toFixed(1)}</td>
-      <td>${t.appIta.toFixed(1)}</td><td>${t.appMonk ?? '-'}</td>
-      <td>${t.confidence?.toFixed(2) ?? '-'}</td><td>${t.cct ?? '-'}</td>`;
+      <td><b>${f1(t.de2000, 2)}</b></td>
+      <td>${f1(t.dL)}</td><td>${f1(t.da)}</td><td>${f1(t.db)}</td>
+      <td>${f1(t.appIta)}${t.norm ? ` (${f1(t.norm.ita)})` : ''}</td><td>${t.appMonk ?? '-'}${t.norm ? ` (${monkFromIta(t.norm.ita)})` : ''}</td>
+      <td>${f1(t.patches?.cheekL?.ita)} / ${f1(t.patches?.cheekR?.ita)}</td>
+      <td>${t.facing ?? '-'}${t.camctl === 'on' ? (t.capture === 'controlled' ? ' locked' : ' unlocked') : ''}</td><td>${t.lightVerdict ?? '-'}</td>
+      <td>${t.confidence?.toFixed(2) ?? '-'}</td><td>${t.cct ?? '-'}${t.eyeFullCct ? ` / ${t.eyeFullCct}` : ''}</td>
+      <td>${t.paperSide && t.paperSide !== 'none' ? `${t.paperCct ?? '-'}K ${t.paperFrames ?? ''}${t.byPaper ? `, ITA ${f1(t.byPaper.ita)} (${monkFromIta(t.byPaper.ita)})` : ` ${t.paperWhy ?? ''}`}` : '-'}</td>`;
     body.appendChild(tr);
   }
 
@@ -282,12 +591,14 @@ function render() {
    * calibration fixes it. */
   const groups = new Map<string, Trial[]>();
   for (const t of rows) {
-    const k = `${t.subject} / ${t.site} / ${t.light} / ${t.device}`;
+    /* Camera and control in the key too: front against rear and control on against off are
+       the comparisons this is for, and pooling them would hide exactly that difference. */
+    const k = `${t.subject} / ${t.site} / ${t.light} / ${t.device} / ${t.facing ?? '?'} / control ${t.camctl ?? 'off'}`;
     groups.set(k, [...(groups.get(k) ?? []), t]);
   }
   const repeats = [...groups.entries()].filter(([, v]) => v.length > 1);
   if (repeats.length) {
-    let rh = '<div class="big">Repeatability, no instrument needed</div><table class="sum"><thead><tr><th>subject / site / light / device</th><th>n</th><th>spread dE2000</th><th>worst pair</th></tr></thead><tbody>';
+    let rh = '<div class="big">Repeatability, no instrument needed</div><table class="sum"><thead><tr><th>subject / site / light / device / camera / control</th><th>n</th><th>spread dE2000</th><th>worst pair</th></tr></thead><tbody>';
     for (const [k, v] of repeats) {
       /* Every pair against every other, so one outlier cannot hide behind an average. */
       const ds: number[] = [];
@@ -338,7 +649,14 @@ function csv() {
   const rows = read();
   const cols: Array<keyof Trial> = ['id', 'at', 'subject', 'monkVisual', 'site', 'light', 'device',
     'de2000', 'dL', 'da', 'db', 'appIta', 'appMonk', 'confidence', 'band', 'capture', 'cct', 'samples'];
-  const head = [...cols, 'refL', 'refA', 'refB', 'appL', 'appA', 'appB'].join(',');
+  const extra: Array<keyof Trial> = ['paperEv', 'paperSide', 'paperFrames', 'paperWhy', 'paperCct', 'paperVerdict', 'paperGains', 'paperCoverage', 'paperSpread', 'paperClip', 'paperY', 'skinY', 'miredGap', 'eyeFullCct', 'eyeFullVerdict', 'eyeFullGains', 'eyeFullPx', 'camctl', 'camctlNote', 'facing', 'res', 'lightVerdict', 'lightLevel', 'clipped', 'whiteBalanced', 'strongCast', 'gains', 'caps'];
+  const cell = (v: unknown) => {
+    if (typeof v === 'number') return Number.isInteger(v) ? String(v) : v.toFixed(4);
+    const s = String(v ?? '');
+    return /[",\n ]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const patchHead = ['byPaperL', 'byPaperA', 'byPaperB', 'byPaperIta', 'byPaperFreeL', 'byPaperFreeA', 'byPaperFreeB', 'byPaperFreeIta', 'normL', 'normA', 'normB', 'normIta', ...PATCHES.flatMap((p) => [`${p}L`, `${p}A`, `${p}B`, `${p}Ita`])];
+  const head = [...cols, 'refL', 'refA', 'refB', 'appL', 'appA', 'appB', ...extra, ...patchHead].join(',');
   const lines = rows.map((t) => [
     ...cols.map((c) => {
       const v = t[c];
@@ -346,6 +664,13 @@ function csv() {
     }),
     t.ref ? t.ref.L.toFixed(2) : '', t.ref ? t.ref.a.toFixed(2) : '', t.ref ? t.ref.b.toFixed(2) : '',
     t.app.L.toFixed(2), t.app.a.toFixed(2), t.app.b.toFixed(2),
+    ...extra.map((c) => cell(t[c])),
+    ...[t.byPaper, t.byPaperFree].flatMap((v) => (v ? [v.L.toFixed(2), v.a.toFixed(2), v.b.toFixed(2), v.ita.toFixed(2)] : ['', '', '', ''])),
+    ...(t.norm ? [t.norm.L.toFixed(2), t.norm.a.toFixed(2), t.norm.b.toFixed(2), t.norm.ita.toFixed(2)] : ['', '', '', '']),
+    ...PATCHES.flatMap((p) => {
+      const v = t.patches?.[p];
+      return v ? [v.L.toFixed(2), v.a.toFixed(2), v.b.toFixed(2), v.ita.toFixed(2)] : ['', '', '', ''];
+    }),
   ].join(','));
   return [head, ...lines].join('\n');
 }
@@ -356,6 +681,38 @@ function csv() {
 
 $('start').addEventListener('click', () => { void start(); });
 $('capture').addEventListener('click', () => { void record(); });
+$('paper').addEventListener('click', () => { void measurePaper(); });
+
+/* Send to Oira: every trial on this phone that has not been sent yet goes to the study
+   server's bench store, behind the team passphrase. Replaces copying and pasting the CSV.
+   Sent ids are remembered here so nothing goes twice. */
+const SENT = 'oira.study.sent';
+const TEAM = 'oira.study.team';
+$('send').addEventListener('click', async () => {
+  let key = '';
+  try { key = localStorage.getItem(TEAM) || ''; } catch { /* asked below */ }
+  if (!key) key = (prompt('Team passphrase (from the Oira team, starts with OIRA-)') || '').trim();
+  if (!key) return;
+  let sent: string[] = [];
+  try { sent = JSON.parse(localStorage.getItem(SENT) || '[]'); } catch { sent = []; }
+  const todo = read().filter((t) => !sent.includes(t.id));
+  if (!todo.length) { say('everything on this phone has already been sent'); return; }
+  say(`sending ${todo.length} trials...`);
+  try {
+    const r = await fetch('/api/study/bench', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-oira-team': key },
+      body: JSON.stringify({ trials: todo }),
+    });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 401) { try { localStorage.removeItem(TEAM); } catch { /* fine */ } say('that passphrase was not right, tap Send again and re-enter it', true); return; }
+    if (!r.ok) { say(`not sent (${j.error || r.status}). Nothing was lost; try again.`, true); return; }
+    try { localStorage.setItem(TEAM, key); localStorage.setItem(SENT, JSON.stringify([...sent, ...todo.map((t) => t.id)])); } catch { /* fine */ }
+    say(`sent ${j.stored} trials to Oira. Thank you.`);
+  } catch {
+    say('no connection, nothing was lost; try again', true);
+  }
+});
 
 $('copy').addEventListener('click', async () => {
   const text = csv();

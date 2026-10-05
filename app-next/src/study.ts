@@ -15,8 +15,8 @@
  * handsets in real rooms, and a page that only ran on a laptop would measure the one device
  * whose answer does not matter.
  *
- * See docs/ACCURACY-STUDY.md for the protocol. Do not run this without reading it: the order
- * of operations is what stops the data being noise.
+ * Follow the study protocol, which the research team keeps, every time: the order of
+ * operations is what stops the data being noise.
  */
 
 import { warmUp, readFrame, consolidate, type ScanFrame } from './lib/scan';

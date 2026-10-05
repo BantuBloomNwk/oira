@@ -19,6 +19,9 @@ Oira runs the sensitive part of that exchange inside a MagicBlock Private Epheme
   row is a live ledger read, not a label, so the enclave dependency is something you can check
   rather than something we claim.
 - **The site:** [myoira.com](https://myoira.com)
+- **The open skin study:** [myoira.com/study](https://myoira.com/study). Anyone can take part in
+  about three minutes; the picture never leaves her phone and she sees every number before it is
+  sent. Live totals, across skin tones, phones and countries: [myoira.com/study/live](https://myoira.com/study/live).
 
 ## What is new since we last showed this
 
@@ -36,6 +39,15 @@ Judges called Oira a frontrunner last time and it did not win. This is what we d
 - **Patched before it bit us.** MagicBlock disclosed a flaw in the `#[ephemeral]` macro that cost
   another team 98k USDC. We upgraded the SDK and redeployed in place the same week, then
   re-verified the whole suite against the upgraded program.
+- **Fair to deeper skin, found by testing on it.** The scan uses the white of the eye to judge
+  the light, and on darker eyes it reads warm: in a same-frame bench against plain paper it read
+  about 1000 to 1400K warmer than the light really was, so daylight was being refused as a warm
+  bulb. The gate now accepts that range at a capped confidence. Brown and dark skin now get a deep
+  palette, and a camera whose colours have broken can no longer produce a sealable reading. We
+  have not yet validated accuracy against an instrument; that study is next, starting with
+  Monk 7 to 10.
+- **An open study.** Readings women choose to send land on our own server (`study-service/`),
+  with no name, no photo and no IP address, and a code that deletes them from any phone.
 - **Recovery that exists.** An export and import recovery key for the one custody path that had
   no automatic recovery, and she cannot seal until she has saved it.
 
@@ -141,6 +153,8 @@ program/            the on-chain program (Rust, Anchor + ephemeral-rollups-sdk)
 idl/                generated IDL for the deployed program
 client/             the end-to-end proof against devnet + the TEE
 app-next/           the Android app (React + Capacitor), the scan and both ways in
+  join.html         the open skin study; progress.html its live totals
+study-service/      where study readings land: a small dependency-free Node service
 docs/ARCHITECTURE.md  the technical walkthrough
 docs/VERIFY.md        prove the private match yourself against devnet
 docs/PITCH.md         the product story and where this goes

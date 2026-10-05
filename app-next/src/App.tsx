@@ -516,8 +516,14 @@ export default function App() {
                 }));
                 /* Her reading picks the palette rather than a picker doing it for her.
                    Depth and undertone are what the seasonal split actually turns on. */
-                const cool = tone.includes('cool');
-                const deep = tone.includes('deep') || tone.includes('rich');
+                /* The finding reads "<band> · <undertone>", and the bands are very-light,
+                   light, intermediate, tan, brown, dark and deepest. This used to look for
+                   the word "deep", which only "deepest" has, so brown and dark skin, most of
+                   the women Oira is for, were handed a Medium palette right after being told
+                   their skin is deep brown. */
+                const [band = '', lean = ''] = tone.split('·').map((t) => t.trim().toLowerCase());
+                const cool = lean.includes('cool');
+                const deep = ['brown', 'dark', 'deepest'].includes(band) || band.includes('deep');
                 const matched =
                   seasonalPalettes.find((p) =>
                     cool

@@ -37,6 +37,17 @@
 #
 # Host is the sslip.io address the shipping app's root netlify.toml already proxies to.
 # Change both when the real domain lands.
+# The open study. /join is what the website links to.
+[[redirects]]
+  from = "/progress"
+  to = "/progress.html"
+  status = 200
+
+[[redirects]]
+  from = "/join"
+  to = "/join.html"
+  status = 200
+
 [[redirects]]
   from = "/api/*"
   to = "https://oira.161-97-74-212.sslip.io/api/:splat"

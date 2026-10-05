@@ -9,6 +9,7 @@ import {
 } from '../lib/voice';
 import { GoldenFigBranch } from './GoldenFigBranch';
 import { openCamera, type CaptureSession, type CapturePath } from '../lib/capture';
+import { CameraControl, cameraControlEnabled } from '../lib/camera-control';
 
 interface DeepScanViewProps {
   onClose: () => void;
@@ -58,9 +59,12 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
   const [findings, setFindings] = useState<Finding[]>([]);
   const [nudge, setNudge] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
-  /* Which camera path she actually got. Carried into the reading so the seal records it and a
-     browser capture is never later mistaken for one we controlled. */
-  const [capture, setCapture] = useState<CapturePath>('browser');
+  /* Which camera path she actually got, carried into the reading so the seal records it and a
+     browser capture is never later mistaken for one we controlled. Refs, not state: the scan
+     loop is a callback made once per render cycle, and state read inside it could be stale,
+     which is how every reading used to record the path's starting value. */
+  const captureRef = useRef<CapturePath>('browser');
+  const controlRef = useRef<CameraControl | null>(null);
 
   /* Which pass she is being told about. Driven off the hold, so the label and the work are
      the same clock. */
@@ -216,6 +220,20 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
       setFindings(frame.findings);
       setPhase('reading');
 
+      /* Camera control first, when it is on: the hold does not start until exposure has been
+         metered off the whites of her eyes and locked, or control has given up and the scan
+         carries on automatic. Bounded by the control's own time budget. */
+      const control = controlRef.current;
+      if (control && !control.settled) {
+        control.feed(frame.light?.level ?? null, now);
+        heldSinceRef.current = null;
+        samplesRef.current = [];
+        setProgress(0);
+        setNudge(null);
+        rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
+        return;
+      }
+
       /* The gate. A reading taken under a warm bulb is not a slightly worse reading, it is
          a different woman's colouring, so the hold resets rather than creeping forward and
          finishing on something we would have to walk back. Her hair being tucked away is
@@ -262,7 +280,10 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
           sctx.drawImage(video, 0, 0);
           still = shot.toDataURL('image/jpeg', 0.9);
         }
-        onDone(consolidate(samplesRef.current, frame, capture), still);
+        /* `controlled` only when the camera itself reported the lock. */
+        const report = controlRef.current?.report();
+        if (report && report.phase !== 'off') console.info('[scan] camera control', report.phase, report.note);
+        onDone(consolidate(samplesRef.current, frame, report?.locked ? 'controlled' : captureRef.current), still);
         return;
       }
     } else {
@@ -299,15 +320,15 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
       });
       let session: CaptureSession;
       try {
-        /* One seam for both paths. Inside the native shell this locks exposure and white
-           balance after a settle, which is the whole reason the shell exists; in a browser it
-           is the same getUserMedia call it has always been. Which one she got travels with
-           the sealed reading rather than being guessed at afterwards. See src/lib/capture.ts. */
+        /* One seam for both paths, the same getUserMedia stream either way. Camera control,
+           when it is switched on, takes over that stream below. Which path she got travels
+           with the sealed reading. See src/lib/capture.ts and src/lib/camera-control.ts. */
         session = await openCamera();
         console.info('[scan] camera open', session.path, session.locked ? 'locked' : 'unlocked', Math.round(performance.now() - t0), 'ms');
         if (!cancelled) setWaitingOn('eyes');
         stream = session.stream;
-        setCapture(session.path);
+        captureRef.current = session.path;
+        controlRef.current = new CameraControl(stream, cameraControlEnabled());
       } catch {
         clearTimeout(slowTimer);
         if (!cancelled) setPhase('denied');

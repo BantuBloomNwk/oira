@@ -46,7 +46,11 @@
       graded and cannot also be the answer key.
     </p>
 
-    <video id="cam" playsinline muted></video>
+    <div id="camwrap" style="position:relative;max-width:420px">
+      <video id="cam" playsinline muted></video>
+      <canvas id="overlay" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+    </div>
+    <p class="empty">The circles are the patches read on her face; they should sit on skin. For paper in frame, hold a plain white sheet flat in the "paper here" box, tilted slightly away from the window so it is not glaring. If it says the paper is overexposed, set exposure to -1, then -2 (Android only; an iPhone ignores it).</p>
 
     <fieldset>
       <legend>The trial</legend>
@@ -55,7 +59,10 @@
       <label>site<br /><select id="site"><option>cheek</option><option>jaw</option><option>forehead</option><option>inner-arm</option></select></label>
       <label>light<br /><select id="light"><option>daylight</option><option>led-4000k</option><option>tungsten-2700k</option><option>mixed-window-lamp</option></select></label>
       <label>device<br /><input id="device" class="wide" placeholder="e.g. tecno-spark-10" /></label>
-      <label>camera<br /><select id="facing"><option value="environment">rear</option><option value="user">front</option></select></label>
+      <label>camera<br /><select id="facing"><option value="user">front (what the app uses)</option><option value="environment">rear</option></select></label>
+      <label>paper in frame<br /><select id="paperSide"><option value="none">none</option><option value="left">beside face, left of picture</option><option value="right">beside face, right of picture</option></select></label>
+      <label>exposure for paper trials<br /><select id="paperEv"><option value="0">0 (as the phone chooses)</option><option value="-1">-1 (darker)</option><option value="-2">-2 (darkest)</option></select></label>
+      <label>camera control<br /><select id="camctl"><option value="off">off (as the app is today)</option><option value="on">on (meter and lock)</option></select></label>
     </fieldset>
 
     <fieldset>
@@ -73,11 +80,13 @@
 
     <button id="start">Open camera</button>
     <button id="capture" disabled>Capture trial (3.2s hold)</button>
+    <button id="paper" disabled>Measure paper alone (separate frame, confounded, prefer paper in frame)</button>
     <span style="font:11px system-ui;color:#8A6580">frames: <b id="count">0</b></span>
     <p id="say"></p>
 
     <div id="summary"></div>
 
+    <button id="send">Send to Oira</button>
     <button id="copy">Copy CSV</button>
     <button id="wipe">Clear all trials</button>
     <textarea id="dump" hidden readonly></textarea>
@@ -86,7 +95,7 @@
       <table id="out"><thead><tr>
         <th>subj</th><th>monk</th><th>site</th><th>light</th><th>device</th>
         <th>dE2000</th><th>dL*</th><th>da*</th><th>db*</th>
-        <th>app ITA</th><th>app monk</th><th>conf</th><th>CCT</th>
+        <th>app ITA</th><th>app monk</th><th>cheek ITA L / R</th><th>camera</th><th>light</th><th>conf</th><th>eyes K (scan / full res)</th><th>paper in frame</th>
       </tr></thead><tbody></tbody></table>
     </div>
 

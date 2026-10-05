@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#FBF3EE" />
+    <title>The Oira skin study, live</title>
+    <meta name="description" content="Live totals from the Oira open skin study: how many women have taken part, across which skin tones, phones and countries." />
+    <link rel="icon" href="/brand/svg/oira-mark-silk-edge-light.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/brand/icon-192.png" />
+    <style>
+      :root { --ink: #43203B; --blush: #FBF3EE; --paper: #FFFBF7; --mauve: #C9799B; --mauve-deep: #A85578; --gold: #D6A756; --line: #EFDDE2; --muted: #8A6580; --petal: #F3DDD6; }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--blush); color: var(--ink); }
+      body { font-family: 'Karla', system-ui, -apple-system, sans-serif; font-size: 16px; line-height: 1.5; }
+      main { max-width: 760px; margin: 0 auto; padding: 28px 18px 56px; }
+      .brand { font-family: 'Fraunces', Georgia, serif; font-size: 22px; margin: 0 0 18px; }
+      .brand span { color: var(--mauve-deep); font-style: italic; }
+      h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 400; font-size: 34px; line-height: 1.12; margin: 0 0 8px; }
+      h2 { font-family: 'Fraunces', Georgia, serif; font-weight: 400; font-size: 22px; margin: 0 0 12px; }
+      .live { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+      .live i { width: 8px; height: 8px; border-radius: 50%; background: #3FA36B; box-shadow: 0 0 0 4px rgba(63,163,107,.18); }
+      .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 8px 0 18px; }
+      .stat { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+      .stat b { display: block; font-family: 'Fraunces', Georgia, serif; font-weight: 400; font-size: 36px; line-height: 1.05; }
+      .stat span { color: var(--muted); font-size: 13px; }
+      .card { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 18px; margin: 12px 0; }
+      .shades { display: grid; grid-template-columns: repeat(10, 1fr); gap: 6px; align-items: end; height: 150px; margin-top: 6px; }
+      .shade { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 6px; }
+      .shade .bar { width: 100%; border-radius: 8px 8px 4px 4px; min-height: 4px; }
+      .shade .n { font-size: 12px; color: var(--muted); }
+      .shade .k { font-size: 11px; color: var(--muted); }
+      .rows div { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 15px; }
+      .rows div:last-child { border-bottom: 0; }
+      .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .days { display: flex; gap: 4px; align-items: end; height: 90px; }
+      .days div { flex: 1; background: var(--mauve); border-radius: 4px 4px 2px 2px; min-height: 3px; position: relative; }
+      p.muted, .muted { color: var(--muted); font-size: 14px; }
+      a.cta { display: block; text-align: center; background: var(--ink); color: var(--blush); text-decoration: none; font-weight: 700; border-radius: 999px; padding: 15px 22px; margin: 18px 0 8px; }
+      a { color: var(--mauve-deep); }
+      .empty { text-align: center; padding: 18px; color: var(--muted); }
+      @media (max-width: 620px) { .stats { grid-template-columns: repeat(2, 1fr); } .two { grid-template-columns: 1fr; } h1 { font-size: 28px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="brand">Oira <span>skin study</span></p>
+      <h1>The Oira skin study, live.</h1>
+      <div class="live"><i></i><span id="updated">Loading the latest numbers...</span></div>
+      <p>Phone colour tools get deeper skin wrong more often than any other. We're measuring how well Oira reads every skin tone, on the phones women actually own. These are the study's own totals, straight from our study server.</p>
+
+      <div class="stats">
+        <div class="stat"><b id="s-women">0</b><span>women have taken part</span></div>
+        <div class="stat"><b id="s-readings">0</b><span>skin readings taken</span></div>
+        <div class="stat"><b id="s-models">0</b><span>different phone models</span></div>
+        <div class="stat"><b id="s-countries">0</b><span>countries</span></div>
+      </div>
+
+      <div class="card">
+        <h2>Across skin tones</h2>
+        <p class="muted">The shade each woman picked as closest to her own, on the 10-step Monk scale.</p>
+        <div class="shades" id="shades"></div>
+      </div>
+
+      <div class="two">
+        <div class="card"><h2>Phones</h2><div class="rows" id="phones"></div><h2 style="margin-top:16px">Makers</h2><div class="rows" id="makers"></div></div>
+        <div class="card"><h2>Where</h2><div class="rows" id="countries"></div></div>
+      </div>
+
+      <div class="card">
+        <h2>Each day</h2>
+        <div class="days" id="days"></div>
+        <p class="muted" id="days-range" style="margin-top:8px"></p>
+      </div>
+
+      <a class="cta" href="/join">Join the study</a>
+
+      <div class="card">
+        <h2>How these numbers are counted</h2>
+        <p>Every woman counted here agreed to take part, took five scans of her skin on her own phone, saw exactly what would be sent, and chose to send it. A reading is one of those scans. If she takes part again on the same phone, her new readings are added but she is not counted twice. On a second phone she would be, because we keep nothing that could tell us it is her.</p>
+        <p>We never collect a name, a photo, an email or an address, and the picture never leaves her phone. Countries with fewer than three women are grouped as "other" so nobody can be singled out. Anyone can ask for their readings to be deleted, so totals can go down as well as up.</p>
+        <p class="muted">For a technical check, the same totals are served as data at <a href="/api/study/count">/api/study/count</a>. Questions: <a href="mailto:info@myoira.com">info@myoira.com</a>.</p>
+      </div>
+    </main>
+    <script type="module" src="/src/progress.ts"></script>
+  </body>
+</html>

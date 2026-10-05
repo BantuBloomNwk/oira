@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#FBF3EE" />
+    <title>The Oira skin study</title>
+    <link rel="icon" href="/brand/svg/oira-mark-silk-edge-light.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/brand/icon-192.png" />
+    <style>
+      :root {
+        --ink: #43203B; --blush: #FBF3EE; --paper: #FFFBF7; --mauve: #C9799B; --mauve-deep: #A85578;
+        --gold: #D6A756; --line: #EFDDE2; --muted: #8A6580; --petal: #F3DDD6;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--blush); color: var(--ink); }
+      body { font-family: 'Karla', system-ui, -apple-system, sans-serif; font-size: 16px; line-height: 1.5; -webkit-text-size-adjust: 100%; }
+      main { max-width: 520px; margin: 0 auto; padding: 24px 18px 48px; }
+      .brand { font-family: 'Fraunces', Georgia, serif; font-size: 22px; letter-spacing: .01em; margin: 0 0 18px; }
+      .brand span { color: var(--mauve-deep); font-style: italic; }
+      h1 { font-family: 'Fraunces', Georgia, serif; font-weight: 400; font-size: 30px; line-height: 1.15; margin: 0 0 12px; }
+      h2 { font-family: 'Fraunces', Georgia, serif; font-weight: 400; font-size: 22px; margin: 22px 0 8px; }
+      p { margin: 0 0 12px; }
+      .muted { color: var(--muted); font-size: 14px; }
+      .card { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 18px; margin: 14px 0; }
+      .count { display: inline-block; background: var(--petal); color: var(--mauve-deep); border-radius: 999px; padding: 4px 12px; font-size: 14px; margin-bottom: 14px; }
+      ul.plain { padding-left: 18px; margin: 6px 0 12px; }
+      ul.plain li { margin: 4px 0; }
+      label.check { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0; cursor: pointer; }
+      label.check input { width: 22px; height: 22px; flex: none; margin-top: 1px; accent-color: var(--mauve-deep); }
+      select { font: inherit; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--ink); width: 100%; }
+      button { font: inherit; font-weight: 700; border: 0; border-radius: 999px; padding: 14px 22px; cursor: pointer; width: 100%; margin-top: 10px; }
+      button.primary { background: var(--ink); color: var(--blush); }
+      button.primary:disabled { opacity: .35; cursor: default; }
+      button.ghost { background: transparent; color: var(--mauve-deep); border: 1px solid var(--line); }
+      .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 12px 0; }
+      .sw { aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent; cursor: pointer; position: relative; }
+      .sw.on { border-color: var(--ink); box-shadow: 0 0 0 3px var(--blush) inset; }
+      .sw b { position: absolute; bottom: -20px; left: 0; right: 0; text-align: center; font-size: 12px; color: var(--muted); font-weight: 400; }
+      .cam { position: relative; border-radius: 22px; overflow: hidden; background: #1B1120; aspect-ratio: 3/4; }
+      .cam video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); display: block; }
+      .ring { position: absolute; inset: 14% 18% 18%; border: 2px dashed rgba(255,255,255,.55); border-radius: 50%; pointer-events: none; overflow: hidden; transition: border-color .25s, box-shadow .25s; }
+      .ring.ok { border: 3px solid var(--gold); box-shadow: 0 0 0 2px rgba(214,167,86,.25), 0 0 28px rgba(214,167,86,.45); }
+      .ring i { position: absolute; left: 0; right: 0; height: 3px; top: 0; opacity: 0; background: linear-gradient(90deg, transparent, #F6D58E 20%, #fff 50%, #F6D58E 80%, transparent); box-shadow: 0 0 14px 3px rgba(246,213,142,.75); }
+      .ring i.on { opacity: 1; animation: sweep 1.6s ease-in-out infinite alternate; }
+      @keyframes sweep { from { top: 4%; } to { top: 94%; } }
+      @media (prefers-reduced-motion: reduce) { .ring i.on { animation: none; top: 50%; } }
+      .opts label.check { padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: #fff; margin: 8px 0; }
+      .say { min-height: 48px; margin: 12px 0 0; font-size: 15px; }
+      .bar { height: 6px; background: var(--line); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+      .bar i { display: block; height: 100%; width: 0; background: var(--mauve); transition: width .1s linear; }
+      .dots { display: flex; gap: 8px; justify-content: center; margin: 12px 0 0; }
+      .dots i { width: 12px; height: 12px; border-radius: 50%; background: var(--line); }
+      .dots i.on { background: var(--gold); }
+      #review { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      th, td { text-align: left; padding: 6px 3px; border-bottom: 1px solid var(--line); }
+      th { font-size: 11px; line-height: 1.2; }
+      th { color: var(--muted); font-weight: 400; }
+      .code { font-family: ui-monospace, Menlo, monospace; font-size: 22px; letter-spacing: .08em; background: #fff; border: 1px dashed var(--mauve); border-radius: 12px; padding: 12px; text-align: center; margin: 10px 0; user-select: all; }
+      .hide { display: none !important; }
+      a { color: var(--mauve-deep); }
+      .codebox { margin-top: 18px; font-size: 14px; }
+      .codebox summary { cursor: pointer; color: var(--mauve-deep); }
+      .codebox input { font: 18px ui-monospace, Menlo, monospace; letter-spacing: .06em; text-transform: uppercase; width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--ink); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="brand">Oira <span>skin study</span></p>
+
+      <!-- 1. Welcome and consent -->
+      <section id="s-consent">
+        <span id="count" class="count hide"></span>
+        <h1>Help us read every skin tone right.</h1>
+        <p>Most phone colour tools get deeper skin wrong. We're testing Oira on as many women as we can, so it reads all of us properly. It takes about three minutes.</p>
+
+        <div class="card">
+          <h2 style="margin-top:0">What happens</h2>
+          <ul class="plain">
+            <li>You pick the shade that looks most like your skin.</li>
+            <li>Your camera looks at your face five times, a few seconds each.</li>
+            <li>Your phone works out your skin colour as numbers. <b>The picture never leaves your phone and is never saved.</b> Your phone finds your face only to know where your cheeks are, and that is gone when you close the page.</li>
+            <li>You see exactly what would be sent, and you choose whether to send it.</li>
+          </ul>
+          <h2>What we keep, if you send it</h2>
+          <ul class="plain">
+            <li>The colour numbers from your five scans, how much light there was, and how sure the scan was.</li>
+            <li>The shade you picked for yourself.</li>
+            <li>Your phone's make and model, its camera's resolution, and the browser you're using, because every camera sees colour a little differently.</li>
+            <li>Where you said you scanned (by a window, indoors or outside) and the hour on your phone, so we know if it was daylight.</li>
+            <li>Your country, only if you choose to say.</li>
+          </ul>
+          <p class="muted">No name, no photo, no email, no address. Nothing is sold. We use it only to make Oira's skin reading accurate, and we keep it until the study ends, at most two years. You'll get a code to delete your readings any time. It's free and you can stop whenever you like. Questions: <a href="mailto:info@myoira.com">info@myoira.com</a>. Run by the Oira team (BantuBloom Network).</p>
+        </div>
+
+        <label class="check"><input type="checkbox" id="c-adult" /> <span>I'm 18 or older.</span></label>
+        <label class="check"><input type="checkbox" id="c-ill" /> <span>I don't live in Illinois, USA. <span class="muted">(Its law on face data needs a different process, so we're not including Illinois for now.)</span></span></label>
+        <label class="check"><input type="checkbox" id="c-ok" /> <span>I've read the above and I'm happy to take part.</span></label>
+        <button class="primary" id="b-start" disabled>Let's start</button>
+        <div class="card hide" id="already"><b>You've already taken part on this phone. Thank you!</b><p class="muted" style="margin:6px 0 0">To keep the count honest, each phone takes part once. If you'd like to start over, delete your readings below first.</p></div>
+        <button class="ghost hide" id="b-delete-mine">Delete the readings I sent from this phone</button>
+        <div class="card hide" id="confirm">
+          <b>Delete your readings?</b>
+          <p class="muted" style="margin:4px 0 0">This can't be undone.</p>
+          <button class="primary" id="b-confirm-yes">Yes, delete them</button>
+          <button class="ghost" id="b-confirm-no">Keep them</button>
+        </div>
+        <p class="muted" id="del-say"></p>
+        <details class="codebox">
+          <summary>Have a code? Delete your readings from any phone</summary>
+          <p class="muted" style="margin:8px 0">Type the code you were given when you sent your readings.</p>
+          <input id="code-in" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH-JKLM" maxlength="20" />
+          <button class="ghost" id="b-code-del">Delete with this code</button>
+        </details>
+      </section>
+
+      <!-- 2. Her shade, her country -->
+      <section id="s-shade" class="hide">
+        <h1>Which looks most like you?</h1>
+        <p>Go with your gut. Look at the inside of your arm or your cheek in daylight if you can.</p>
+        <div class="swatches" id="swatches"></div>
+        <div style="height:18px"></div>
+        <h2>Where are you? <span class="muted">(optional)</span></h2>
+        <select id="country"><option value="">Rather not say</option></select>
+        <div id="iphone-q" class="hide">
+          <h2>Which iPhone is this? <span class="muted">(optional)</span></h2>
+          <p class="muted">iPhones don't tell websites their model, and each one sees colour a little differently. You'll find it in Settings, General, About.</p>
+          <select id="iphone"><option value="">Not sure</option></select>
+        </div>
+        <h2>Where are you scanning?</h2>
+        <div class="opts" id="setting">
+          <label class="check"><input type="radio" name="setting" value="window" /> <span>By a window, in daylight</span></label>
+          <label class="check"><input type="radio" name="setting" value="outdoor" /> <span>Outside</span></label>
+          <label class="check"><input type="radio" name="setting" value="indoor" /> <span>Indoors, under lights</span></label>
+          <label class="check"><input type="radio" name="setting" value="unsure" /> <span>Not sure</span></label>
+        </div>
+        <p class="muted">Daylight by a window reads you best, so if you can, head to one.</p>
+        <button class="primary" id="b-shade" disabled>Next</button>
+      </section>
+
+      <!-- 3. The scans -->
+      <section id="s-scan" class="hide">
+        <h1>Five quick looks.</h1>
+        <p class="muted">Face a window if you can, in daylight, with your face filling the oval. Hold still for a few seconds each time.</p>
+        <div class="cam"><video id="cam" playsinline muted></video><div class="ring" id="ring"><i id="scanline"></i></div></div>
+        <div class="bar"><i id="bar"></i></div>
+        <p class="say" id="say">Opening your camera...</p>
+        <div class="dots" id="dots"><i></i><i></i><i></i><i></i><i></i></div>
+        <button class="primary" id="b-scan" disabled>Start</button>
+      </section>
+
+      <!-- 4. What would be sent -->
+      <section id="s-review" class="hide">
+        <h1>Here's exactly what you'd send.</h1>
+        <p>This is all of it. No picture, no name.</p>
+        <div class="card" id="review"></div>
+        <button class="primary" id="b-send">Send my readings</button>
+        <button class="ghost" id="b-nosend">Don't send, I'm done</button>
+        <p class="muted" id="send-say"></p>
+      </section>
+
+      <!-- 5. Thank you -->
+      <section id="s-done" class="hide">
+        <h1>Thank you. Truly.</h1>
+        <p>Your readings are in. You've just helped Oira read women like you properly.</p>
+        <p>Save this code. If you ever want your readings deleted, email it to <a href="mailto:info@myoira.com">info@myoira.com</a>, or come back to this page on this phone and tap delete.</p>
+        <div class="code" id="code"></div>
+        <p class="muted">Know women who'd help? Send them this page.</p>
+      </section>
+
+      <section id="s-nosend" class="hide">
+        <h1>No problem.</h1>
+        <p>Nothing was sent, and nothing was kept. Thanks for having a look.</p>
+      </section>
+    </main>
+    <script type="module" src="/src/join.ts"></script>
+  </body>
+</html>

@@ -140,6 +140,7 @@ export const LIGHT_NUDGE: Record<string, string> = {
      naming the wrong lamp at her is a small confident lie. */
   'green-cast': "There's a colour in this light that isn't yours, love. Daylight will sort it.",
   blown: "The sun's straight on you and it's washing you out. Turn away from it a touch.",
+  'camera-off': "Your camera's colours have gone a bit funny on me. Close me and open me again?",
 };
 
 /* Standing on the scan screen from the moment it opens, not sprung on her afterwards. It
@@ -191,6 +192,7 @@ export const CONFIDENCE_COPY: Record<string, string> = {
   'small-sample': "I didn't get enough of your face in frame to call this one.",
   'few-frames': "You kept moving on me, so this is a glance rather than a proper look.",
   'light-turned': "The light shifted on me halfway through.",
+  'warm-edge': "Your light's on the warm side. I've got you, but a step closer to the window and I'll be surer of your warm or cool.",
   'no-skin': "I didn't get a read on your skin at all there.",
 };
 

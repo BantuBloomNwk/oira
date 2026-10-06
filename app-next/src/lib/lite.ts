@@ -14,8 +14,12 @@ type Nav = Navigator & { deviceMemory?: number; connection?: { saveData?: boolea
 export function isLowEnd(): boolean {
   try {
     const n = navigator as Nav;
+    /* Safari reports a capped core count for privacy, so every iPhone said 4 and was treated
+       like a budget Android: the scan dropped to 480x640 and the app lost its decoration on
+       phones that handle both easily. On Apple devices the core count is ignored. */
+    const apple = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && (navigator.maxTouchPoints || 0) > 1);
     return (n.deviceMemory !== undefined && n.deviceMemory <= 4)
-      || (n.hardwareConcurrency !== undefined && n.hardwareConcurrency <= 4)
+      || (!apple && n.hardwareConcurrency !== undefined && n.hardwareConcurrency <= 4)
       || n.connection?.saveData === true;
   } catch {
     return false;

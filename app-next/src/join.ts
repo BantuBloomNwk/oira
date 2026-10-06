@@ -97,10 +97,14 @@ const ISO = 'AF AX AL DZ AS AD AO AI AQ AG AR AM AW AU AT AZ BS BH BD BB BY BE B
   ISO.map((c) => ({ c, n: names?.of(c) || c }))
     .sort((a, b) => a.n.localeCompare(b.n))
     .forEach(({ c, n }) => { const o = document.createElement('option'); o.value = c; o.textContent = n; sel.appendChild(o); });
+  /* The way out stays, at the bottom. It used to be the preselected default, so leaving the box
+     alone counted as declining: three of the first four women "chose" it without touching it. */
+  const none = document.createElement('option'); none.value = 'none'; none.textContent = 'Rather not say'; sel.appendChild(none);
+  sel.addEventListener('change', () => refreshShade());
 }
 
 let setting = '';
-const refreshShade = () => { $<HTMLButtonElement>('b-shade').disabled = !(monkSelf && setting); };
+const refreshShade = () => { $<HTMLButtonElement>('b-shade').disabled = !(monkSelf && setting && $<HTMLSelectElement>('country').value); };
 document.querySelectorAll<HTMLInputElement>('input[name=setting]').forEach((r) =>
   r.addEventListener('change', () => { setting = r.value; refreshShade(); }));
 
@@ -313,10 +317,15 @@ async function detectPhone() {
   /* An iPad's Safari says it is a Mac; a touch screen gives it away. */
   const touch = (navigator.maxTouchPoints || 0) > 1;
   browser = /FBAN|FBAV/.test(ua) ? 'in-app Facebook' : /Instagram/.test(ua) ? 'in-app Instagram' : /WhatsApp/.test(ua) ? 'in-app WhatsApp'
+    : /Twitter|TwitterAndroid/.test(ua) ? 'in-app X' : /Telegram/.test(ua) ? 'in-app Telegram' : /LinkedInApp/.test(ua) ? 'in-app LinkedIn'
+    : /GSA\//.test(ua) ? 'in-app Google' : /Pinterest/.test(ua) ? 'in-app Pinterest' : /Discord/.test(ua) ? 'in-app Discord'
+    : /Threads|Barcelona/.test(ua) ? 'in-app Threads' : /DuckDuckGo/.test(ua) ? 'DuckDuckGo' : /Brave/.test(ua) ? 'Brave'
     : /TikTok|musical_ly/.test(ua) ? 'in-app TikTok' : /Snapchat/.test(ua) ? 'in-app Snapchat' : /Line\//.test(ua) ? 'in-app Line'
     : /SamsungBrowser/.test(ua) ? 'Samsung Internet' : /EdgA?\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera'
     : /CriOS/.test(ua) ? 'Chrome' : /FxiOS|Firefox/.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome'
-    : /Safari\//.test(ua) ? 'Safari' : 'other';
+    : /Safari\//.test(ua) ? 'Safari'
+    /* An iPhone web view without "Safari/" is an app's built-in browser that does not name itself. */
+    : /iPhone|iPad|iPod/.test(ua) ? 'in-app (unnamed)' : 'other';
   if (/iPad/.test(ua) || (/Macintosh/.test(ua) && touch)) { platform = 'ipad'; model = 'iPad'; make = 'Apple'; }
   else if (/iPhone|iPod/.test(ua)) {
     platform = 'ios'; make = 'Apple';
@@ -346,7 +355,7 @@ const phoneReady = detectPhone();
 async function review() {
   await phoneReady;
   const modelSelf = $<HTMLSelectElement>('iphone').value;
-  const country = $<HTMLSelectElement>('country').value;
+  const country = $<HTMLSelectElement>('country').value === 'none' ? '' : $<HTMLSelectElement>('country').value;
   const countryName = $<HTMLSelectElement>('country').selectedOptions[0]?.text || '';
   const rows = readings.map((r, i) => `<tr><td>${i + 1}</td><td>${r.L.toFixed(1)}</td><td>${r.a.toFixed(1)}</td><td>${r.b.toFixed(1)}</td><td>${r.monk}</td><td>${r.cct ?? '-'}</td><td>${Math.round(r.confidence * 100)}%</td></tr>`).join('');
   $('review').innerHTML = `
@@ -374,7 +383,7 @@ $('b-send').addEventListener('click', async () => {
   const code = newCode();
   const body = {
     v: 1, adult: true, consent: true, notIllinois: true, monkSelf, platform, model,
-    country: $<HTMLSelectElement>('country').value, code, readings,
+    country: $<HTMLSelectElement>('country').value === 'none' ? '' : $<HTMLSelectElement>('country').value, code, readings,
     setting, localHour: new Date().getHours(), browser,
     make, modelSelf: $<HTMLSelectElement>('iphone').value, camera, screen: screenId,
     /* This phone has sent before: the count adds her readings but not another woman. */

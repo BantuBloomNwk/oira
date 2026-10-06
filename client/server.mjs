@@ -3,6 +3,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
+import { createHmac, timingSafeEqual } from 'crypto';
 import { Keypair } from '@solana/web3.js';
 import { sealPalette, sealPaletteRelay, privatePayout, runOffer, privacyProof, postCampaign, matchCampaign, campaignStatus, bridgeStatus } from './oira-chain.mjs';
 import { recordError, alertBridge, monitorStats } from './oira-monitor.mjs';
@@ -23,6 +24,34 @@ const app = express();
 app.set('trust proxy', 1); // behind Caddy — derive the client IP from X-Forwarded-For
 app.use(express.json());
 
+// Web traffic reaches us through Netlify's /api proxy, so the address Caddy hands on is a Netlify
+// edge, shared by everyone in that region. Netlify signs proxied requests (netlify.toml `signed`)
+// with a secret only it and this server hold; when that signature checks out, its client-IP
+// header is hers. Without a valid signature the header is ignored, since anyone can send it.
+const PROXY_SECRET = process.env.OIRA_PROXY_SIGNATURE || '';
+function viaNetlify(req) {
+  const tok = req.headers['x-nf-sign'];
+  if (!PROXY_SECRET || typeof tok !== 'string') return false;
+  const [h, p, s] = tok.split('.');
+  if (!h || !p || !s) return false;
+  const want = createHmac('sha256', PROXY_SECRET).update(`${h}.${p}`).digest();
+  const got = Buffer.from(s, 'base64url');
+  if (got.length !== want.length || !timingSafeEqual(got, want)) return false;
+  try {
+    const c = JSON.parse(Buffer.from(p, 'base64url').toString('utf8'));
+    return c.iss === 'netlify' && (!c.exp || c.exp * 1000 > Date.now());
+  } catch { return false; }
+}
+
+// The brand studio spends sponsor SOL on every campaign and every match, so both need the studio
+// key. With no key configured, both stay shut.
+const BRAND_KEY = process.env.OIRA_BRAND_KEY || '';
+function brandAllowed(req) {
+  const k = Buffer.from(String(req.headers['x-oira-brand-key'] || ''));
+  const want = Buffer.from(BRAND_KEY);
+  return BRAND_KEY.length > 0 && k.length === want.length && timingSafeEqual(k, want);
+}
+
 // CORS — when the bridge is hosted separately from the static app (e.g. VPS bridge behind
 // Caddy, app on Netlify), the browser calls it cross-origin. Allow the configured origin
 // (comma-separated list ok) and answer preflight. Harmless when same-origin/proxied.
@@ -32,7 +61,7 @@ app.use((req, res, next) => {
   if (origin && ALLOW.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'content-type');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type, x-oira-brand-key');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
@@ -40,12 +69,12 @@ app.use((req, res, next) => {
 // Real health for the reverse proxy / uptime probes: process up (ok), whether it's degraded
 // (RPC or TEE unreachable, or the deployer running low), uptime, and a scrubbed error summary —
 // no user data. `bridgeStatus()` is cached + refreshed in the background, so this never blocks.
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', (req, res) => {
   const s = bridgeStatus(), m = monitorStats();
   const degraded = s.rpcOk === false || s.teeOk === false || (s.deployerSol != null && s.deployerSol < 1);
   res.json({ ok: true, service: 'oira-bridge', degraded, uptimeSec: m.uptimeSec, startedAt: m.startedAt,
     errors: { count: m.errorCount, last: m.lastError }, deployer: { balanceSol: s.deployerSol },
-    rpc: { ok: s.rpcOk }, tee: { ok: s.teeOk }, alertChannel: m.alertChannel });
+    rpc: { ok: s.rpcOk }, tee: { ok: s.teeOk }, alertChannel: m.alertChannel, signed: viaNetlify(req) });
 });
 
 // Per-IP rate limit on the EXPENSIVE devnet flows (each seal/offer/payout spends deployer
@@ -62,7 +91,8 @@ function rateLimited(ip) {
   return e.count > RL_MAX;
 }
 setInterval(() => { const now = Date.now(); for (const [ip, e] of rlHits) if (now > e.resetAt) rlHits.delete(ip); }, RL_WINDOW_MS).unref();
-const clientIp = (req) => req.ip || (req.socket && req.socket.remoteAddress) || 'unknown';
+const clientIp = (req) => (viaNetlify(req) && String(req.headers['x-nf-client-connection-ip'] || '').trim())
+  || req.ip || (req.socket && req.socket.remoteAddress) || 'unknown';
 
 // Sealing a NEW Palette specifically (not the general expensive-flow burst limit above, which is
 // tuned loose enough to not block a real multi-person dev/demo session behind one NAT). A real
@@ -75,20 +105,50 @@ const clientIp = (req) => req.ip || (req.socket && req.socket.remoteAddress) || 
 const SEAL_WINDOW_MS = 24 * 60 * 60 * 1000;
 const SEAL_MAX = process.env.OIRA_SEAL_MAX != null ? Number(process.env.OIRA_SEAL_MAX) : 3;
 const sealHits = new Map();
-function sealRateLimited(ip) {
+// PEEK. Deliberately does not increment. The old version counted every attempt, so a seal
+// that failed for a reason that was nothing to do with her — an RPC 429, a dropped socket,
+// a cancelled biometric — still burned quota, and three unlucky retries locked her out of
+// her own Palette for 24 hours. The Sybil control we actually want is on Palettes created,
+// so only a completed seal should count. See recordSeal below.
+function sealOverLimit(ip) {
+  const e = sealHits.get(ip);
+  if (!e || Date.now() > e.resetAt) return false;
+  return e.count >= SEAL_MAX;
+}
+// The per-connection limit above does nothing against a script on a handful of addresses, and
+// each seal the app sponsors costs the deployer about 0.1 SOL. So there is a ceiling on sponsored
+// seals across everyone, per UTC day. Wallet seals pay their own way but count too; a day that
+// reaches this is not a normal day.
+const SEAL_DAY_CAP = process.env.OIRA_SEAL_DAY_CAP != null ? Number(process.env.OIRA_SEAL_DAY_CAP) : 60;
+const sealDay = { day: '', count: 0 };
+const today = () => new Date().toISOString().slice(0, 10);
+function sealDayFull() { return sealDay.day === today() && sealDay.count >= SEAL_DAY_CAP; }
+// Call ONLY once a seal has actually landed on chain.
+function recordSeal(ip) {
   const now = Date.now();
+  if (sealDay.day !== today()) { sealDay.day = today(); sealDay.count = 0; }
+  sealDay.count++;
   let e = sealHits.get(ip);
   if (!e || now > e.resetAt) { e = { count: 0, resetAt: now + SEAL_WINDOW_MS }; sealHits.set(ip, e); }
   e.count++;
-  return e.count > SEAL_MAX;
 }
 setInterval(() => { const now = Date.now(); for (const [ip, e] of sealHits) if (now > e.resetAt) sealHits.delete(ip); }, SEAL_WINDOW_MS).unref();
 app.use((req, res, next) => {
   if (req.method === 'POST' && ['/api/seal', '/api/campaign', '/api/payout', '/api/brand/campaign', '/api/brand/match', '/api/concierge'].includes(req.path)
       && rateLimited(clientIp(req))) {
-    return res.status(429).json({ error: 'Too many requests — please wait a moment.' });
+    return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
   }
   next();
+});
+// The first demo's offer and payout routes. Nothing in the app calls them now, and both spend
+// deployer SOL, so they only exist when a local walkthrough asks for them.
+app.post(['/api/campaign', '/api/payout'], (_req, res, next) => {
+  if (process.env.OIRA_LEGACY_DEMO === '1') return next();
+  res.status(404).json({ error: 'not available' });
+});
+app.post(['/api/brand/campaign', '/api/brand/match'], (req, res, next) => {
+  if (brandAllowed(req)) return next();
+  res.status(401).json({ error: 'brand key required' });
 });
 // Serve the app UI locally, but NOT on a hosted API-only bridge (set OIRA_SERVE_STATIC=0
 // there — the app is served by Netlify, and serving from the code dir would leak source).
@@ -109,9 +169,10 @@ app.post('/api/seal', async (req, res) => {
   // set OIRA_ALLOW_SELF_SEAL=1 to re-enable it for a local demo/walkthrough that deliberately
   // wants the no-setup flow.
   if (process.env.OIRA_ALLOW_SELF_SEAL !== '1') {
-    return res.status(404).json({ error: 'not available — seal from the app (passkey-backed)' });
+    return res.status(404).json({ error: 'Not available. Seal from the app.' });
   }
-  if (sealRateLimited(clientIp(req))) return res.status(429).json({ error: 'Too many requests — please wait a moment.' });
+  if (sealDayFull()) return res.status(429).json({ error: 'Sealing is paused until tomorrow (UTC).' });
+  if (sealOverLimit(clientIp(req))) return res.status(429).json({ error: `Already sealed ${SEAL_MAX} Palettes from this connection today.` });
   try {
     // the device sends CIPHERTEXT (AES-256-GCM recovery blob) + her CONFIRMED bucketed traits
     // (undertone/depth/season) — the raw selfie never leaves the phone; these 3 buckets are what
@@ -121,6 +182,7 @@ app.post('/api/seal', async (req, res) => {
     const t = (traits && Number.isInteger(traits.undertone) && Number.isInteger(traits.depth) && Number.isInteger(traits.season)) ? traits : undefined;
     const r = await sealPalette({ traits: t, encBlob: blob });
     session.owner = r.owner; session.agent = r.agent; session.salt = r.salt; session.traits = r.traits; session.palette = r.palette;
+    recordSeal(clientIp(req)); // a Palette exists now, so it counts
     console.log('sealed', r.palette);
     res.json({ palette: r.palette, sealSig: r.sealSig, explorer: r.explorer });
   } catch (e) { recordError('seal', e, { alert: true }); res.status(500).json({ error: String(e.message || e) }); }
@@ -312,7 +374,9 @@ wss.on('connection', (ws, req) => {
     let m; try { m = JSON.parse(raw.toString()); } catch { return; }
     if (m.t === 'sig' && pending.has(m.id)) { const r = pending.get(m.id); pending.delete(m.id); return r(Buffer.from(m.sig, 'base64')); }
     if (m.t === 'start' && !started) {
-      if (rateLimited(ip) || sealRateLimited(ip)) { try { ws.send(JSON.stringify({ t: 'error', message: 'Too many requests — please wait a moment.' })); } catch {} return ws.close(); }
+      if (rateLimited(ip)) { try { ws.send(JSON.stringify({ t: 'error', message: 'Too many requests. Please wait a moment.' })); } catch {} return ws.close(); }
+      if (sealDayFull()) { try { ws.send(JSON.stringify({ t: 'error', message: "We've sealed a lot of Palettes today, so new ones are paused until tomorrow. Your reading's still safe on your phone." })); } catch {} return ws.close(); }
+      if (sealOverLimit(ip)) { try { ws.send(JSON.stringify({ t: 'error', message: `You have already sealed ${SEAL_MAX} Palettes from this connection today. This limit is per day, and it resets on its own.` })); } catch {} return ws.close(); }
       started = true;
       const traits = (m.traits && Number.isInteger(m.traits.undertone) && Number.isInteger(m.traits.depth) && Number.isInteger(m.traits.season)) ? m.traits : undefined;
       const encBlob = m.encBlob ? Buffer.from(m.encBlob, 'base64') : undefined;
@@ -325,6 +389,7 @@ wss.on('connection', (ws, req) => {
           // server keeps ONLY the bounded agent key + her pubkey/traits (for the overnight);
           // never her owner secret and never her salt (device holds/derives that).
           session.owner = null; session.agent = r.agent; session.salt = null; session.traits = r.traits; session.palette = r.palette; session.her = r.her;
+          recordSeal(ip); // only now, with a Palette actually on chain, does this count
           console.log('sealed (relayed)', r.palette, 'her', r.her);
           ws.send(JSON.stringify({ t: 'done', palette: r.palette, her: r.her, sealSig: r.sealSig, explorer: r.explorer }));
         })

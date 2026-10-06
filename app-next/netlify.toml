@@ -48,8 +48,12 @@
   to = "/join.html"
   status = 200
 
+# Signed, so the servers behind it can tell a request Netlify proxied from one that only
+# claims to be, and trust the client address on the first kind. The secret is a site
+# environment variable on Netlify and an env var on the servers; it is never in this repo.
 [[redirects]]
   from = "/api/*"
   to = "https://oira.161-97-74-212.sslip.io/api/:splat"
   status = 200
   force = true
+  signed = "OIRA_PROXY_SIGNATURE"

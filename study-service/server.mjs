@@ -111,6 +111,29 @@ function cleanSubmission(s) {
   };
 }
 
+/* ---- whose address is this --------------------------------------------------------------
+   Women reach us through Netlify's /api proxy, then Caddy. Caddy does not trust anyone's
+   forwarded header, so what it passes on is the Netlify edge that connected, shared by every
+   woman in that region, so a busy hour from one region would start turning women away.
+   Netlify signs what it proxies (netlify.toml `signed`) with a secret only it and we hold.
+   When that signature checks out, its client-IP header is hers; otherwise it is ignored,
+   because anyone can send it. */
+
+const PROXY_SECRET = process.env.OIRA_PROXY_SIGNATURE || '';
+function viaNetlify(req) {
+  const tok = req.headers['x-nf-sign'];
+  if (!PROXY_SECRET || typeof tok !== 'string') return false;
+  const [h, p, s] = tok.split('.');
+  if (!h || !p || !s) return false;
+  const want = crypto.createHmac('sha256', PROXY_SECRET).update(`${h}.${p}`).digest();
+  const got = Buffer.from(s, 'base64url');
+  if (got.length !== want.length || !crypto.timingSafeEqual(got, want)) return false;
+  try {
+    const c = JSON.parse(Buffer.from(p, 'base64url').toString('utf8'));
+    return c.iss === 'netlify' && (!c.exp || c.exp * 1000 > Date.now());
+  } catch { return false; }
+}
+
 /* ---- rate limit, in memory only: the address is a map key for an hour, never written -- */
 
 const hits = new Map();
@@ -159,11 +182,12 @@ function readBody(req, max = MAX_BODY) {
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
-  /* Caddy and Netlify both sit in front; the first forwarded address is hers. */
-  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  const netlify = viaNetlify(req);
+  const ip = (netlify && String(req.headers['x-nf-client-connection-ip'] || '').trim())
+    || String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
   try {
-    if (req.method === 'GET' && url.pathname === '/api/study/health') return send(res, 200, { ok: true });
+    if (req.method === 'GET' && url.pathname === '/api/study/health') return send(res, 200, { ok: true, signed: netlify });
 
     if (req.method === 'GET' && url.pathname === '/api/study/count') {
       const all = rows();

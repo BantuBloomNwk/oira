@@ -36,6 +36,24 @@ function render(campaigns) {
 }
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
+// Posting and matching spend real devnet SOL, so the studio needs its key. Asked for once,
+// kept on this browser only.
+function brandKey(again) {
+  let k = '';
+  try { k = again ? '' : (localStorage.getItem('oira-brand-key') || ''); } catch {}
+  if (!k) {
+    k = (prompt('Brand studio key') || '').trim();
+    try { if (k) localStorage.setItem('oira-brand-key', k); } catch {}
+  }
+  return k;
+}
+async function brandPost(path, body) {
+  for (const again of [false, true]) {
+    const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', 'x-oira-brand-key': brandKey(again) }, body: JSON.stringify(body) });
+    if (r.status !== 401 || again) return r;
+  }
+}
+
 async function load() {
   try { const r = await fetch('/api/brand/campaigns'); const j = await r.json(); render(j.campaigns || []); }
   catch { /* keep last render */ }
@@ -50,7 +68,7 @@ async function post() {
       payout: Number($('payout').value) || 5,
       target: { tu: Number($('undertone').value), td: Number($('depth').value), ts: Number($('season').value), tol: Number($('tol').value) },
     };
-    const r = await fetch('/api/brand/campaign', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const r = await brandPost('/api/brand/campaign', body);
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || 'post failed');
     toast('Campaign posted and escrow funded.');
@@ -62,7 +80,7 @@ async function post() {
 async function runMatch(campaign, btn) {
   btn.disabled = true; btn.textContent = 'Matching in enclave…';
   try {
-    const r = await fetch('/api/brand/match', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ campaign }) });
+    const r = await brandPost('/api/brand/match', { campaign });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || 'match failed');
     toast(j.matched ? ('Matched. $' + j.amount + ' settled to her, and you still do not know who.') : 'No match. Nothing was paid, nothing was revealed.');

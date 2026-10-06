@@ -345,14 +345,19 @@ const ESCROW_RENT = 890_880; // getMinimumBalanceForRentExemption(0) — a 0-dat
 // so any leftover safely clears the floor; it is never left in the forbidden dust zone.
 const TOPUP_MARGIN = 2_000_000;
 const OWNER_MARGIN = TOPUP_MARGIN; // covers minor delegation-metadata size variance + rounding
+// What the delegation program takes from her for one delegated account's record + metadata.
+// NOT read from the RPC: devnet cut its rent rate in October 2026 (rent(0) 890,880 -> 650,240)
+// and our program's accounts follow the new rate, but the delegation program still charged the
+// old one (6,284,880 for both accounts against 4,592,320 from the RPC). The 1.69M gap ate the
+// margin and the escrow top-up then failed on the rent floor. A fixed bound above the old rate
+// holds under either.
+const DELEGATION_RENT_PER_ACCOUNT = 3_200_000;
 async function estimateOwnerFirstSealCost() {
-  const [palette, traits, delRecord, delMeta] = await Promise.all([
+  const [palette, traits] = await Promise.all([
     base.getMinimumBalanceForRentExemption(952), // PaletteVault::SPACE
     base.getMinimumBalanceForRentExemption(76),  // TraitsSession::SPACE
-    base.getMinimumBalanceForRentExemption(96),  // delegation record (both accounts, observed identical)
-    base.getMinimumBalanceForRentExemption(100), // delegation metadata (upper bound of the two observed sizes)
   ]);
-  return palette + traits + RENT_FLOAT * 2 + (delRecord + delMeta) * 2 + ESCROW_TOPUP + ESCROW_RENT + OWNER_MARGIN;
+  return palette + traits + RENT_FLOAT * 2 + DELEGATION_RENT_PER_ACCOUNT * 2 + ESCROW_TOPUP + ESCROW_RENT + OWNER_MARGIN;
 }
 // Top up ownerPk's BASE wallet to exactly `need` lamports — tops up only the shortfall against
 // her CURRENT balance (never a flat lump), so a re-seal that needs a small top-up (e.g. to finish
@@ -436,7 +441,7 @@ export async function sealPaletteRelay({ ownerPubkey, traits = { undertone: 2, d
     // spends nothing from her wallet and funds her nothing at all.
     for (const [pda, info, name] of [[palettePda, paletteInfo, 'delegate_palette'], [traitsPda, traitsInfo, 'delegate_traits']]) {
       if (info && info.owner.equals(PROGRAM)) {
-        await ensureOwnerFunds(ownerPk, RENT_FLOAT + 3_200_000 + TOPUP_MARGIN, selfFunded); // + delegation record/metadata rent (~3.15M observed), generously bounded
+        await ensureOwnerFunds(ownerPk, RENT_FLOAT + DELEGATION_RENT_PER_ACCOUNT + TOPUP_MARGIN, selfFunded);
         await sendRelayedBase(new Transaction()
           .add(SystemProgram.transfer({ fromPubkey: ownerPk, toPubkey: pda, lamports: RENT_FLOAT }))
           .add(delIx(pda, name)), ownerSigner);

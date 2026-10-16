@@ -32,3 +32,4 @@ Sessions.md
 
 # e2e run artifacts — contain ephemeral secret keys
 client/*-e2e-state.json
+client/e2e/*-e2e-state.json

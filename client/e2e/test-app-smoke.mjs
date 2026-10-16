@@ -8,14 +8,14 @@
 //
 // Needs a Chromium/Chrome binary. Uses $CHROME_PATH, else common system paths. If none is found it
 // SKIPS cleanly (exit 0) rather than failing — same graceful-gating pattern as the devnet tier.
-// Run from client/:  node test-app-smoke.mjs
+// Run from client/:  node e2e/test-app-smoke.mjs
 import puppeteer from 'puppeteer-core';
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../app');
+const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../app');
 const CHROME_CANDIDATES = [
   process.env.CHROME_PATH, '/usr/bin/chromium', '/usr/bin/chromium-browser',
   '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable',

@@ -7,7 +7,7 @@ Oira runs the sensitive part of that exchange inside a MagicBlock Private Epheme
 - **Program (devnet):** [`CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP`](https://explorer.solana.com/address/CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP?cluster=devnet)
 - **Android app:** [`app-next/`](app-next), see [the Android app](#the-android-app-built-for-the-seeker)
 - **IDL:** [`idl/oira_palette.json`](idl/oira_palette.json)
-- **End-to-end proof:** [`client/settle-match-e2e.mjs`](client/settle-match-e2e.mjs)
+- **End-to-end proof:** [`client/e2e/settle-match-e2e.mjs`](client/e2e/settle-match-e2e.mjs)
 - **Verify it yourself:** [`docs/VERIFY.md`](docs/VERIFY.md) to run the match and check the empty chain
 - **See our vision:** [`docs/PITCH.md`](docs/PITCH.md) on why this matters and where it goes
 
@@ -140,7 +140,7 @@ solana program deploy target/deploy/oira_palette.so \
 # 3. run the end-to-end proof
 cd ../client
 npm install
-OIRA_KEYPAIR=/path/to/funded-devnet-id.json node settle-match-e2e.mjs
+OIRA_KEYPAIR=/path/to/funded-devnet-id.json node e2e/settle-match-e2e.mjs
 ```
 
 The client mints a small test token, spins up throwaway her / agent / brand actors, runs the whole seal, match, settle flow against the TEE endpoint, and checks every assertion above. Your funded keypair only pays the fees. For a step-by-step account of what each line proves and how to confirm the empty chain on the explorer, see [`docs/VERIFY.md`](docs/VERIFY.md).

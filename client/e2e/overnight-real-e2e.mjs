@@ -3,7 +3,7 @@
 // owner secret. (Also exercises the device-supplied salt path.)
 import nacl from 'tweetnacl';
 import { Keypair, PublicKey } from '@solana/web3.js';
-import { sealPaletteRelay, runOffer } from './oira-chain.mjs';
+import { sealPaletteRelay, runOffer } from '../oira-chain.mjs';
 
 const device = Keypair.generate();                 // her passkey-derived key (stand-in)
 const traits = { undertone: 2, depth: 8, season: 3 };

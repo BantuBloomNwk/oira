@@ -10,7 +10,7 @@ deployed 2026-07-05 (had to `solana program extend … 110000` first — the esc
 grew the `.so` to 427,368 B). Instructions added: `create_campaign`, `settle_offer`,
 `close_campaign` + `Campaign` account + per-campaign escrow token account (PDA authority).
 
-## Live run (harness `client/campaign-e2e.mjs`)
+## Live run (harness `client/e2e/campaign-e2e.mjs`)
 
 ```
 create_campaign  escrow $20.00, stake $0.10/query, payout $5.00/accept
@@ -32,7 +32,7 @@ Explorer (this run):
 ## Reproduce
 
 ```
-cd client && node campaign-e2e.mjs
+cd client && node e2e/campaign-e2e.mjs
 ```
 
 ## Security

@@ -5,7 +5,7 @@ judge) can read the public Solana base layer and confirm a seal, a match, and a 
 while her actual traits, her salt, and her per-query verdict are never readable there. This is the
 Model B privacy claim, re-verified **live on devnet** rather than asserted from the source.
 
-Reproduce it yourself: `cd client && node per-audit.mjs` (read-only; hits public devnet RPC).
+Reproduce it yourself: `cd client && node e2e/per-audit.mjs` (read-only; hits public devnet RPC).
 
 Program: `CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP` (Solana devnet).
 Last run: 2026-07-07.

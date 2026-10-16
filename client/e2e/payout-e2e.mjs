@@ -27,9 +27,9 @@ const DECIMALS = 6;
 const AMOUNT = 5; // 5 oUSDC private payout
 
 const load = (p) => Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(p, 'utf8'))));
-const cfg = JSON.parse(fs.readFileSync('./payout-config.json', 'utf8'));
+const cfg = JSON.parse(fs.readFileSync(new URL('../payout-config.json', import.meta.url), 'utf8'));
 const MINT = new PublicKey(cfg.mint);
-const deployer = load('../keys/oira-deployer.json');
+const deployer = load(new URL('../../keys/oira-deployer.json', import.meta.url));
 const brand = Keypair.generate(); // fresh each run (clean eATAs)
 const her = Keypair.generate();
 const amt = BigInt(AMOUNT * 10 ** DECIMALS);

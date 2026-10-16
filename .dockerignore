@@ -1,0 +1,25 @@
+# Build context for client/Dockerfile is the repo root. Only client/, mcp/ and app/ are copied;
+# keep everything else, and anything secret, out of the context.
+**/node_modules
+.git
+keys
+**/*.env
+**/.env*
+**/*-e2e-state.json
+client/e2e
+client/*-e2e.mjs
+client/test-*.mjs
+client/oira-custody.mjs
+client/parity-check.mjs
+app-next
+android-twa
+landing
+program
+target
+docs
+research
+whitepaper
+voice
+study-service
+design
+brand-kit

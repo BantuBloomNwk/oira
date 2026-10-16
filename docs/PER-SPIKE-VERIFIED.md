@@ -16,7 +16,7 @@ An earlier internal PER build was proven ~55 days before this one; MagicBlock's 
 
 ## Reproduce
 ```bash
-cd client && node per-palette-e2e.mjs   # each run uses a fresh owner/agent
+cd client && node e2e/per-palette-e2e.mjs   # each run uses a fresh owner/agent
 ```
 Requires: devnet SOL in `keys/oira-deployer.json`; SDK `@magicblock-labs/ephemeral-rollups-sdk@0.15.1`; build with solana 3.1.10 (NOT 1.54).
 

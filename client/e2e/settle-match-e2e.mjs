@@ -16,7 +16,7 @@
 //     • a genuine MATCH settles: her oUSDC += per_accept_payout, escrow debited
 //     • FORGERY-RESISTANT: wrong nonce → ReceiptMismatch ; wrong offer → OfferMismatch
 //     • close returns the unspent escrow to the brand and the per-query stake to the treasury
-// Run from client/ (AFTER redeploying the leak-fixed program):  node settle-match-e2e.mjs
+// Run from client/ (AFTER redeploying the leak-fixed program):  node e2e/settle-match-e2e.mjs
 import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction, sendAndConfirmTransaction, SystemProgram } from '@solana/web3.js';
 import {
   getAuthToken, permissionPdaFromAccount,
@@ -38,10 +38,10 @@ const TEE_RPC = 'https://devnet-tee.magicblock.app';
 const BASE_RPC = process.env.BASE_RPC || 'https://api.devnet.solana.com'; // set BASE_RPC to a less-throttled devnet RPC to avoid 429s
 const SYS = new PublicKey('11111111111111111111111111111111');
 const RENT = new PublicKey('SysvarRent111111111111111111111111111111111');
-const MINT = new PublicKey(JSON.parse(fs.readFileSync(new URL('./payout-config.json', import.meta.url))).mint);
+const MINT = new PublicKey(JSON.parse(fs.readFileSync(new URL('../payout-config.json', import.meta.url))).mint);
 // funded devnet keypair: OIRA_KEYPAIR env → ../keys/oira-deployer.json → ./devnet-keypair.json (git-ignored)
-const legacyKey = new URL('../keys/oira-deployer.json', import.meta.url);
-const KEYPATH = process.env.OIRA_KEYPAIR || (fs.existsSync(legacyKey) ? legacyKey : new URL('./devnet-keypair.json', import.meta.url));
+const legacyKey = new URL('../../keys/oira-deployer.json', import.meta.url);
+const KEYPATH = process.env.OIRA_KEYPAIR || (fs.existsSync(legacyKey) ? legacyKey : new URL('../devnet-keypair.json', import.meta.url));
 let deployer;
 try { deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(KEYPATH)))); }
 catch { console.error('Missing funded devnet keypair. Set OIRA_KEYPAIR=/path/to/id.json or place one at client/devnet-keypair.json (needs a little devnet SOL).'); process.exit(1); }

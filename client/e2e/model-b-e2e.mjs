@@ -12,7 +12,7 @@
 //     L5  hidden no-match — a no-match commits payee=0 (no wallet link) and an opaque receipt (no verdict)
 //     settle bound to match — a real receipt pays her; a forged nonce / wrong offer are rejected
 //     Palette stays in the enclave — it is still delegation-owned on base at the end
-// Run from client/:  node model-b-e2e.mjs
+// Run from client/:  node e2e/model-b-e2e.mjs
 import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction, sendAndConfirmTransaction, SystemProgram } from '@solana/web3.js';
 import {
   getAuthToken, permissionPdaFromAccount,
@@ -33,9 +33,9 @@ const TEE_RPC = 'https://devnet-tee.magicblock.app';
 const BASE_RPC = 'https://api.devnet.solana.com';
 const SYS = new PublicKey('11111111111111111111111111111111');
 const RENT = new PublicKey('SysvarRent111111111111111111111111111111111');
-const MINT = new PublicKey(JSON.parse(fs.readFileSync(new URL('./payout-config.json', import.meta.url))).mint);
+const MINT = new PublicKey(JSON.parse(fs.readFileSync(new URL('../payout-config.json', import.meta.url))).mint);
 
-const deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(new URL('../keys/oira-deployer.json', import.meta.url)))));
+const deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(new URL('../../keys/oira-deployer.json', import.meta.url)))));
 const owner = Keypair.generate();    // her
 const agent = Keypair.generate();    // her offline-owner's session key
 const brand = Keypair.generate();

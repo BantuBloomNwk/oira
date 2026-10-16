@@ -7,7 +7,7 @@
 //
 // Method: seal a fresh Palette private (whitelist AGENT), then getAccountInfo(palette)
 //   (1) from the whitelisted AGENT token, (2) from a random OUTSIDER token, (3) from base.
-// Run from client/:  node spike-read-semantics.mjs
+// Run from client/:  node e2e/spike-read-semantics.mjs
 import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction, sendAndConfirmTransaction, SystemProgram } from '@solana/web3.js';
 import {
   getAuthToken, permissionPdaFromAccount,
@@ -24,7 +24,7 @@ const TEE_VALIDATOR = new PublicKey('MTEWGuqxUpYZGFJQcp8tLN7x5v9BSeoFHYWQQ3n3xzo
 const TEE_RPC = 'https://devnet-tee.magicblock.app';
 const BASE_RPC = 'https://api.devnet.solana.com';
 const SYS = new PublicKey('11111111111111111111111111111111');
-const deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync('../keys/oira-deployer.json', 'utf8'))));
+const deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(new URL('../../keys/oira-deployer.json', import.meta.url), 'utf8'))));
 const owner = Keypair.generate();
 const agent = Keypair.generate();      // the ONE whitelisted reader
 const outsider = Keypair.generate();   // NOT whitelisted

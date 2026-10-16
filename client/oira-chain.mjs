@@ -1,5 +1,5 @@
 // Oira chain bridge — the proven seal + private-payout flows as callable functions.
-// Reuses exactly what client/per-palette-e2e.mjs and client/payout-e2e.mjs proved on devnet.
+// Reuses exactly what client/e2e/per-palette-e2e.mjs and client/e2e/payout-e2e.mjs proved on devnet.
 import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction, SystemProgram, sendAndConfirmTransaction } from '@solana/web3.js';
 import {
   getAuthToken, permissionPdaFromAccount, deriveVault, deriveEphemeralAta,
@@ -139,7 +139,7 @@ export async function privacyProof({ ownerPubkey } = {}) {
 
 // ---- MODEL B OFFER: a brand commits its target shade + escrow, co-delegates the campaign into
 // her ER, the AGENT matches it in-enclave (owner offline), and — only on a real match — settles
-// her payout from escrow against the private receipt. Ports client/model-b-e2e.mjs. ----
+// her payout from escrow against the private receipt. Ports client/e2e/model-b-e2e.mjs. ----
 export async function runOffer({ ownerSecret, ownerPubkey, agentSecret, salt, traits, payout = 5, category = 0, target: targetArg } = {}) {
   // Runs against HER real palette from her owner PUBKEY + the bounded agent key + her confirmed
   // traits. Her owner SECRET is never needed here — the agent matches in-enclave and settle pays
@@ -221,7 +221,7 @@ export async function runOffer({ ownerSecret, ownerPubkey, agentSecret, salt, tr
 }
 
 // ---- MODEL B SEAL: her Palette + Traits, sealed private, and they STAY in the enclave ----
-// Ports the flow proven in client/model-b-e2e.mjs. DEMO NOTE: the bridge holds her owner+agent
+// Ports the flow proven in client/e2e/model-b-e2e.mjs. DEMO NOTE: the bridge holds her owner+agent
 // keys; in production owner = her passkey / Seed Vault and set_traits is signed on her device.
 export async function sealPalette({ traits = { undertone: 2, depth: 8, season: 3 }, encBlob, lifetimeCap = 0 } = {}) {
   const owner = Keypair.generate(), agent = Keypair.generate();
@@ -266,7 +266,7 @@ export async function sealPalette({ traits = { undertone: 2, depth: 8, season: 3
 // Identical Model B seal to sealPalette, but the owner SECRET is never constructed here —
 // every owner signature comes from `sign(msgBytes)` (her passkey-derived key, on-device).
 // The agent stays a bounded, server-held session key by design. Proven headlessly by
-// client/relay-seal-e2e.mjs (a local keypair stands in for the device); the browser passes
+// client/e2e/relay-seal-e2e.mjs (a local keypair stands in for the device); the browser passes
 // `sign` from window.OiraCustody.
 //
 // SPONSORED FEE PAYER: the relay (deployer), not her, pays the network's per-signature fee.

@@ -1,6 +1,6 @@
 // PER on-chain READABILITY AUDIT (live devnet). Answers: what can ANYONE read on the public base
 // layer, and does her private self (traits, salt, verdict) stay unreadable? Re-verifies the
-// Model B claim rather than trusting the docs. Run from client/: node per-audit.mjs
+// Model B claim rather than trusting the docs. Run from client/: node e2e/per-audit.mjs
 import { Connection, PublicKey } from '@solana/web3.js';
 import { DELEGATION_PROGRAM_ID } from '@magicblock-labs/ephemeral-rollups-sdk';
 import { createHash } from 'crypto';

@@ -33,7 +33,7 @@ jobs:
           fail=0
           while IFS= read -r -d '' f; do
             node --check "$f" || fail=1
-          done < <(find app client mcp netlify scripts -name '*.js' -o -name '*.mjs' 2>/dev/null | grep -v node_modules | tr '\n' '\0')
+          done < <(find app client mcp scripts -name '*.js' -o -name '*.mjs' 2>/dev/null | grep -v node_modules | tr '\n' '\0')
           exit $fail
 
       - name: Concierge LLM seam tests (mocked, no weights/GPU needed)
@@ -41,23 +41,23 @@ jobs:
 
       - name: Custody derivation proof (deterministic recovery, uniqueness, signing)
         working-directory: client
-        run: node test-custody.mjs
+        run: node e2e/test-custody.mjs
 
       - name: Custody browser/node parity proof
         working-directory: client
-        run: node test-custody-parity.mjs
+        run: node e2e/test-custody-parity.mjs
 
       - name: Fallback-recovery roundtrip proof
         working-directory: client
-        run: node test-custody-recovery.mjs
+        run: node e2e/test-custody-recovery.mjs
 
       - name: App PWA smoke test (headless Chromium; skips clean if no browser)
         working-directory: client
-        run: node test-app-smoke.mjs
+        run: node e2e/test-app-smoke.mjs
 
       - name: Self-seal Sybil-gate proof (off by default)
         working-directory: client
-        run: node test-self-seal-gate.mjs
+        run: node e2e/test-self-seal-gate.mjs
 
       - name: MCP tool-boundary tests
         working-directory: mcp

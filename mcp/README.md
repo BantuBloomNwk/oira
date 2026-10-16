@@ -25,7 +25,7 @@ what she sees in the app, and they only ever get the whitelisted `palette` (neve
 ```
 cd mcp && npm install
 node oira-mcp-server.mjs      # speaks MCP over stdio
-npm test                      # or: node test-mcp.mjs  (10 checks, incl. a live client<->server round-trip)
+npm test                      # or: node e2e/test-mcp.mjs  (10 checks, incl. a live client<->server round-trip)
 ```
 
 ## Connect an agent (e.g. Claude Desktop)

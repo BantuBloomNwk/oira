@@ -11,14 +11,14 @@
 // holds even for palettes first sealed by an older client with a random per-call agent.
 //
 // Usage:
-//   node client/reseal-e2e.mjs           # fresh device: first seal + re-seal (steady state)
-//   node client/reseal-e2e.mjs <state>   # reuse a saved device state file across runs
+//   node client/e2e/reseal-e2e.mjs           # fresh device: first seal + re-seal (steady state)
+//   node client/e2e/reseal-e2e.mjs <state>   # reuse a saved device state file across runs
 import nacl from 'tweetnacl';
 import { randomBytes, createHash } from 'crypto';
 import { Keypair, Connection, PublicKey } from '@solana/web3.js';
 import { getAuthToken } from '@magicblock-labs/ephemeral-rollups-sdk';
 import fs from 'fs';
-import { sealPaletteRelay } from './oira-chain.mjs';
+import { sealPaletteRelay } from '../oira-chain.mjs';
 
 const TEE_RPC = process.env.OIRA_TEE_RPC || 'https://devnet-tee.magicblock.app';
 const base = new Connection(process.env.OIRA_BASE_RPC || 'https://api.devnet.solana.com', 'confirmed');

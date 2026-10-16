@@ -4,7 +4,7 @@
 // This is exactly what the browser will do via window.OiraCustody.
 import nacl from 'tweetnacl';
 import { Keypair, Connection, PublicKey } from '@solana/web3.js';
-import { sealPaletteRelay } from './oira-chain.mjs';
+import { sealPaletteRelay } from '../oira-chain.mjs';
 
 const base = new Connection(process.env.OIRA_BASE_RPC || 'https://api.devnet.solana.com', 'confirmed');
 

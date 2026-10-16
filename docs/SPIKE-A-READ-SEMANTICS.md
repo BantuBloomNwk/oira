@@ -4,7 +4,7 @@ Question (Fable Attack 1): once a Palette is sealed private (EphemeralPermission
 whitelists ONE reader = the agent), can a NON-whitelisted key RPC-read its plaintext
 from the TEE? If yes, the query budget bounds brands but not the key holder.
 
-## Result (live devnet, `client/spike-read-semantics.mjs`)
+## Result (live devnet, `client/e2e/spike-read-semantics.mjs`)
 Same sealed private Palette, three readers:
 - **AGENT token (whitelisted):** DATA RETURNED — full ER state (query_count, is_private=1, ...).
 - **OUTSIDER token (not whitelisted):** `null (no data returned)` — **blocked**.

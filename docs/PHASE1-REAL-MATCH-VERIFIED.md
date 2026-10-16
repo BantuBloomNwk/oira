@@ -13,7 +13,7 @@ commitment-bound traits. The client no longer supplies `matched`.
 - Base receipts are HASHED: `last_receipt = sha256(offer_hash‖verdict‖nonce)` — public base
   cannot reconstruct her palette from receipts (fixes Fable Attack 2).
 
-## Live proof (`client/match-real-e2e.mjs`, PASS)
+## Live proof (`client/e2e/match-real-e2e.mjs`, PASS)
 - commitment binding: wrong-traits `set_traits` rejected in-enclave (BindingMismatch)
 - read gating: outsider RPC read of traits -> null (Spike A confirmed)
 - real match: matching offer -> MATCH(1); mismatched undertone -> no-match(0); client passed no answer
@@ -22,7 +22,7 @@ commitment-bound traits. The client no longer supplies `matched`.
 - reference palette 8DhBFkg3XVbzLK5GvM8DePdTGyfXgiS8sfZNPRYgbT2c
 
 ## Reproduce
-    cd client && node match-real-e2e.mjs
+    cd client && node e2e/match-real-e2e.mjs
 
 ## Notes
 - Program upgraded on devnet (extended +70000 for the larger .so, 483,672 B).

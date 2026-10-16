@@ -9,7 +9,7 @@
 - The offline **agent runs `match_query` with NO target** — it can only ask "does she match *this* committed, escrowed offer?". The enclave reads her sealed traits + the campaign target and computes the verdict itself.
 - The **verdict + a trait-derived nonce stay PRIVATE in her Palette** (agent-whitelisted read). Only an **opaque receipt** `sha256(target_hash‖verdict‖nonce)` and — **on a match only** — her **payee** are written onto the campaign and undelegated to base for `settle_offer`.
 
-## Defense stack (all proven live in `client/model-b-e2e.mjs`)
+## Defense stack (all proven live in `client/e2e/model-b-e2e.mjs`)
 
 | Layer | Property | How |
 |---|---|---|
@@ -20,7 +20,7 @@
 | **L5** | Hidden no-match | The verdict never reaches base in cleartext; the committed receipt is opaque without the private nonce, and a no-match commits `payee = 0` (no wallet link). A brand that paid learns the verdict only via the nonce the agent discloses on an accept. |
 | — | Settlement bound to match | `settle_offer` pays her only when `sha256(target_hash‖1‖nonce) == campaign.receipt` and `campaign.payee == her_token.owner`. Forged nonce → `ReceiptMismatch`; wrong offer → `OfferMismatch`. |
 
-Program `CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP` (devnet). Reproduce: `cd client && node model-b-e2e.mjs`.
+Program `CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP` (devnet). Reproduce: `cd client && node e2e/model-b-e2e.mjs`.
 
 ## CSO sweep (2026-07-06) — semgrep clean + 3 latent bugs fixed
 
@@ -38,7 +38,7 @@ Two more residuals are also now **CLOSED**:
 
 `client/oira-chain.mjs` (`sealPalette` + `runOffer`) and `client/server.mjs` (`/api/seal`, `/api/campaign`, `/api/payout`) are wired to the deployed Model B flow (commit root → campaign target shade + escrow → co-delegate → agent-gated `match_query` → undelegate → receipt/nonce settle). `app/index.html` sends her confirmed bucketed traits at seal and reflects the real enclave verdict/payout. Verified end-to-end: seal → overnight offer → matched, her paid $5 from escrow.
 
-**Per-brand distinct cap** is also now **CLOSED**: her Palette carries a bounded 8-slot `(brand → distinct-offer count)` table; `max_q_per_brand` is the per-brand distinct cap. A brand's `(cap+1)`th distinct offer is rejected in-enclave (`PerBrandCapExceeded`) while a different brand gets its own slot; on a full table a new brand evicts the smallest-count slot, which never bypasses the hard `lifetime_cap` ceiling (it only approximates per-brand once >8 brands are active). Proven in `client/perbrand-e2e.mjs`.
+**Per-brand distinct cap** is also now **CLOSED**: her Palette carries a bounded 8-slot `(brand → distinct-offer count)` table; `max_q_per_brand` is the per-brand distinct cap. A brand's `(cap+1)`th distinct offer is rejected in-enclave (`PerBrandCapExceeded`) while a different brand gets its own slot; on a full table a new brand evicts the smallest-count slot, which never bypasses the hard `lifetime_cap` ceiling (it only approximates per-brand once >8 brands are active). Proven in `client/e2e/perbrand-e2e.mjs`.
 
 ## Known residuals (honest mainnet backlog — NOT yet closed)
 

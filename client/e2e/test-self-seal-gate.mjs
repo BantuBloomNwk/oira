@@ -4,14 +4,14 @@
 // be abused in production to Sybil-mint Palettes, and only re-enabled with an explicit opt-in. This
 // proves the gate (`assertSelfSealAllowed`): default-blocks, only OIRA_ALLOW_SELF_SEAL=1 allows, the
 // error is actionable, and the gate is actually WIRED at the runOffer call site (not just defined).
-// Run from client/:  node test-self-seal-gate.mjs
+// Run from client/:  node e2e/test-self-seal-gate.mjs
 import { Keypair } from '@solana/web3.js';
 
 // Seed a throwaway deployer key so importing the bridge module needs no real secret — the gate we
 // test throws before the deployer is ever used, so this keeps the check in the fast, offline tier.
 process.env.OIRA_DEPLOYER_KEY = JSON.stringify([...Keypair.generate().secretKey]);
 delete process.env.OIRA_ALLOW_SELF_SEAL;
-const { assertSelfSealAllowed, runOffer } = await import('./oira-chain.mjs');
+const { assertSelfSealAllowed, runOffer } = await import('../oira-chain.mjs');
 
 let pass = true; const check = (label, ok) => { pass = pass && ok; console.log(`   ${ok ? '✓' : '✗'} ${label}`); };
 const blocks = (fn) => { try { fn(); return false; } catch { return true; } };

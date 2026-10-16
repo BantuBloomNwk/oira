@@ -2,7 +2,7 @@
 //   Her Palette carries an 8-slot (brand -> distinct-offer count) table. With max_q_per_brand = 1,
 //   ONE brand can query at most one distinct offer; a second distinct offer from the SAME brand is
 //   rejected in-enclave, while a DIFFERENT brand is still allowed. Tightens the Sybil barrier beyond
-//   the global lifetime cap. Run from client/:  node perbrand-e2e.mjs
+//   the global lifetime cap. Run from client/:  node e2e/perbrand-e2e.mjs
 import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction, sendAndConfirmTransaction, SystemProgram } from '@solana/web3.js';
 import {
   getAuthToken, permissionPdaFromAccount,
@@ -21,8 +21,8 @@ const TEE_RPC = 'https://devnet-tee.magicblock.app';
 const BASE_RPC = 'https://api.devnet.solana.com';
 const SYS = new PublicKey('11111111111111111111111111111111');
 const RENT = new PublicKey('SysvarRent111111111111111111111111111111111');
-const MINT = new PublicKey(JSON.parse(fs.readFileSync(new URL('./payout-config.json', import.meta.url))).mint);
-const deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(new URL('../keys/oira-deployer.json', import.meta.url)))));
+const MINT = new PublicKey(JSON.parse(fs.readFileSync(new URL('../payout-config.json', import.meta.url))).mint);
+const deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(new URL('../../keys/oira-deployer.json', import.meta.url)))));
 
 const owner = Keypair.generate(), agent = Keypair.generate();
 const HER = { undertone: 2, depth: 8, season: 3 };

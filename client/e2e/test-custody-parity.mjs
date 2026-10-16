@@ -10,9 +10,9 @@
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import nacl from 'tweetnacl';
-import { deriveOwner } from './oira-custody.mjs';
+import { deriveOwner } from '../oira-custody.mjs';
 
-const ROOT = fileURLToPath(new URL('..', import.meta.url));
+const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const load = (p) => fs.readFileSync(ROOT + p, 'utf8');
 
 const store = {};
@@ -27,7 +27,7 @@ const ok = (c, m) => { if (c) { pass++; console.log('  PASS', m); } else { fail+
 
 console.log('Oira browser/node custody parity proof\n');
 
-const prfAlice = new Uint8Array(32).fill(7); // same mock secret client/test-custody.mjs uses
+const prfAlice = new Uint8Array(32).fill(7); // same mock secret client/e2e/test-custody.mjs uses
 const prfBob = Uint8Array.from({ length: 32 }, (_, i) => (i * 13 + 5) & 0xff);
 
 const nodeAlice = deriveOwner(prfAlice).publicKey.toBase58();

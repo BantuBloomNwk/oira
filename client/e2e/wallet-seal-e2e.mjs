@@ -6,11 +6,11 @@
 //   B) an UNDERFUNDED wallet is REJECTED loudly BEFORE anything is sealed — ensureOwnerFunds throws an
 //      actionable error naming the shortfall SOL + her address, and no palette exists on base (no
 //      silent sponsor, no half-seal). This is the regression this test exists to catch.
-// Run from client/:  node wallet-seal-e2e.mjs
+// Run from client/:  node e2e/wallet-seal-e2e.mjs
 import nacl from 'tweetnacl';
 import fs from 'fs';
 import { Keypair, Connection, PublicKey, SystemProgram, Transaction, sendAndConfirmTransaction } from '@solana/web3.js';
-import { sealPaletteRelay } from './oira-chain.mjs';
+import { sealPaletteRelay } from '../oira-chain.mjs';
 
 const PROGRAM = new PublicKey('CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP');
 const base = new Connection(process.env.OIRA_BASE_RPC || 'https://api.devnet.solana.com', 'confirmed');
@@ -19,7 +19,7 @@ const opts = { commitment: 'confirmed', maxRetries: 5 };
 const isTransient = (e) => /429|Too Many Requests|Timed out|fetch failed|ETIMEDOUT|ECONNRESET|502|503|Blockhash not found/i.test(String(e && (e.message || e)));
 process.on('unhandledRejection', (e) => { if (isTransient(e)) return; console.error('unhandledRejection:', e && (e.message || e)); process.exit(1); });
 
-const deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(new URL('../keys/oira-deployer.json', import.meta.url)))));
+const deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(new URL('../../keys/oira-deployer.json', import.meta.url)))));
 const SOL = 1e9;
 const walletSign = (kp) => async (msg) => nacl.sign.detached(new Uint8Array(msg), kp.secretKey);
 const palettePda = (ownerPk) => PublicKey.findProgramAddressSync([Buffer.from('palette'), new PublicKey(ownerPk).toBuffer()], PROGRAM)[0];

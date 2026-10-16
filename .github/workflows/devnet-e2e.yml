@@ -71,77 +71,77 @@ jobs:
       - name: match-real-e2e
         if: env.SKIP != '1'
         working-directory: client
-        run: node match-real-e2e.mjs
+        run: node e2e/match-real-e2e.mjs
         env:
           OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
 
       - name: model-b-e2e
         if: env.SKIP != '1'
         working-directory: client
-        run: node model-b-e2e.mjs
+        run: node e2e/model-b-e2e.mjs
         env:
           OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
 
       - name: night-rules-e2e
         if: env.SKIP != '1'
         working-directory: client
-        run: node night-rules-e2e.mjs
+        run: node e2e/night-rules-e2e.mjs
         env:
           OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
 
       - name: overnight-real-e2e
         if: env.SKIP != '1'
         working-directory: client
-        run: node overnight-real-e2e.mjs
+        run: node e2e/overnight-real-e2e.mjs
         env:
           OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
 
       - name: payout-e2e
         if: env.SKIP != '1'
         working-directory: client
-        run: node payout-e2e.mjs
+        run: node e2e/payout-e2e.mjs
         env:
           OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
 
       - name: perbrand-e2e
         if: env.SKIP != '1'
         working-directory: client
-        run: node perbrand-e2e.mjs
+        run: node e2e/perbrand-e2e.mjs
         env:
           OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
 
       - name: per-palette-e2e
         if: env.SKIP != '1'
         working-directory: client
-        run: node per-palette-e2e.mjs
+        run: node e2e/per-palette-e2e.mjs
         env:
           OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
 
       - name: relay-seal-e2e
         if: env.SKIP != '1'
         working-directory: client
-        run: node relay-seal-e2e.mjs
+        run: node e2e/relay-seal-e2e.mjs
         env:
           OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
 
       - name: wallet-seal-e2e
         if: env.SKIP != '1'
         working-directory: client
-        run: node wallet-seal-e2e.mjs
+        run: node e2e/wallet-seal-e2e.mjs
         env:
           OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
 
       - name: reseal-e2e
         if: env.SKIP != '1'
         working-directory: client
-        run: node reseal-e2e.mjs
+        run: node e2e/reseal-e2e.mjs
         env:
           OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
 
       - name: settle-match-e2e
         if: env.SKIP != '1'
         working-directory: client
-        run: node settle-match-e2e.mjs
+        run: node e2e/settle-match-e2e.mjs
         env:
           # relative to working-directory (client/), so ../keys — where the key was written (repo-root keys/)
           OIRA_KEYPAIR: ../keys/oira-deployer.json
@@ -154,7 +154,7 @@ jobs:
           SERVER_PID=$!
           # give the bridge a moment to bind before the WS client tries to connect
           for i in $(seq 1 15); do curl -sf http://127.0.0.1:8779/api/health >/dev/null && break; sleep 1; done
-          node relay-ws-e2e.mjs
+          node e2e/relay-ws-e2e.mjs
           RESULT=$?
           kill $SERVER_PID 2>/dev/null || true
           exit $RESULT

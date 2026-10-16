@@ -17,7 +17,7 @@ Time: about two minutes once your keypair is funded.
 ```bash
 cd client
 npm install
-OIRA_KEYPAIR=/path/to/funded-devnet-id.json node settle-match-e2e.mjs
+OIRA_KEYPAIR=/path/to/funded-devnet-id.json node e2e/settle-match-e2e.mjs
 ```
 
 The run spins up throwaway `her` / `agent` / `brand` actors, mints a small test token, and drives the
@@ -57,4 +57,4 @@ The full technical walkthrough, including the five privacy fixes and their hones
 ## Tip
 
 Run it once before you record or present, so the RPC is warm and the run reads clean. To quiet the
-retry lines: `node settle-match-e2e.mjs 2>&1 | grep -v "Retrying after"`.
+retry lines: `node e2e/settle-match-e2e.mjs 2>&1 | grep -v "Retrying after"`.

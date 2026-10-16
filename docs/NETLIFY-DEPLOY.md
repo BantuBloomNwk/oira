@@ -44,17 +44,10 @@ overnight continuity) and has no function timeout ceiling.
 - Set the deployer secret as an env var (below); run `node client/server.mjs`.
 - In `netlify.toml` add a proxy redirect: `from = "/api/*" to = "https://<bridge-host>/api/:splat" status = 200`.
 
-**(B) Netlify Functions (staged in `netlify/functions/`).** Works for a quick all-in-one
-deploy but with real caveats:
-- **Timeout:** the delegate→match→undelegate→settle flow often exceeds the 10s sync limit
-  (26s max on paid). If `/api/campaign` times out, use (A) or convert `campaign.mjs` to a
-  background function (async 202 + status poll).
-- **Stateless:** no shared session across invocations, so seal->overnight identity isn't
-  carried (`runOffer` self-seals a fresh matching palette as fallback).
-- **Bundling:** functions import `client/node_modules`; set a build step to install them
-  (`command = "cd client && npm ci"`) so `included_files` can bundle them.
+**(B) Netlify Functions: retired.** The old `netlify/functions/` demo endpoints were removed.
+The bridge in (A) is the only API.
 
-## Secrets / env (set in Netlify UI → Site config → Environment, or `netlify env:set`)
+## Secrets / env (on the bridge host only, never on Netlify)
 - `OIRA_DEPLOYER_KEY` — **required for any hosted bridge.** The deployer secret key as a JSON
   byte array (contents of `keys/oira-deployer.json`). NEVER commit it. `oira-chain.mjs` reads
   this env first and falls back to the local file only for dev.

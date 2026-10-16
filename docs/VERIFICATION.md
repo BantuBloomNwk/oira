@@ -110,7 +110,7 @@ Ranked by how load-bearing the flow is versus how exposed it is.
 
 **Fast tier** (deterministic, no SOL, every push — also run locally before a commit):
 ```
-cd client && node test-custody.mjs && node test-custody-parity.mjs && node test-custody-recovery.mjs
+cd client && node e2e/test-custody.mjs && node e2e/test-custody-parity.mjs && node e2e/test-custody-recovery.mjs
 node scripts/test-llm.mjs
 cd mcp && npm test
 ```
@@ -119,12 +119,12 @@ cd mcp && npm test
 are the ones that tell you the *product* works:
 ```
 cd client
-node relay-seal-e2e.mjs        # bridge: seal
-node reseal-e2e.mjs            # bridge: re-seal
-node overnight-real-e2e.mjs    # bridge: seal → match → settle → payout (strongest single check)
+node e2e/relay-seal-e2e.mjs        # bridge: seal
+node e2e/reseal-e2e.mjs            # bridge: re-seal
+node e2e/overnight-real-e2e.mjs    # bridge: seal → match → settle → payout (strongest single check)
 # program-level (ABI / defense stack):
-node match-real-e2e.mjs   node model-b-e2e.mjs   node settle-match-e2e.mjs
-node night-rules-e2e.mjs  node per-palette-e2e.mjs  node perbrand-e2e.mjs  node payout-e2e.mjs
+node e2e/match-real-e2e.mjs   node e2e/model-b-e2e.mjs   node e2e/settle-match-e2e.mjs
+node e2e/night-rules-e2e.mjs  node e2e/per-palette-e2e.mjs  node e2e/perbrand-e2e.mjs  node e2e/payout-e2e.mjs
 # relay-ws needs server.mjs running first (see devnet-e2e.yml for the exact start+poll sequence)
 ```
 The deployer wallet (`6wWrCWZ3y9UveFG1t5GzupJ1qkWn5r4QPWg8EmELA8Xz`, devnet) must hold enough SOL;

@@ -5,7 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import nacl from 'tweetnacl';
 
-const ROOT = fileURLToPath(new URL('..', import.meta.url));
+const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 const load = (p) => fs.readFileSync(ROOT + p, 'utf8');
 
 function freshWindow() {

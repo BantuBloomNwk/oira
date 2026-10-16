@@ -2,7 +2,7 @@
 // We stand in a MOCK PRF secret where the real passkey would supply one, and assert the
 // four properties the custody model depends on.
 import nacl from 'tweetnacl';
-import { deriveOwner, deriveAgent, deriveSeed, OWNER_INFO } from './oira-custody.mjs';
+import { deriveOwner, deriveAgent, deriveSeed, OWNER_INFO } from '../oira-custody.mjs';
 
 let pass = 0, fail = 0;
 const ok = (c, m) => { if (c) { pass++; console.log('  PASS', m); } else { fail++; console.log('  FAIL', m); } };

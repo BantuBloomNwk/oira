@@ -1,17 +1,18 @@
-// Phase-1 proof — the REAL in-enclave match on the current commitment ABI (the client never supplies
-// the answer). Each offer is a committed, escrowed campaign co-delegated into her ER; the AGENT (owner
-// offline) runs match_query and the program READS her sealed traits and computes the verdict itself.
-//   Asserts:
-//     • commitment BINDING: a set_traits with traits != the published root is rejected in-enclave
-//     • READ GATING: an outsider cannot RPC-read the sealed traits (null)
-//     • REAL verdict: a matching campaign -> MATCH(1); a mismatched-undertone campaign -> no-match(0),
-//       WITHOUT the client ever passing the answer
-//     • HASHED receipt: the campaign carries sha256(target_hash‖verdict‖nonce), not the cleartext offer
-//   (The per-epoch budget is proven separately in per-palette-e2e; settlement in settle-match-e2e.)
-// Run from client/:  node match-real-e2e.mjs
+// Oira PER spike — the offline-agent match inside a MagicBlock Private ER (TEE), current commitment ABI.
+//   attest TEE -> init_palette(root)+init_traits (base) -> set_night_rules(epoch_cap=CAP) ->
+//   delegate palette+traits to the TEE validator -> seal both private (whitelist agent) ->
+//   verify EphemeralPermission(is_private) -> the AGENT answers CAP escrowed, committed offers
+//   in-enclave (owner NOT a signer) -> the (CAP+1)th is rejected by the on-chain per-epoch budget ->
+//   base stays frozen throughout (query_count == 0 on base while matches happen in-ER).
+//
+//   NOTE on CAP: the on-chain default epoch cap is 8, but each budget-consuming query now needs its
+//   OWN escrowed campaign (a repeat of an answered offer is a free no-op). A default-8 proof would
+//   need 8 escrowed campaigns; her-set epoch_cap exercises the IDENTICAL on-chain enforcement path
+//   (match_query's `require!(query_count < epoch_cap)`) at a fraction of the devnet cost.
+// Run from client/: node e2e/per-palette-e2e.mjs
 import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction, sendAndConfirmTransaction, SystemProgram } from '@solana/web3.js';
 import {
-  getAuthToken, permissionPdaFromAccount,
+  verifyTeeRpcIntegrity, getAuthToken, permissionPdaFromAccount,
   delegateBufferPdaFromDelegatedAccountAndOwnerProgram, delegationRecordPdaFromDelegatedAccount, delegationMetadataPdaFromDelegatedAccount,
   EPHEMERAL_VAULT_ID, MAGIC_PROGRAM_ID, PERMISSION_PROGRAM_ID, DELEGATION_PROGRAM_ID,
   createTopUpEscrowInstruction, escrowPdaFromEscrowAuthority,
@@ -23,26 +24,29 @@ import fs from 'fs';
 
 const PROGRAM = new PublicKey('CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP');
 const TEE_VALIDATOR = new PublicKey('MTEWGuqxUpYZGFJQcp8tLN7x5v9BSeoFHYWQQ3n3xzo');
-const TEE_RPC = 'https://devnet-tee.magicblock.app';
+const TEE_RPC = process.env.MAGICBLOCK_TEE_RPC || 'https://devnet-tee.magicblock.app';
 const BASE_RPC = process.env.BASE_RPC || 'https://api.devnet.solana.com';
 const SYS = new PublicKey('11111111111111111111111111111111');
 const RENT = new PublicKey('SysvarRent111111111111111111111111111111111');
-const MINT = new PublicKey(JSON.parse(fs.readFileSync(new URL('./payout-config.json', import.meta.url))).mint);
-const deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(new URL('../keys/oira-deployer.json', import.meta.url)))));
-const owner = Keypair.generate();
-const agent = Keypair.generate();
-const brand = Keypair.generate();
-const outsider = Keypair.generate();
+const MINT = new PublicKey(JSON.parse(fs.readFileSync(new URL('../payout-config.json', import.meta.url))).mint);
+const EX = (k, v) => `https://explorer.solana.com/${k}/${v}?cluster=devnet`;
+const CAP = 3; // her-set epoch_cap; exercises the same on-chain per-epoch budget as the default 8
 
-// her real (bucketed) reading
-const HER = { undertone: 2, depth: 8, season: 3 }; // cool, Monk 8, season 3
+const deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(new URL('../../keys/oira-deployer.json', import.meta.url)))));
+const owner = Keypair.generate();       // fresh palette owner each run (present only for setup)
+const agent = Keypair.generate();       // the offline session key (signs the match)
+const brand = Keypair.generate();       // funds the committed offers
+
+const HER = { undertone: 2, depth: 8, season: 3 };
 const salt = randomBytes(32);
-const sha = (...bufs) => createHash('sha256').update(Buffer.concat(bufs)).digest();
+const sha = (...b) => createHash('sha256').update(Buffer.concat(b)).digest();
 const commitmentRoot = sha(salt, Buffer.from([HER.undertone, HER.depth, HER.season]));
 
 const disc = (n) => createHash('sha256').update(`global:${n}`).digest().subarray(0, 8);
 const bBytes = (b) => { const l = Buffer.alloc(4); l.writeUInt32LE(b.length, 0); return Buffer.concat([l, Buffer.from(b)]); };
+const bU32 = (n) => { const b = Buffer.alloc(4); b.writeUInt32LE(n, 0); return b; };
 const bU64 = (n) => { const b = Buffer.alloc(8); b.writeBigUInt64LE(BigInt(n), 0); return b; };
+
 const palettePda = PublicKey.findProgramAddressSync([Buffer.from('palette'), owner.publicKey.toBuffer()], PROGRAM)[0];
 const traitsPda = PublicKey.findProgramAddressSync([Buffer.from('traits'), owner.publicKey.toBuffer()], PROGRAM)[0];
 const permPalette = permissionPdaFromAccount(palettePda);
@@ -53,6 +57,10 @@ const initPaletteIx = (enc) => new TransactionInstruction({ programId: PROGRAM, 
   { pubkey: palettePda, isSigner: false, isWritable: true }, { pubkey: owner.publicKey, isSigner: true, isWritable: true }, { pubkey: SYS, isSigner: false, isWritable: false }], data: Buffer.concat([disc('init_palette'), bBytes(enc), commitmentRoot]) });
 const initTraitsIx = () => new TransactionInstruction({ programId: PROGRAM, keys: [
   { pubkey: traitsPda, isSigner: false, isWritable: true }, { pubkey: owner.publicKey, isSigner: true, isWritable: true }, { pubkey: SYS, isSigner: false, isWritable: false }], data: disc('init_traits') });
+// set_night_rules(min_payout, max_q_per_brand, blocked_cats, active, lifetime_cap, epoch_cap)
+const setRulesIx = () => new TransactionInstruction({ programId: PROGRAM, keys: [
+  { pubkey: owner.publicKey, isSigner: true, isWritable: false }, { pubkey: palettePda, isSigner: false, isWritable: true }],
+  data: Buffer.concat([disc('set_night_rules'), bU64(0), Buffer.from([0]), bU32(0), Buffer.from([0]), bU32(0), bU32(CAP)]) });
 const delegateIx = (which) => { const pda = which === 'palette' ? palettePda : traitsPda; const name = which === 'palette' ? 'delegate_palette' : 'delegate_traits';
   return new TransactionInstruction({ programId: PROGRAM, keys: [
     { pubkey: owner.publicKey, isSigner: true, isWritable: true }, { pubkey: owner.publicKey, isSigner: false, isWritable: false },
@@ -66,14 +74,14 @@ const privacyIx = (which, reader) => { const pda = which === 'palette' ? palette
     { pubkey: owner.publicKey, isSigner: true, isWritable: true }, { pubkey: owner.publicKey, isSigner: false, isWritable: false },
     { pubkey: pda, isSigner: false, isWritable: true }, { pubkey: perm, isSigner: false, isWritable: true },
     { pubkey: EPHEMERAL_VAULT_ID, isSigner: false, isWritable: true }, { pubkey: MAGIC_PROGRAM_ID, isSigner: false, isWritable: false }, { pubkey: PERMISSION_PROGRAM_ID, isSigner: false, isWritable: false }], data: Buffer.concat([disc(name), reader.toBuffer(), Buffer.from([1])]) }); };
-const setTraitsIx = (u, d, s, saltBuf) => new TransactionInstruction({ programId: PROGRAM, keys: [
-  { pubkey: owner.publicKey, isSigner: true, isWritable: false }, { pubkey: traitsPda, isSigner: false, isWritable: true }, { pubkey: palettePda, isSigner: false, isWritable: false }], data: Buffer.concat([disc('set_traits'), Buffer.from([u, d, s]), saltBuf]) });
+const setTraitsIx = () => new TransactionInstruction({ programId: PROGRAM, keys: [
+  { pubkey: owner.publicKey, isSigner: true, isWritable: false }, { pubkey: traitsPda, isSigner: false, isWritable: true }, { pubkey: palettePda, isSigner: false, isWritable: false }], data: Buffer.concat([disc('set_traits'), Buffer.from([HER.undertone, HER.depth, HER.season]), salt]) });
 
 const PER_QUERY = 100_000, PER_ACCEPT = 5_000_000, ESCROW = 20_000_000;
-const campaignFor = (offerId, tu, td, ts, tol) => { const oidLe = Buffer.alloc(8); oidLe.writeBigUInt64LE(offerId, 0);
+const campaignFor = (offerId) => { const oidLe = Buffer.alloc(8); oidLe.writeBigUInt64LE(offerId, 0);
   const [c] = PublicKey.findProgramAddressSync([Buffer.from('campaign'), brand.publicKey.toBuffer(), oidLe], PROGRAM);
   const [e] = PublicKey.findProgramAddressSync([Buffer.from('escrow'), c.toBuffer()], PROGRAM);
-  const offerSalt = randomBytes(16); const shade = [tu, td, ts, tol]; const targetHash = sha(offerSalt, Buffer.from(shade));
+  const offerSalt = randomBytes(16); const shade = [HER.undertone, HER.depth, HER.season, 1]; const targetHash = sha(offerSalt, Buffer.from(shade));
   return { offerId, c, e, offerSalt, shade, targetHash }; };
 const createCampaignIx = (k) => new TransactionInstruction({ programId: PROGRAM, keys: [
   { pubkey: brand.publicKey, isSigner: true, isWritable: true }, { pubkey: MINT, isSigner: false, isWritable: false },
@@ -94,12 +102,8 @@ const matchIx = (k) => new TransactionInstruction({ programId: PROGRAM, keys: [
   { pubkey: k.c, isSigner: false, isWritable: true }],
   data: Buffer.concat([disc('match_query'), Buffer.from(k.shade), Buffer.from(k.offerSalt)]) });
 
-function decodePalette(buf) { let o = 8; o += 32; const encLen = buf.readUInt32LE(o); o += 4; o += encLen; o += 32; // root
-  const query_count = buf.readUInt32LE(o); o += 4; o += 4; o += 4; // lifetime, epoch
-  const is_private = buf.readUInt8(o); o += 1; const last_verdict = buf.readUInt8(o); o += 1; const last_nonce = Buffer.from(buf.subarray(o, o + 16));
-  return { query_count, is_private, last_verdict, last_nonce }; }
-// Campaign (after 8-byte disc): answered@163 receipt@164 payee_commit@196
-function decodeCampaign(buf) { return { answered: buf.readUInt8(163) === 1, receipt: Buffer.from(buf.subarray(164, 196)) }; }
+// query_count is the first field after the commitment root
+function readQueryCount(buf) { if (!buf) return null; let o = 8; o += 32; const n = buf.readUInt32LE(o); o += 4; o += n; o += 32; return buf.readUInt32LE(o); }
 
 const base = new Connection(BASE_RPC, 'confirmed');
 const opts = { commitment: 'confirmed', maxRetries: 5 };
@@ -108,74 +112,81 @@ const opts = { commitment: 'confirmed', maxRetries: 5 };
 // still fail loudly on real errors. (Same guard settle-match-e2e carries.)
 const isTransient = (err) => /429|Too Many Requests|Timed out|fetch failed|ETIMEDOUT|ECONNRESET|502|503|Blockhash not found/i.test(String(err && (err.message || err)));
 process.on('unhandledRejection', (err) => { if (isTransient(err)) return; console.error('unhandledRejection:', err && (err.message || err)); process.exit(1); });
-async function teeConn(kp) { const { token } = await getAuthToken(TEE_RPC, kp.publicKey, (m) => Promise.resolve(nacl.sign.detached(m, kp.secretKey))); return new Connection(`${TEE_RPC}?token=${token}`, 'confirmed'); }
+async function freshTee(auth) { const { token } = await getAuthToken(TEE_RPC, auth.publicKey, (m) => Promise.resolve(nacl.sign.detached(m, auth.secretKey))); return new Connection(`${TEE_RPC}?token=${token}`, 'confirmed'); }
 async function sendOnEr(tee, ixs, signers, feePayer) {
   const tx = new Transaction().add(...ixs); tx.feePayer = feePayer.publicKey;
-  const w = new Set([feePayer.publicKey.toBase58()]); for (const ix of tx.instructions) for (const k of ix.keys) if (k.isWritable) w.add(k.pubkey.toBase58());
-  const r = await (await fetch(tee.rpcEndpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBlockhashForAccounts', params: [[...w]] }) })).json();
+  const writable = new Set([feePayer.publicKey.toBase58()]);
+  for (const ix of tx.instructions) for (const k of ix.keys) if (k.isWritable) writable.add(k.pubkey.toBase58());
+  const r = await (await fetch(tee.rpcEndpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getBlockhashForAccounts', params: [[...writable]] }) })).json();
   const bh = r.result.value; tx.recentBlockhash = bh.blockhash; tx.lastValidBlockHeight = bh.lastValidBlockHeight; tx.sign(...signers);
   const sig = await tee.sendRawTransaction(tx.serialize(), { skipPreflight: true });
-  const c = await tee.confirmTransaction({ signature: sig, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight }, 'confirmed');
-  if (c.value?.err) throw new Error('ER tx failed ' + JSON.stringify(c.value.err));
-  return sig; }
-// create + delegate a committed campaign, then run match_query in-ER; returns the ER palette + campaign state
-async function offer(k) {
+  const conf = await tee.confirmTransaction({ signature: sig, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight }, 'confirmed');
+  if (conf.value?.err) throw new Error(`ER tx failed ${JSON.stringify(conf.value.err)}`);
+  return sig;
+}
+async function answerOffer() {
+  const k = campaignFor(BigInt(Date.now()) + BigInt(Math.floor(Math.random() * 1e6)));
   await sendAndConfirmTransaction(base, new Transaction().add(createCampaignIx(k)), [brand], opts);
   await sendAndConfirmTransaction(base, new Transaction().add(delegateCampaignIx(k)), [brand], opts);
-  const tee = await teeConn(agent); await sendOnEr(tee, [matchIx(k)], [agent], agent);
-  const pv = decodePalette((await tee.getAccountInfo(palettePda)).data);
-  const cv = decodeCampaign((await tee.getAccountInfo(k.c)).data);
-  return { pv, cv };
+  const tee = await freshTee(agent); await sendOnEr(tee, [matchIx(k)], [agent], agent);
 }
 
-let pass = true; const check = (label, ok) => { pass = pass && ok; console.log(`   ${ok ? '✓' : '✗'} ${label}`); };
-console.log('program:', PROGRAM.toBase58());
-console.log('owner  :', owner.publicKey.toBase58(), '| agent:', agent.publicKey.toBase58(), '(offline)');
-console.log('her (bucketed):', HER);
+console.log('program :', PROGRAM.toBase58());
+console.log('owner   :', owner.publicKey.toBase58());
+console.log('agent   :', agent.publicKey.toBase58(), '(offline session key)');
+console.log('palette :', palettePda.toBase58());
 
-console.log('\n[0] fund owner/agent/brand/outsider (SOL), mint the brand $100 oUSDC…');
+console.log('\n[1] attest TEE…');
+try { await verifyTeeRpcIntegrity(TEE_RPC); console.log('   ✓ enclave attested (TDX quote verified)'); }
+catch (e) { console.warn('   ⚠ attestation fetch failed (sandbox egress):', (e?.cause?.code || e.message) + ' — continuing with auth token'); }
+console.log('   TEE ER core:', (await (await freshTee(agent)).getVersion())['solana-core']);
+
+console.log('\n[2] fund owner/agent/brand; mint the brand $100 oUSDC…');
 await sendAndConfirmTransaction(base, new Transaction()
   .add(SystemProgram.transfer({ fromPubkey: deployer.publicKey, toPubkey: owner.publicKey, lamports: 300_000_000 }))
-  .add(SystemProgram.transfer({ fromPubkey: deployer.publicKey, toPubkey: agent.publicKey, lamports: 120_000_000 }))
-  .add(SystemProgram.transfer({ fromPubkey: deployer.publicKey, toPubkey: brand.publicKey, lamports: 300_000_000 }))
-  .add(SystemProgram.transfer({ fromPubkey: deployer.publicKey, toPubkey: outsider.publicKey, lamports: 60_000_000 })), [deployer], opts);
+  .add(SystemProgram.transfer({ fromPubkey: deployer.publicKey, toPubkey: agent.publicKey, lamports: 150_000_000 }))
+  .add(SystemProgram.transfer({ fromPubkey: deployer.publicKey, toPubkey: brand.publicKey, lamports: 320_000_000 })), [deployer], opts);
 await sendAndConfirmTransaction(base, new Transaction()
   .add(createAssociatedTokenAccountIdempotentInstruction(deployer.publicKey, brandAta, brand.publicKey, MINT))
   .add(createMintToInstruction(MINT, brandAta, deployer.publicKey, 100_000_000)), [deployer], opts);
 
-console.log('\n[1] init_palette(commitment_root) + init_traits (empty), delegate both → TEE…');
+console.log('\n[3] init_palette(root)+init_traits, set_night_rules(epoch_cap=' + CAP + ')…');
 await sendAndConfirmTransaction(base, new Transaction().add(initPaletteIx(randomBytes(96))).add(initTraitsIx()), [owner], opts);
+await sendAndConfirmTransaction(base, new Transaction().add(setRulesIx()), [owner], opts);
 await sendAndConfirmTransaction(base, new Transaction()
   .add(SystemProgram.transfer({ fromPubkey: owner.publicKey, toPubkey: palettePda, lamports: 10_000_000 }))
   .add(SystemProgram.transfer({ fromPubkey: owner.publicKey, toPubkey: traitsPda, lamports: 10_000_000 })), [owner], opts);
+
+console.log('\n[4] delegate palette + traits → TEE validator; top up ER escrows…');
 await sendAndConfirmTransaction(base, new Transaction().add(delegateIx('palette')), [owner], opts);
 await sendAndConfirmTransaction(base, new Transaction().add(delegateIx('traits')), [owner], opts);
 for (const kp of [owner, agent, brand]) await sendAndConfirmTransaction(base, new Transaction().add(createTopUpEscrowInstruction(escrowPdaFromEscrowAuthority(kp.publicKey, 255), kp.publicKey, kp.publicKey, 40_000_000, 255)), [kp], opts);
-console.log('[2] seal both private (whitelist agent)…');
-{ const tee = await teeConn(owner); await sendOnEr(tee, [privacyIx('palette', agent.publicKey)], [owner], owner); await sendOnEr(tee, [privacyIx('traits', agent.publicKey)], [owner], owner); }
 
-console.log('\n[3] commitment BINDING — a wrong-traits set_traits must be rejected in-enclave:');
-try { const tee = await teeConn(owner); await sendOnEr(tee, [setTraitsIx(1, HER.depth, HER.season, salt)], [owner], owner); check('wrong traits rejected', false); }
-catch (e) { check('wrong traits rejected (BindingMismatch)', /failed/.test(String(e.message))); }
-console.log('   sealing the REAL traits (bound to the published root)…');
-{ const tee = await teeConn(owner); await sendOnEr(tee, [setTraitsIx(HER.undertone, HER.depth, HER.season, salt)], [owner], owner); }
+console.log('\n[5] seal palette + traits private (whitelist only the agent), bind her real traits…');
+{ const tee = await freshTee(owner); await sendOnEr(tee, [privacyIx('palette', agent.publicKey)], [owner], owner); await sendOnEr(tee, [privacyIx('traits', agent.publicKey)], [owner], owner); }
+{ const tee = await freshTee(owner); await sendOnEr(tee, [setTraitsIx()], [owner], owner); }
 
-console.log('\n[4] READ GATING — outsider cannot read the sealed traits:');
-{ const rd = await (await teeConn(outsider)).getAccountInfo(traitsPda); check('outsider read of traits is null', rd === null); }
+console.log('\n[6] verify the EphemeralPermission(is_private) artifact on the ER…');
+{ const tee = await freshTee(agent); const p = await tee.getAccountInfo(permPalette);
+  console.log('   permission account:', p ? `EXISTS (${p.data.length}B, owner==permission program ${p.owner.equals(PERMISSION_PROGRAM_ID) ? '✓' : '✗'})` : 'NOT FOUND'); }
 
-console.log('\n[5] REAL match, computed in-enclave by the AGENT (owner offline, client passes NO answer):');
-const mk = campaignFor(BigInt(Date.now()) + BigInt(Math.floor(Math.random() * 1e6)), 2, 8, 3, 1); // matches her
-const m = await offer(mk);
-check('matching campaign -> verdict MATCH(1)', m.pv.last_verdict === 1);
-check('campaign receipt == sha256(target_hash‖1‖nonce)', m.cv.receipt.equals(sha(mk.targetHash, Buffer.from([1]), m.pv.last_nonce)));
+console.log(`\n[7] the AGENT answers ${CAP} escrowed, committed offers in-enclave (owner absent)…`);
+for (let i = 1; i <= CAP; i++) { await answerOffer(); process.stdout.write(`   match #${i} (agent-signed, owner offline) ✓\n`); }
 
-const nk = campaignFor(BigInt(Date.now()) + BigInt(Math.floor(Math.random() * 1e6)), 0, 8, 3, 1); // warm undertone -> no-match
-const n = await offer(nk);
-check('mismatched-undertone campaign -> verdict no-match(0)', n.pv.last_verdict === 0);
+console.log(`\n[8] per-epoch budget: the ${CAP + 1}th match must be REJECTED on-chain…`);
+let rejected = false;
+try { await answerOffer(); }
+catch (e) { rejected = true; console.log('   ✓ rejected:', (e.message || '').split('\n')[0].slice(0, 80)); }
+if (!rejected) console.log(`   ✗ the ${CAP + 1}th was NOT rejected — budget not enforced`);
+
+console.log('\n[9] base is still frozen (the matches never touched the base layer)…');
+const baseCount = readQueryCount((await base.getAccountInfo(palettePda))?.data);
+console.log('   base query_count:', baseCount, '(should be 0 — matches happened in-enclave)');
 
 console.log('\n────────── RESULT ──────────');
+const pass = rejected && baseCount === 0;
 console.log(pass
-  ? 'PASS ✓ — the enclave COMPUTES the match from her sealed, commitment-bound traits (the client never supplies it); wrong traits are rejected at seal; outsiders cannot read the traits; a matching committed offer verdicts MATCH and a mismatched one no-match; only a hashed receipt reaches the campaign.'
-  : 'CHECK — a sub-assertion failed; inspect above.');
-console.log('palette:', `https://explorer.solana.com/address/${palettePda.toBase58()}?cluster=devnet`);
+  ? `PASS ✓ — the offline agent answered ${CAP} committed offers inside the TEE; the owner never signed a match; the (${CAP + 1})th was rejected by the on-chain per-epoch budget; base only ever saw an encrypted blob (query_count still 0, matches live in-enclave).`
+  : 'CHECK — an assertion did not hold; inspect above.');
+console.log('palette:', EX('address', palettePda.toBase58()));
 process.exit(pass ? 0 : 1);

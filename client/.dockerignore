@@ -1,6 +1,0 @@
-node_modules
-*-e2e.mjs
-test-*.mjs
-oira-custody.mjs
-parity-check.mjs
-.git

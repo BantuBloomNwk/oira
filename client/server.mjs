@@ -5,9 +5,11 @@ import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { Keypair } from '@solana/web3.js';
-import { sealPalette, sealPaletteRelay, privatePayout, runOffer, privacyProof, postCampaign, matchCampaign, campaignStatus, bridgeStatus } from './oira-chain.mjs';
+import { sealPalette, sealPaletteRelay, privatePayout, runOffer, privacyProof, postCampaign, matchCampaign, campaignStatus, bridgeStatus, askHer, brandSeedFor, setRulesRelay } from './oira-chain.mjs';
+import { registerWoman, listWomen, addBrief, getBrief, listBriefs, updateBrief, addAsk, answersFor } from './brief-store.mjs';
+import nacl from 'tweetnacl';
+import { PublicKey } from '@solana/web3.js';
 import { recordError, alertBridge, monitorStats } from './oira-monitor.mjs';
-import { addCampaign, listCampaigns, getCampaign, updateCampaign } from './campaign-store.mjs';
 import { createChallenge, verifyAndClaim } from './genesis-check.mjs';
 import { reason as conciergeReason, llmConfigured } from './oira-concierge.mjs';
 import { ttsConfigured, synthesize } from './oira-tts.mjs';
@@ -61,7 +63,7 @@ app.use((req, res, next) => {
   if (origin && ALLOW.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'content-type, x-oira-brand-key');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type, x-oira-brand-key, x-oira-owner, x-oira-time, x-oira-sig');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
@@ -319,7 +321,18 @@ app.post('/api/genesis/verify', async (req, res) => {
 // persists so her overnight can match it later. Responses NEVER include the commitment opening
 // (target shade + salt) — that stays server-side, exactly as the on-chain commitment intends.
 const EX_ADDR = (a) => `https://explorer.solana.com/address/${a}?cluster=devnet`;
-const publicCampaign = (c) => ({ campaign: c.campaign, brand: c.brand, label: c.label, payout: c.payout, perQuery: c.perQuery, category: c.category, escrowUi: c.escrowUi, status: c.status, createdAt: c.createdAt, matchedAt: c.matchedAt, amount: c.amount || 0, explorer: EX_ADDR(c.campaign) });
+// ── BRAND BRIEFS ───────────────────────────────────────────────────────────
+// A brand describes the shade it made, what one yes pays, and how many women to ask. Running it
+// asks that many sealed women privately, one campaign each, as each woman's own agent: her rules
+// first, then the match in the rollup, then payment on a yes. The brand only ever sees counts.
+const CATS = ['Foundation', 'Concealer', 'Lipstick', 'Blush', 'Skincare', 'Other'];
+const SEASONS_12 = ['Bright Spring', 'True Spring', 'Light Spring', 'Light Summer', 'True Summer', 'Soft Summer', 'Soft Autumn', 'True Autumn', 'Deep Autumn', 'Deep Winter', 'True Winter', 'Bright Winter'];
+const counts = (b) => {
+  const asks = (b.asks || []).filter((a) => a.outcome !== 'unavailable' && a.outcome !== 'error');
+  return { asked: asks.length, yes: asks.filter((a) => a.outcome === 'yes').length, no: asks.filter((a) => a.outcome === 'no').length,
+    turnedAway: asks.filter((a) => a.outcome === 'declined').length, paid: asks.reduce((t, a) => t + (a.outcome === 'yes' ? a.amount || 0 : 0), 0) };
+};
+const publicBrief = (b) => ({ campaign: b.id, label: b.label, payout: b.payout, category: b.category, reach: b.reach, status: b.status, createdAt: b.createdAt, results: counts(b) });
 
 app.post('/api/brand/campaign', async (req, res) => {
   try {
@@ -329,35 +342,74 @@ app.post('/api/brand/campaign', async (req, res) => {
     if (t.tu > 3 || t.td < 1 || t.td > 10 || t.ts > 11 || t.tol > 5) return res.status(400).json({ error: 'target out of range' });
     const payout = Math.min(Math.max(Number(b.payout) || 5, 1), 50);
     const label = String(b.label || 'Brand').slice(0, 40);
-    const category = Math.max(0, Math.min(31, Number(b.category) || 0));
-    const r = await postCampaign({ target: t, payout, category, label });
-    const rec = addCampaign(r);
-    console.log('brand posted campaign', r.campaign, label, '$' + payout);
-    res.json(publicCampaign(rec));
+    const category = Math.max(0, Math.min(CATS.length - 1, Number(b.category) || 0));
+    const reach = Math.max(1, Math.min(10, Number(b.reach) || 3));
+    const brief = addBrief({ label, category, payout, target: t, reach, brandSeed: brandSeedFor(label) });
+    console.log('brand brief', brief.id, label, '$' + payout, 'reach', reach);
+    res.json(publicBrief(brief));
   } catch (e) { console.error('brand/campaign', e.message); res.status(500).json({ error: String(e.message || e) }); }
 });
 
-app.get('/api/brand/campaigns', async (_req, res) => {
-  try {
-    const out = await Promise.all(listCampaigns().map(async (c) => {
-      let live = {}; try { live = await campaignStatus(c.campaign); } catch {}
-      return { ...publicCampaign(c), live };
-    }));
-    res.json({ campaigns: out });
-  } catch (e) { console.error('brand/campaigns', e.message); res.status(500).json({ error: String(e.message || e) }); }
+app.get('/api/brand/campaigns', (_req, res) => {
+  res.json({ campaigns: listBriefs().map(publicBrief), women: listWomen().length });
 });
 
-app.post('/api/brand/match', async (req, res) => {
+// One brief runs at a time: every ask spends from the same sponsor key.
+let running = null;
+async function runBrief(id) {
+  const brief = getBrief(id); if (!brief) return;
+  updateBrief(id, { status: 'running' });
   try {
-    const pk = (req.body && req.body.campaign) || '';
-    const rec = getCampaign(pk);
-    if (!rec) return res.status(404).json({ error: 'campaign not found' });
-    if (rec.status === 'matched') return res.json({ already: true, matched: true, amount: rec.amount || 0, campaign: pk });
-    const r = await matchCampaign({ campaignRec: rec, ownerPubkey: session.her, agentSecret: session.agent, traits: session.traits });
-    updateCampaign(pk, { status: r.matched ? 'matched' : 'no-match', matchedAt: Date.now(), amount: r.amount });
-    console.log('brand match', pk, r.matched ? 'matched+settled' : 'no-match');
-    res.json({ matched: r.matched, amount: r.amount, herBalance: r.herBalance, explorer: r.explorer, campaign: pk });
-  } catch (e) { console.error('brand/match', e.message); res.status(500).json({ error: String(e.message || e) }); }
+    const askedAlready = new Set((brief.asks || []).map((a) => a.owner));
+    const pool = listWomen().filter((w) => !askedAlready.has(w)).sort(() => Math.random() - 0.5);
+    let done = counts(brief).asked;
+    for (const owner of pool) {
+      if (done >= brief.reach) break;
+      try {
+        const r = await askHer({ brief, ownerPubkey: owner });
+        addAsk(id, { owner, ...r });
+        if (r.outcome !== 'unavailable') done++;
+        console.log('brief', id.slice(0, 8), r.outcome, r.reason || '');
+      } catch (e) {
+        addAsk(id, { owner, outcome: 'error' });
+        recordError('brief-ask', e);
+      }
+    }
+    updateBrief(id, { status: 'done' });
+  } catch (e) { updateBrief(id, { status: 'done' }); recordError('brief-run', e); }
+}
+
+app.post('/api/brand/match', (req, res) => {
+  const id = String((req.body && req.body.campaign) || '');
+  const brief = getBrief(id);
+  if (!brief) return res.status(404).json({ error: 'brief not found' });
+  if (running) return res.status(409).json({ error: 'Another brief is being asked right now. Try again in a minute.' });
+  if (!listWomen().length) return res.status(409).json({ error: 'No sealed women to ask yet.' });
+  running = runBrief(id).finally(() => { running = null; });
+  res.status(202).json({ started: true, campaign: id });
+});
+
+// ── HER ANSWERS ────────────────────────────────────────────────────────────
+// What brands asked her and what she answered, for her eyes only. The request is signed by her
+// own key over a short message with the time in it, so nobody can read another woman's answers
+// by knowing her address, and an old signature stops working after five minutes.
+app.get('/api/me/answers', (req, res) => {
+  try {
+    const owner = String(req.headers['x-oira-owner'] || '');
+    const time = Number(req.headers['x-oira-time'] || 0);
+    const sig = Buffer.from(String(req.headers['x-oira-sig'] || ''), 'base64');
+    if (!owner || !time || sig.length !== 64) return res.status(401).json({ error: 'signed request required' });
+    if (Math.abs(Date.now() - time) > 5 * 60_000) return res.status(401).json({ error: 'request too old' });
+    let pk; try { pk = new PublicKey(owner).toBytes(); } catch { return res.status(400).json({ error: 'bad owner' }); }
+    const msg = Buffer.from(`oira:my-answers:v1\n${owner}\n${time}`);
+    if (!nacl.sign.detached.verify(msg, sig, pk)) return res.status(401).json({ error: 'bad signature' });
+    const answers = answersFor(owner).map(({ brief, ask }) => ({
+      brand: brief.label, category: CATS[brief.category] || 'Other', season: SEASONS_12[brief.target.ts] || '',
+      payout: brief.payout, outcome: ask.outcome, reason: ask.reason || null,
+      amount: ask.outcome === 'yes' ? ask.amount || 0 : 0, explorer: ask.outcome === 'yes' ? ask.explorer || null : null, at: ask.at,
+    }));
+    res.json({ answers, earned: answers.reduce((t, a) => t + a.amount, 0) });
+  } catch (e) { console.error('me/answers', e.message); res.status(500).json({ error: 'could not load answers' }); }
 });
 
 // ---- RELAYED SEAL over WebSocket: her owner key stays on her device ----
@@ -395,6 +447,15 @@ wss.on('connection', (ws, req) => {
   ws.on('message', (raw) => {
     let m; try { m = JSON.parse(raw.toString()); } catch { return; }
     if (m.t === 'sig' && pending.has(m.id)) { const r = pending.get(m.id); pending.delete(m.id); return r(Buffer.from(m.sig, 'base64')); }
+    /* Her rules, written to her palette. Her key signs on her phone; no sponsor SOL is spent. */
+    if (m.t === 'rules' && !started) {
+      if (rateLimited(ip)) { try { ws.send(JSON.stringify({ t: 'error', message: 'Too many requests. Please wait a moment.' })); } catch {} return ws.close(); }
+      started = true;
+      setRulesRelay({ ownerPubkey: m.ownerPubkey, minPayout: m.minPayout, maxPerBrand: m.maxPerBrand, sign })
+        .then((r) => { try { ws.send(JSON.stringify({ t: 'done', ...r })); } catch {} })
+        .catch((e) => { recordError('relay-rules', e); try { ws.send(JSON.stringify({ t: 'error', message: String(e.message || e) })); } catch {} });
+      return;
+    }
     if (m.t === 'start' && !started) {
       if (rateLimited(ip)) { try { ws.send(JSON.stringify({ t: 'error', message: 'Too many requests. Please wait a moment.' })); } catch {} return ws.close(); }
       if (sealDayFull()) { try { ws.send(JSON.stringify({ t: 'error', message: "We've sealed a lot of Palettes today, so new ones are paused until tomorrow. Your reading's still safe on your phone." })); } catch {} return ws.close(); }
@@ -414,11 +475,14 @@ wss.on('connection', (ws, req) => {
           // never her owner secret and never her salt (device holds/derives that).
           session.owner = null; session.agent = r.agent; session.salt = null; session.traits = r.traits; session.palette = r.palette; session.her = r.her;
           recordSeal(ip); // only now, with a Palette actually on chain, does this count
+          registerWoman(r.her);
           console.log('sealed (relayed)', r.palette, 'her', r.her);
           ws.send(JSON.stringify({ t: 'done', palette: r.palette, her: r.her, sealSig: r.sealSig, explorer: r.explorer }));
         })
         .catch((e) => {
-          if (!(e instanceof SponsorLimit)) recordError('relay-seal', e, { alert: true });
+          /* A re-seal refused because her first reading is locked in: she is sealed already. */
+          if (/Custom"?:\s*6005/.test(String(e.message || e))) { try { registerWoman(new PublicKey(m.ownerPubkey).toBase58()); } catch {} }
+          else if (!(e instanceof SponsorLimit)) recordError('relay-seal', e, { alert: true });
           try { ws.send(JSON.stringify({ t: 'error', message: String(e.message || e) })); } catch {}
         });
     }

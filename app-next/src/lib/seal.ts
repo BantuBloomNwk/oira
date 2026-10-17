@@ -52,7 +52,7 @@ export interface SealResult {
    underneath a woman who is doing exactly what she was asked to do would be our bug. */
 const TIMEOUT_MS = 150_000;
 
-function bridgeWsUrl(): string {
+export function bridgeWsUrl(): string {
   const h = location.hostname;
   if (h === 'localhost' || h === '127.0.0.1') return `ws://${h}:8777/api/seal/ws`;
   return 'wss://oira.161-97-74-212.sslip.io/api/seal/ws';

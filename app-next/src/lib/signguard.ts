@@ -138,3 +138,28 @@ export function sealSignGuard(me: string, reading: { undertone: number; depth: n
     for (const ix of m.instructions) checkInstruction(ix, me, traits, salt, totals);
   };
 }
+
+/* One guard per rules save: her login text, and one set_night_rules on her own palette with
+   exactly the values she chose on screen. Nothing else, not even the seal's other steps. */
+export function rulesSignGuard(me: string, rules: { minPayout: number; maxPerBrand: number }) {
+  const want = new Uint8Array(30);
+  want.set([0xa1, 0x87, 0x64, 0x17, 0x6b, 0x81, 0x59, 0x04], 0); // set_night_rules
+  let micro = BigInt(Math.max(0, Math.round(rules.minPayout * 1e6)));
+  for (let i = 0; i < 8; i++) { want[8 + i] = Number(micro & 0xffn); micro >>= 8n; }
+  want[16] = Math.max(0, Math.min(255, Math.floor(rules.maxPerBrand)));
+  want[21] = 1; // rules active; blocked categories and both caps stay 0
+  let requests = 0;
+  return (msg: Uint8Array) => {
+    if (++requests > 4) throw new SignRefused('too many sign requests');
+    const text = new TextDecoder('utf-8', { fatal: false }).decode(msg.subarray(0, LOGIN_PREFIX.length));
+    if (text === LOGIN_PREFIX) {
+      const full = new TextDecoder().decode(msg);
+      if (msg.length > 256 || !full.includes(`\nUser: ${me}`)) throw new SignRefused('unexpected login message');
+      return;
+    }
+    const m = parseLegacy(msg);
+    if (!m.signers.includes(me) || m.instructions.length !== 1) throw new SignRefused('unexpected message');
+    const ix = m.instructions[0];
+    if (ix.program !== OIRA_PROGRAM || ix.accounts[0] !== me || !equal(ix.data, want)) throw new SignRefused('unexpected rules change');
+  };
+}

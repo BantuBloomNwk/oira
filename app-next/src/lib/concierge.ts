@@ -153,7 +153,7 @@ export function installContext(input: ConciergeContextInput) {
     worstColors: input.season.worstColors,
     /* Overnight, coarse. A count and a total, never who asked or what they asked about. */
     earned: input.nightRules.totalEarned,
-    matched: input.brandLogs.length > 0,
+    matched: input.brandLogs.some((l) => l.answer === 'YES'),
     rules: {
       minPayout: input.nightRules.lowestPayout,
       maxPerBrand: input.nightRules.brandLifetimeCap,

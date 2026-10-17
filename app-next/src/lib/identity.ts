@@ -21,6 +21,8 @@ import { unlockLocal, unlockOwner, reset as resetCustody, prfSupported } from '.
 import { connect, walletOwner, disconnect, isSupported as walletSupported, getCached } from './wallet';
 import { clear as clearResiduals } from './residual';
 import type { Owner } from './owner';
+import { isNativeApp } from './native';
+import { initNativeBiometric, nativeBiometricAvailable, confirmWithBiometric } from './biometric';
 
 export type { Owner };
 
@@ -33,6 +35,7 @@ export const currentOwner = (): Owner | null => current;
 /** The silent boot. Safe to call on page load: it never touches WebAuthn. */
 export async function boot(): Promise<Owner> {
   if (current) return current;
+  void initNativeBiometric();
   current = await unlockLocal();
   return current;
 }
@@ -47,6 +50,12 @@ export async function boot(): Promise<Owner> {
  * no longer uses.
  */
 export async function useFingerprint(): Promise<Owner> {
+  /* Inside the app on a phone whose WebView has no passkeys, unlockOwner would carry on with
+     the device key and no prompt at all. Android's own fingerprint sheet asks first instead, so
+     scanning and sealing always begin with her fingerprint, as they do on the web. */
+  if (isNativeApp() && !prfSupported() && nativeBiometricAvailable()) {
+    await confirmWithBiometric('Is it you?', 'Your fingerprint keeps your reading yours');
+  }
   current = await unlockOwner();
   return current;
 }
@@ -60,7 +69,7 @@ export async function useWallet(name?: string): Promise<Owner> {
 
 /* Whether each door is worth offering on this device, so the UI can say something true
    rather than presenting a button that cannot work. */
-export const fingerprintAvailable = (): boolean => prfSupported();
+export const fingerprintAvailable = (): boolean => prfSupported() || nativeBiometricAvailable();
 export const walletAvailable = (): boolean => walletSupported();
 export const connectedWalletAddress = (): string | null => getCached();
 

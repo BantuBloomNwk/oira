@@ -39,7 +39,10 @@ export interface BrandQueryLog {
   question: string;
   shadeName: string;
   shadeHex: string;
-  answer: 'YES' | 'NO';
+  /* DECLINED: her rules turned it away before anything was looked at. */
+  answer: 'YES' | 'NO' | 'DECLINED';
+  /* Why, in her words, for a no or a turned-away question. */
+  reason?: string;
   matchConfidence: number;
   payout: number;
   timestamp: string;

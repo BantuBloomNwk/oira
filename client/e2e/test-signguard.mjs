@@ -10,7 +10,7 @@ import { createTransferCheckedInstruction } from '@solana/spl-token';
 const appNext = new URL('../../app-next/', import.meta.url).pathname;
 const out = path.join(os.tmpdir(), `signguard-${process.pid}.mjs`);
 execFileSync(path.join(appNext, 'node_modules/.bin/esbuild'), [path.join(appNext, 'src/lib/signguard.ts'), '--bundle', '--format=esm', `--outfile=${out}`, '--log-level=error']);
-const { sealSignGuard } = await import(out);
+const { sealSignGuard, rulesSignGuard } = await import(out);
 fs.unlinkSync(out);
 
 const fx = JSON.parse(fs.readFileSync(new URL('./fixtures/seal-sign-requests.json', import.meta.url)));
@@ -45,5 +45,14 @@ const privacy = realBytes.find((b) => b.includes(Buffer.from('170ae11ced2ab496',
 { const b = Buffer.from(privacy); const perm = new PublicKey('ACLseoPoyC3cBqoUtkbjZ4aDrkurZW86v19pXz2XQnp1').toBuffer(); const at = b.indexOf(perm); attacker.toBuffer().copy(b, at); check('a privacy call pointing at another permission program is refused', refused(b)); }
 { const g = sealSignGuard(fx.device, fx.traits, salt); let n = 0; try { for (;;) { g(realBytes[realBytes.length - 1]); n++; } } catch {} check('one seal cannot ask for more than 16 signatures', n === 16); }
 
+// the rules guard: exactly her chosen rules, nothing else
+{ const disc = Buffer.from('a18764176b815904', 'hex');
+  const rulesIx = (min, per) => { const u = Buffer.alloc(8); u.writeBigUInt64LE(BigInt(Math.round(min * 1e6))); return new TransactionInstruction({ programId: new PublicKey('CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP'),
+    keys: [{ pubkey: her, isSigner: true, isWritable: false }, { pubkey: attacker, isSigner: false, isWritable: true }], data: Buffer.concat([disc, u, Buffer.from([per]), Buffer.alloc(4), Buffer.from([1]), Buffer.alloc(8)]) }); };
+  const ok = (msg, r = { minPayout: 4, maxPerBrand: 2 }) => { try { rulesSignGuard(fx.device, r)(msg); return true; } catch { return false; } };
+  check('rules: her own chosen rules are allowed', ok(legacy(rulesIx(4, 2))));
+  check('rules: a different minimum is refused', !ok(legacy(rulesIx(0.1, 2))));
+  check('rules: anything extra in the message is refused', !ok(legacy(rulesIx(4, 2), SystemProgram.transfer({ fromPubkey: her, toPubkey: attacker, lamports: 1 }))));
+  check('rules: a seal step is refused', !ok(realBytes[realBytes.length - 1])); }
 console.log(failed ? `\n${failed} FAILED` : '\nALL GREEN');
 process.exit(failed ? 1 : 0);

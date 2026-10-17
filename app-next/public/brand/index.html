@@ -80,7 +80,7 @@
   <div class="grid">
     <div class="panel">
       <h2>Post a campaign</h2>
-      <p class="sub">Commit a target shade and an escrow. Nothing about it lands on the public chain in the clear.</p>
+      <p class="sub">Describe the shade you made and what a yes is worth. You never learn who said yes.</p>
       <label>Brand name</label>
       <input id="label" maxlength="40" placeholder="Aurora Cosmetics" />
 
@@ -118,8 +118,11 @@
       <label>Payout per match (oUSDC)</label>
       <input id="payout" type="number" min="1" max="50" step="1" value="5" />
 
-      <button class="post" id="postBtn">Post campaign &amp; fund escrow</button>
-      <p class="note">Posting runs three real devnet transactions: commit the target, fund the escrow, and delegate the campaign into the enclave. Give it a moment.</p>
+      <label>How many women to ask</label>
+      <input id="reach" type="number" min="1" max="10" step="1" value="3" />
+
+      <button class="post" id="postBtn">Post brief</button>
+      <p class="note">Asking happens privately, one woman at a time. Her own rules decide first, then the match, and only a yes is paid. You'll see how many said yes, never who.</p>
     </div>
 
     <div class="board">

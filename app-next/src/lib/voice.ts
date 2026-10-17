@@ -265,6 +265,12 @@ export const DOOR_COPY = {
  * be on the receiving end of, so this says the first one plainly and says her colours are
  * still here in the same breath.
  */
+/* A re-seal that the program turned down because her first reading is already locked in. */
+export const SEAL_KEPT = {
+  title: "You're already sealed",
+  body: "Your Palette's locked to your first reading and that one stays, so nothing changed. You're all set.",
+};
+
 export const SEAL_FAIL = {
   working: 'Locking it to you',
   workingWhy: 'Signing on your phone. Your key stays here, it never goes anywhere.',

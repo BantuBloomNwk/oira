@@ -97,8 +97,10 @@ async function fund(kp, lamports) { await sendAndConfirmTransaction(base, new Tr
 function decodePalette(buf) { let o = 8; o += 32; const n = buf.readUInt32LE(o); o += 4; o += n; o += 32;
   o += 4; const lifetime = buf.readUInt32LE(o); o += 4; o += 4; const is_private = buf.readUInt8(o); o += 1;
   const last_verdict = buf.readUInt8(o); o += 1; const last_nonce = Buffer.from(buf.subarray(o, o + 16)); o += 16;
-  o += 8 + 8 + 1 + 4 + 1 + 4 + 4; const agent = new PublicKey(buf.subarray(o, o + 32));
-  return { lifetime, is_private, last_verdict, last_nonce, agent }; }
+  o += 8; const min_payout = buf.readBigUInt64LE(o); o += 8; const max_q_per_brand = buf.readUInt8(o); o += 1;
+  const blocked_cats = buf.readUInt32LE(o); o += 4; const rules_active = buf.readUInt8(o) === 1; o += 1;
+  o += 4 + 4; const agent = new PublicKey(buf.subarray(o, o + 32));
+  return { lifetime, is_private, last_verdict, last_nonce, agent, min_payout, max_q_per_brand, blocked_cats, rules_active }; }
 
 // PROOF OF PRIVACY — a live, human-legible chain read so ANYONE (crypto or not) can confirm her
 // palette is sealed. Returns the plain-language summary + the raw facts + the public explorer link
@@ -583,18 +585,20 @@ function decodeCampaign(b) {
 
 // A brand posts a campaign: commit a target shade + escrow, delegate into the ER for matching.
 // Returns everything her overnight needs later (offerSalt + target are the opening of the commitment).
-export async function postCampaign({ target, payout = 5, category = 0, label = 'Brand', perQuery = 0.1 } = {}) {
+export async function postCampaign({ target, payout = 5, category = 0, label = 'Brand', perQuery = 0.1, brandSeed } = {}) {
   if (!target || ![target.tu, target.td, target.ts, target.tol].every(Number.isInteger)) throw new Error('postCampaign needs target {tu,td,ts,tol}');
   const offerId = BigInt(Date.now()) + BigInt(Math.floor(Math.random() * 1e6));
   const oidLe = Buffer.alloc(8); oidLe.writeBigUInt64LE(offerId, 0);
-  const brand = brandKeyFor(offerId);
+  /* One key per brand when a seed is given, so her per-brand limit counts the brand and not
+     each separate question. Without one, a fresh key per campaign as before. */
+  const brand = brandKeyFor(brandSeed ?? offerId);
   const [campaign] = PublicKey.findProgramAddressSync([Buffer.from('campaign'), brand.publicKey.toBuffer(), oidLe], PROGRAM);
   const [escrow] = PublicKey.findProgramAddressSync([Buffer.from('escrow'), campaign.toBuffer()], PROGRAM);
   const brandAta = getAssociatedTokenAddressSync(MINT, brand.publicKey);
   const offerSalt = randomBytes(16);
   const targetHash = sha(offerSalt, Buffer.from([target.tu, target.td, target.ts, target.tol]));
   const perAccept = BigInt(Math.round(payout * 1e6)), perQueryU = BigInt(Math.round(perQuery * 1e6)), escrowAmt = perAccept + 15_000_000n;
-  await fund(brand, 220_000_000);
+  await topUpOwnerTo(brand.publicKey, 120_000_000);
   await sendAndConfirmTransaction(base, new Transaction()
     .add(createAssociatedTokenAccountIdempotentInstruction(deployer.publicKey, brandAta, brand.publicKey, MINT))
     .add(createMintToInstruction(MINT, brandAta, deployer.publicKey, Number(escrowAmt))), [deployer], opts);
@@ -613,7 +617,7 @@ export async function postCampaign({ target, payout = 5, category = 0, label = '
     { pubkey: campaign, isSigner: false, isWritable: true }, { pubkey: PROGRAM, isSigner: false, isWritable: false },
     { pubkey: DELEGATION_PROGRAM_ID, isSigner: false, isWritable: false }, { pubkey: SYS, isSigner: false, isWritable: false }, { pubkey: TEE_VALIDATOR, isSigner: false, isWritable: false }], data: Buffer.concat([disc('delegate_campaign'), bU64(Number(offerId))]) });
   await sendAndConfirmTransaction(base, new Transaction().add(delCampIx), [brand], opts);
-  return { campaign: campaign.toBase58(), offerId: offerId.toString(), brand: brand.publicKey.toBase58(), target, offerSalt: [...offerSalt], payout, perQuery, category, label, escrowUi: Number(escrowAmt) / 1e6, createSig, explorer: EX(campaign.toBase58()) };
+  return { brandSeed: brandSeed ?? null, campaign: campaign.toBase58(), offerId: offerId.toString(), brand: brand.publicKey.toBase58(), target, offerSalt: [...offerSalt], payout, perQuery, category, label, escrowUi: Number(escrowAmt) / 1e6, createSig, explorer: EX(campaign.toBase58()) };
 }
 
 // Live status of a posted campaign, read from the public base layer (nothing about WHO matched).
@@ -630,7 +634,8 @@ export async function campaignStatus(campaignPk) {
 export async function matchCampaign({ campaignRec, ownerPubkey, agentSecret, traits } = {}) {
   const rec = campaignRec; if (!rec || !rec.offerId || !rec.offerSalt || !rec.target) throw new Error('matchCampaign needs a stored campaign record');
   const target = rec.target;
-  if ((!ownerPubkey) || !agentSecret || !traits) { assertSelfSealAllowed('matchCampaign'); const s = await sealPalette({ traits: { undertone: target.tu, depth: target.td, season: target.ts } }); ownerPubkey = s.her; agentSecret = s.agent; traits = s.traits; }
+  if (ownerPubkey && !agentSecret) agentSecret = [...agentKeyFor(new PublicKey(ownerPubkey)).secretKey];
+  if (!ownerPubkey) { assertSelfSealAllowed('matchCampaign'); const s = await sealPalette({ traits: { undertone: target.tu, depth: target.td, season: target.ts } }); ownerPubkey = s.her; agentSecret = s.agent; traits = s.traits; }
   const offerId = BigInt(rec.offerId);
   const ownerPk = new PublicKey(ownerPubkey);
   const agent = Keypair.fromSecretKey(Uint8Array.from(agentSecret));
@@ -639,7 +644,7 @@ export async function matchCampaign({ campaignRec, ownerPubkey, agentSecret, tra
   const palettePda = PublicKey.findProgramAddressSync([Buffer.from('palette'), ownerPk.toBuffer()], PROGRAM)[0];
   const traitsPda = PublicKey.findProgramAddressSync([Buffer.from('traits'), ownerPk.toBuffer()], PROGRAM)[0];
   const herAta = getAssociatedTokenAddressSync(MINT, ownerPk, true);
-  const brand = brandKeyFor(offerId);
+  const brand = brandKeyFor(rec.brandSeed ?? offerId);
   const offerSalt = Buffer.from(rec.offerSalt);
   const targetHash = sha(offerSalt, Buffer.from([target.tu, target.td, target.ts, target.tol]));
   /* The agent's ER fee escrow. The relayed seal already prepays it (ESCROW_TOPUP) and leaves
@@ -677,4 +682,57 @@ export async function matchCampaign({ campaignRec, ownerPubkey, agentSecret, tra
     settleSig = await sendAndConfirmTransaction(base, new Transaction().add(settleIx), [brand], opts);
   }
   return { matched, amount: matched ? rec.payout : 0, campaign: rec.campaign, herBalance: await usdc(ownerPk), settleSig, explorer: settleSig ? TX(settleSig) : EX(campaign.toBase58()) };
+}
+
+// ---- ONE BRAND QUESTION TO ONE WOMAN, as her agent ----
+// The server holds only her palette address and derives her agent key, which is the one key the
+// program lets ask her. Her own rules are read from her palette first, so a question she would
+// refuse costs nothing. Anything the program refuses on her limits is recorded as turned away.
+const RULE_REFUSALS = { 6008: 'Her limit for this week is used up.', 6009: 'She has answered as many questions as she allows.', 6010: 'This brand has asked her as many times as she allows.' };
+export function brandSeedFor(label) { return Number(sha(Buffer.from('oira-brand-label-v1'), Buffer.from(String(label).toLowerCase().trim())).readUIntBE(0, 6)); }
+export async function askHer({ brief, ownerPubkey }) {
+  const ownerPk = new PublicKey(ownerPubkey);
+  const palettePda = PublicKey.findProgramAddressSync([Buffer.from('palette'), ownerPk.toBuffer()], PROGRAM)[0];
+  const onBase = await base.getAccountInfo(palettePda);
+  if (!onBase || !onBase.owner.equals(DELEGATION_PROGRAM_ID)) return { outcome: 'unavailable' };
+  const agent = agentKeyFor(ownerPk);
+  const tee = await freshTee(agent);
+  const live = await tee.getAccountInfo(palettePda);
+  if (!live) return { outcome: 'unavailable' };
+  const p = decodePalette(live.data);
+  if (!p.agent.equals(agent.publicKey)) return { outcome: 'unavailable' };
+  const payoutMicro = BigInt(Math.round(brief.payout * 1e6));
+  if (p.rules_active && p.min_payout > 0n && payoutMicro < p.min_payout) return { outcome: 'declined', reason: 'Under her minimum.' };
+  if (p.rules_active && (p.blocked_cats & (1 << brief.category))) return { outcome: 'declined', reason: 'She does not take questions in this category.' };
+  const rec = await postCampaign({ target: brief.target, payout: brief.payout, category: brief.category, label: brief.label, brandSeed: brief.brandSeed });
+  try {
+    const r = await matchCampaign({ campaignRec: rec, ownerPubkey, agentSecret: [...agent.secretKey] });
+    return { outcome: r.matched ? 'yes' : 'no', amount: r.amount, campaign: rec.campaign, settleSig: r.settleSig || null, explorer: r.explorer };
+  } catch (e) {
+    const code = Number((String(e.message || e).match(/Custom"?:\s*(\d+)/) || [])[1]);
+    if (RULE_REFUSALS[code]) return { outcome: 'declined', reason: RULE_REFUSALS[code], campaign: rec.campaign };
+    throw e;
+  }
+}
+
+// ---- HER RULES, WRITTEN TO HER PALETTE ----
+// The rules she sets in the app (her minimum and how often one brand may ask) only count once
+// they are on her palette, where her agent and the program read them. Her own key signs, on her
+// phone; the server builds the transaction and never holds the key.
+export async function setRulesRelay({ ownerPubkey, minPayout, maxPerBrand, sign }) {
+  if (!ownerPubkey || typeof sign !== 'function') throw new Error('setRulesRelay needs ownerPubkey + sign()');
+  const ownerPk = new PublicKey(ownerPubkey);
+  const ownerSigner = { publicKey: ownerPk, sign: async (m) => Uint8Array.from(await sign(m)) };
+  const palettePda = PublicKey.findProgramAddressSync([Buffer.from('palette'), ownerPk.toBuffer()], PROGRAM)[0];
+  const onBase = await base.getAccountInfo(palettePda);
+  if (!onBase || !onBase.owner.equals(DELEGATION_PROGRAM_ID)) throw new Error('Your Palette is not sealed yet.');
+  const minMicro = BigInt(Math.max(0, Math.round(Number(minPayout) * 1e6)));
+  const perBrand = Math.max(0, Math.min(255, Math.floor(Number(maxPerBrand) || 0)));
+  const u64 = Buffer.alloc(8); u64.writeBigUInt64LE(minMicro);
+  const ix = new TransactionInstruction({ programId: PROGRAM, keys: [
+    { pubkey: ownerPk, isSigner: true, isWritable: false }, { pubkey: palettePda, isSigner: false, isWritable: true }],
+    data: Buffer.concat([disc('set_night_rules'), u64, Buffer.from([perBrand]), Buffer.alloc(4), Buffer.from([1]), Buffer.alloc(4), Buffer.alloc(4)]) });
+  const tee = await freshTeeRelayed(ownerSigner);
+  await sendOnErRelayed(tee, [ix], ownerSigner);
+  return { minPayout: Number(minMicro) / 1e6, maxPerBrand: perBrand };
 }

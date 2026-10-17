@@ -11,7 +11,7 @@ import { sealViaDevice } from './lib/seal';
 import { proofFrom, saveProof, loadProof, findExistingSeal, type Proof } from './lib/proof';
 import { isNativeApp, BRIDGE_ORIGIN } from './lib/native';
 import { monkFromIta } from './lib/monk';
-import { SEAL_FAIL } from './lib/voice';
+import { SEAL_FAIL, SEAL_KEPT } from './lib/voice';
 
 import { 
   UserProfile, 
@@ -65,6 +65,10 @@ import { useIdle } from './hooks/useIdle';
 import { useTimeOfDay } from './hooks/useTimeOfDay';
 import { installContext, loadConcierge } from './lib/concierge';
 import { activate as activateLocalModel, modelState } from './lib/localModel';
+import { sampleBrandQuery, type HerRules } from './lib/brandsim';
+import { undertoneCode, seasonCode } from './lib/traitcodes';
+import { fetchMyAnswers, type MyAnswer } from './lib/answers';
+import { saveRulesToPalette } from './lib/rulesync';
 
 interface CartItemEntry {
   product: ProductItem;
@@ -106,6 +110,9 @@ export default function App() {
   // Night Rules & Overnight Intelligence State
   const [nightRules, setNightRules] = useState<NightRulesConfig>(initialNightRulesConfig);
   const [brandLogs, setBrandLogs] = useState<BrandQueryLog[]>(initialBrandLogs);
+  /* Real answers to real brand briefs, loaded when she opens her night screen. null until then. */
+  const [myAnswers, setMyAnswers] = useState<{ answers: MyAnswer[]; earned: number } | null>(null);
+  const [answersState, setAnswersState] = useState<'idle' | 'loading' | 'failed'>('idle');
 
   // Modals & Interactive Drawers
   /* ColorWheelModal and NightRulesModal used to live here too: full second copies of the
@@ -225,9 +232,10 @@ export default function App() {
       return;
     }
 
-    const undertone = tone.includes('cool') ? 1 : tone.includes('olive') ? 3 : tone.includes('neutral') ? 2 : 0;
+    /* The same codes a brand's campaign targets. See lib/traitcodes.ts. */
+    const undertone = undertoneCode(tone);
     const depth = Math.max(1, Math.min(10, sealed ? monkFromIta(sealed.ita) : 6));
-    const season = Math.max(0, seasonalPalettes.findIndex((p) => p.id === seasonId));
+    const season = seasonCode(seasonId);
 
     setSealing(true);
     setSealError(null);
@@ -243,19 +251,33 @@ export default function App() {
       setProfile((prev) => ({ ...prev, isSealed: true }));
       setShowSeal(true);
     } catch (e) {
-      setSealError((e as Error)?.message || SEAL_FAIL.generic);
+      const msg = (e as Error)?.message || '';
+      /* Her reading is locked to her Palette at the first seal, and a re-seal has to match it.
+         When it does not (a new scan read her a step differently, or she sealed before the
+         trait codes were corrected) the program refuses the change, and her Palette is still
+         sealed exactly as it was. That is not a failure, so it is not shown as one. */
+      if (/Custom"?:\s*6005|BindingMismatch|do not match the published commitment/i.test(msg)) {
+        setProfile((prev) => ({ ...prev, isSealed: true }));
+        say({ title: SEAL_KEPT.title, body: SEAL_KEPT.body, tone: 'good' });
+      } else {
+        setSealError(msg || SEAL_FAIL.generic);
+      }
     } finally {
       setSealing(false);
     }
   };
 
-  const handleSimulateOvernightBrandQuery = (newQuery: BrandQueryLog) => {
-    setBrandLogs((prev) => [...prev, newQuery]);
+  /* A sample brand question, answered against her palette and the rules she has set. She is
+     paid for a yes only; a turned-away question was never answered at all. See lib/brandsim.ts. */
+  const handleSimulateOvernightBrandQuery = (rules: HerRules): BrandQueryLog => {
+    const q = sampleBrandQuery(activeSeason, rules, brandLogs, seasonalPalettes);
+    setBrandLogs((prev) => [...prev, q]);
     setNightRules((prev) => ({
       ...prev,
-      totalEarned: Math.round((prev.totalEarned + newQuery.payout) * 100) / 100,
-      totalQuestionsAnswered: prev.totalQuestionsAnswered + 1,
+      totalEarned: Math.round((prev.totalEarned + (q.answer === 'YES' ? q.payout : 0)) * 100) / 100,
+      totalQuestionsAnswered: prev.totalQuestionsAnswered + (q.answer === 'DECLINED' ? 0 : 1),
     }));
+    return q;
   };
 
   const handleAddToCart = (product: ProductItem, e?: React.MouseEvent) => {
@@ -391,6 +413,22 @@ export default function App() {
   /* Silent, and it must stay silent. unlockLocal never touches WebAuthn, so nothing here can
      put a biometric sheet in front of a woman who has just opened the app. */
   useEffect(() => { boot().then(setOwner).catch(() => { /* private mode; she seals later */ }); }, []);
+
+  /* Her real answers, fetched when she opens the night screen rather than at launch: on the
+     wallet path the signature is a prompt in her wallet, and that should follow something she
+     did. */
+  const loadMyAnswers = () => {
+    const o = owner ?? currentOwner();
+    if (!o) return;
+    setAnswersState('loading');
+    fetchMyAnswers(o, isNativeApp() ? BRIDGE_ORIGIN : '')
+      .then((r) => { setMyAnswers(r); setAnswersState('idle'); })
+      .catch(() => setAnswersState('failed'));
+  };
+  useEffect(() => {
+    if (activeView === 'night-rules' && profile.isSealed && myAnswers === null && answersState === 'idle') loadMyAnswers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView, profile.isSealed]);
 
   /* Recognise a seal she already made. As soon as we know who she is, ask whether her
      address has sealed before, on this phone or any other, so she is not asked to seal
@@ -732,7 +770,9 @@ export default function App() {
                         </span>
                       </div>
                       <p className="text-[12px] text-[#43203B]">
-                        {brandLogs.length} brands asked, not one of them saw you • <span className="font-semibold text-[#43203B]">${nightRules.totalEarned.toFixed(2)} earned</span>
+                        {myAnswers && myAnswers.answers.length
+                          ? <>{myAnswers.answers.length} brands asked, not one of them saw you • <span className="font-semibold text-[#43203B]">${myAnswers.earned.toFixed(2)} earned</span></>
+                          : <>{brandLogs.length} sample questions, not one of them saw you • <span className="font-semibold text-[#43203B]">${nightRules.totalEarned.toFixed(2)} in samples</span></>}
                       </p>
                     </div>
 
@@ -791,8 +831,22 @@ export default function App() {
                   routine={profile.routine}
                   onGoodnight={() => setShowSleeping(true)}
                   config={nightRules}
-                  onUpdateConfig={(newConfig) => setNightRules(newConfig)}
+                  onUpdateConfig={(newConfig) => {
+                    setNightRules(newConfig);
+                    /* On her palette, where her agent and the program read them. Saved on this
+                       phone either way, so a failed write never loses what she chose. */
+                    const o = owner ?? currentOwner();
+                    if (profile.isSealed && o) {
+                      saveRulesToPalette(o, { minPayout: newConfig.lowestPayout, maxPerBrand: newConfig.brandLifetimeCap })
+                        .then(() => say({ title: 'Your rules are on your Palette', body: "A brand that breaks them is turned away before anyone looks. That's you, deciding.", tone: 'good' }))
+                        .catch((e) => say({ title: 'Saved on this phone for now', body: (e as Error)?.message || "I'll put them on your Palette next time." }));
+                    }
+                  }}
                   onSimulateBrandQuery={handleSimulateOvernightBrandQuery}
+                  myAnswers={myAnswers}
+                  answersState={answersState}
+                  sealed={profile.isSealed}
+                  onRefreshAnswers={loadMyAnswers}
                   onBackToHome={() => setActiveView('home')}
                 />
               )}

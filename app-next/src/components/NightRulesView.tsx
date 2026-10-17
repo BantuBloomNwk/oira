@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { NightRulesConfig, BrandQueryLog, SeasonPalette } from '../types';
+import type { MyAnswer } from '../lib/answers';
 import { buildRituals } from '../lib/rituals';
 import { NightDecor } from './Decor';
 import {
@@ -35,7 +36,12 @@ interface NightRulesViewProps {
   routine?: string;
   config: NightRulesConfig;
   onUpdateConfig: (newConfig: NightRulesConfig) => void;
-  onSimulateBrandQuery?: (brandQuery: BrandQueryLog) => void;
+  onSimulateBrandQuery?: (rules: { lowestPayout: number; brandLifetimeCap: number }) => BrandQueryLog;
+  /* Real answers to real brand briefs. null until loaded. */
+  myAnswers?: { answers: MyAnswer[]; earned: number } | null;
+  answersState?: 'idle' | 'loading' | 'failed';
+  sealed?: boolean;
+  onRefreshAnswers?: () => void;
   onBackToHome: () => void;
   /* Goodnight. Her rules are set, so she goes to the sleeping screen. */
   onGoodnight?: () => void;
@@ -48,6 +54,10 @@ export const NightRulesView: React.FC<NightRulesViewProps> = ({
   config,
   onUpdateConfig,
   onSimulateBrandQuery,
+  myAnswers = null,
+  answersState = 'idle',
+  sealed = false,
+  onRefreshAnswers,
   onBackToHome,
   onGoodnight,
 }) => {
@@ -55,6 +65,7 @@ export const NightRulesView: React.FC<NightRulesViewProps> = ({
   const [brandCap, setBrandCap] = useState(config.brandLifetimeCap);
   const [activeTab, setActiveTab] = useState<'rules' | 'rituals'>('rules');
   const [isSimulating, setIsSimulating] = useState(false);
+  const [lastTry, setLastTry] = useState<BrandQueryLog | null>(null);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   const { rituals, note: ritualNote } = buildRituals({
@@ -96,27 +107,13 @@ export const NightRulesView: React.FC<NightRulesViewProps> = ({
     }, 1500);
   };
 
+  /* One sample brand question, decided against her palette and the rules on this screen as
+     they stand right now, saved or not. */
   const handleTriggerSimulation = () => {
     setIsSimulating(true);
     setTimeout(() => {
-      const sampleQuery: BrandQueryLog = {
-        id: `sim-${Date.now()}`,
-        brandName: "Saffron Row",
-        brandLogo: "SR",
-        question: "Does 'Velvet Night Lip' match your True Winter season?",
-        shadeName: "Velvet Night #116",
-        shadeHex: "#381326",
-        answer: "YES",
-        matchConfidence: 98,
-        payout: lowestPayout,
-        timestamp: "Just now",
-        /* A sample, so it carries no transaction. Real queries settle on chain and link to it. */
-        onChainTx: "",
-      };
-
-      if (onSimulateBrandQuery) {
-        onSimulateBrandQuery(sampleQuery);
-      }
+      const q = onSimulateBrandQuery?.({ lowestPayout, brandLifetimeCap: brandCap }) ?? null;
+      setLastTry(q);
       setIsSimulating(false);
     }, 1000);
   };
@@ -313,6 +310,46 @@ export const NightRulesView: React.FC<NightRulesViewProps> = ({
               </p>
             </div>
 
+            {/* Real brands, real answers. Only hers, fetched with her own signature. */}
+            <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] uppercase tracking-wider text-[#EFDDE2]/70">Brands that asked you</span>
+                {sealed && onRefreshAnswers && (
+                  <button onClick={onRefreshAnswers} disabled={answersState === 'loading'} className="text-[11px] text-[#F3DDD6] underline disabled:opacity-40 cursor-pointer">
+                    {answersState === 'loading' ? 'Checking...' : 'Check again'}
+                  </button>
+                )}
+              </div>
+              {!sealed ? (
+                <p className="text-[11.5px] text-[#EFDDE2]/70 mt-1.5">Seal your reading first, then brands can ask and the answers show up here.</p>
+              ) : answersState === 'failed' ? (
+                <p className="text-[11.5px] text-[#EFDDE2]/70 mt-1.5">I couldn't check just now. Tap "Check again" in a moment.</p>
+              ) : !myAnswers ? (
+                <p className="text-[11.5px] text-[#EFDDE2]/70 mt-1.5">Checking who's asked...</p>
+              ) : myAnswers.answers.length === 0 ? (
+                <p className="text-[11.5px] text-[#EFDDE2]/70 mt-1.5">No brand has asked you yet. When one does, you'll see it here, and they'll never see you.</p>
+              ) : (
+                <div className="mt-2 space-y-2">
+                  <p className="text-[11.5px] text-[#F3DDD6]">${myAnswers.earned.toFixed(2)} earned from {myAnswers.answers.filter((a) => a.outcome === 'yes').length} yes{myAnswers.answers.filter((a) => a.outcome === 'yes').length === 1 ? '' : 'es'}</p>
+                  {myAnswers.answers.slice(0, 8).map((a, i) => (
+                    <div key={i} className="p-2.5 rounded-xl bg-[#1B1120] border border-[#43203B] text-[11.5px] leading-snug">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[#F3DDD6] font-semibold truncate">{a.brand}</span>
+                        <span className={a.outcome === 'yes' ? 'text-[#D6A756] font-semibold shrink-0' : 'text-[#EFDDE2]/70 shrink-0'}>
+                          {a.outcome === 'yes' ? `Yes, +$${a.amount.toFixed(2)}` : a.outcome === 'no' ? 'No, $0.00' : 'Turned away'}
+                        </span>
+                      </div>
+                      <p className="text-[#EFDDE2]/75 mt-0.5">{a.category} for a {a.season}, ${a.payout.toFixed(2)} a yes</p>
+                      <p className="text-[#EFDDE2]/55 mt-0.5">
+                        {a.outcome === 'yes' ? 'It suits you. They learned that, and nothing else.' : a.outcome === 'no' ? 'Not your match. Nothing about you was shared.' : a.reason || 'It broke one of your rules.'}
+                        {a.explorer && <> <a href={a.explorer} target="_blank" rel="noopener" className="underline text-[#F3DDD6]">See the payment</a></>}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Overnight Simulator Test Trigger */}
             <div className="pt-1">
               <button
@@ -322,9 +359,23 @@ export const NightRulesView: React.FC<NightRulesViewProps> = ({
               >
                 <Play className="w-3 h-3 text-[#F3DDD6]" />
                 <span>
-                  {isSimulating ? 'Trying one for you...' : 'Try one now ($' + lowestPayout.toFixed(2) + ')'}
+                  {isSimulating ? 'Asking for you...' : 'Try a sample brand question'}
                 </span>
               </button>
+              {lastTry && !isSimulating && (
+                <div className="mt-2 p-3 rounded-xl bg-white/5 border border-white/10 text-[11.5px] leading-snug">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[#F3DDD6] font-semibold">{lastTry.brandName} <span className="font-normal text-[#EFDDE2]/60">(sample)</span></span>
+                    <span className={lastTry.answer === 'YES' ? 'text-[#D6A756] font-semibold' : 'text-[#EFDDE2]/70'}>
+                      {lastTry.answer === 'YES' ? `Yes, +$${lastTry.payout.toFixed(2)}` : lastTry.answer === 'NO' ? 'No, $0.00' : 'Turned away'}
+                    </span>
+                  </div>
+                  <p className="text-[#EFDDE2]/80 mt-1">{lastTry.question}</p>
+                  {lastTry.answer === 'YES'
+                    ? <p className="text-[#EFDDE2]/60 mt-1">It suits you. They learn that, and nothing else.</p>
+                    : <p className="text-[#EFDDE2]/60 mt-1">{lastTry.reason}</p>}
+                </div>
+              )}
             </div>
           </div>
         ) : (

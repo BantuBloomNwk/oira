@@ -13,36 +13,31 @@ function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add
 
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = String(text); return e; }
 
+
 function badge(c) {
-  const s = c.status;
-  if (s === 'matched') return el('span', 'badge b-matched', 'matched · $' + (Number(c.amount) || 0) + ' paid');
-  if (s === 'no-match') return el('span', 'badge b-nomatch', 'no match');
-  if (c.live && c.live.phase === 'matching') return el('span', 'badge b-matching', 'matching…');
-  return el('span', 'badge b-open', 'open');
+  if (c.status === 'running') return el('span', 'badge b-matching', 'asking…');
+  if (c.status === 'done') return el('span', 'badge b-matched', 'done');
+  return el('span', 'badge b-open', 'ready');
 }
 
 function render(campaigns) {
   const board = $('board');
-  if (!campaigns.length) { board.replaceChildren(el('div', 'empty', 'No campaigns yet. Post one to see it here.')); return; }
+  if (!campaigns.length) { board.replaceChildren(el('div', 'empty', 'No briefs yet. Post one to see it here.')); return; }
   board.replaceChildren(...campaigns.map((c) => {
+    const r = c.results || {};
     const camp = el('div', 'camp');
     const top = el('div', 'top');
-    top.append(el('div', 'name', c.label), el('div', 'pay', '$' + c.payout + ' / match'));
+    top.append(el('div', 'name', c.label), el('div', 'pay', '$' + c.payout + ' / yes'));
+    const meta = el('div', 'meta', (CATS[c.category] || 'Other') + ' · ask ' + c.reach + ' · asked ' + (r.asked || 0) + ' · yes ' + (r.yes || 0) + ' · no ' + (r.no || 0) + ' · turned away ' + (r.turnedAway || 0) + ' · paid $' + (r.paid || 0));
     const actions = el('div', 'actions');
     actions.append(badge(c));
     if (c.status === 'open') {
-      const run = el('button', 'run', 'Run overnight match');
+      const run = el('button', 'run', 'Ask privately now');
       run.dataset.c = String(c.campaign);
       run.addEventListener('click', () => runMatch(run.dataset.c, run));
       actions.append(run);
     }
-    // The explorer link comes from the bridge; only ever follow it to the Solana explorer.
-    if (typeof c.explorer === 'string' && c.explorer.startsWith('https://explorer.solana.com/')) {
-      const a = el('a', 'ex', 'on-chain ↗');
-      a.href = c.explorer; a.target = '_blank'; a.rel = 'noopener';
-      actions.append(a);
-    }
-    camp.append(top, el('div', 'meta', (CATS[c.category] || 'Other') + ' · escrow $' + c.escrowUi), actions);
+    camp.append(top, meta, actions);
     return camp;
   }));
 }
@@ -77,26 +72,27 @@ async function post() {
       label: $('label').value.trim() || 'Brand',
       category: Number($('category').value),
       payout: Number($('payout').value) || 5,
+      reach: Number($('reach').value) || 3,
       target: { tu: Number($('undertone').value), td: Number($('depth').value), ts: Number($('season').value), tol: Number($('tol').value) },
     };
     const r = await brandPost('/api/brand/campaign', body);
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || 'post failed');
-    toast('Campaign posted and escrow funded.');
+    toast('Brief posted. Tap "Ask privately now" when you are ready.');
     await load();
   } catch (e) { toast(String(e.message || e)); }
-  finally { btn.disabled = false; btn.textContent = 'Post campaign & fund escrow'; }
+  finally { btn.disabled = false; btn.textContent = 'Post brief'; }
 }
 
 async function runMatch(campaign, btn) {
-  btn.disabled = true; btn.textContent = 'Matching in enclave…';
+  btn.disabled = true; btn.textContent = 'Starting…';
   try {
     const r = await brandPost('/api/brand/match', { campaign });
     const j = await r.json();
-    if (!r.ok) throw new Error(j.error || 'match failed');
-    toast(j.matched ? ('Matched. $' + j.amount + ' settled to her, and you still do not know who.') : 'No match. Nothing was paid, nothing was revealed.');
+    if (!r.ok) throw new Error(j.error || 'could not start');
+    toast('Asking privately. Results fill in here as each woman answers.');
     await load();
-  } catch (e) { toast(String(e.message || e)); btn.disabled = false; btn.textContent = 'Run overnight match'; }
+  } catch (e) { toast(String(e.message || e)); btn.disabled = false; btn.textContent = 'Ask privately now'; }
 }
 
 $('postBtn').addEventListener('click', post);

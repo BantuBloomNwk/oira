@@ -88,24 +88,34 @@ The full walkthrough, including the five privacy fixes and their honest limits, 
 
 ## The Android app, built for the Seeker
 
-`app-next/` is a new app, written from the ground up as a native Android app on Capacitor. It is
-not the website in a wrapper: the whole app ships inside the APK, runs offline, and drives the
-phone's camera directly, because a browser camera hands you whatever the phone decided after it
-has already guessed the white balance.
+`app-next/` is the Android app, built on Capacitor. Everything it runs ships inside the APK,
+including the face and hair models, and nothing is loaded from a website: there is no remote
+`server.url`, so the app reads its own files and only goes online for what needs the chain or our
+server, like sealing, payouts, brand answers and Ask Oira.
 
-- **One scan reads her whole face.** Shade, undertone and depth, skin state, facial features and
-  hair, all measured on the phone by models that ship inside the app. The photo never leaves the
-  device. MediaPipe's habit of reporting usage to Google is blocked twice over, once in the
-  content policy and once in our own code.
-- **Her wallet is the way in.** On Android and the Seeker she connects through Mobile Wallet
-  Adapter, so on a Seeker the wallet she signs with is the one her phone shipped with. Women
-  who have never owned a wallet can use a passkey instead, and get the same kind of address.
-- **Sealing is a real Solana transaction she signs.** Only the reading crosses to be sealed,
-  never the image. Her palette account is delegated to MagicBlock's rollup, and the app shows
-  her that the account belongs to the Delegation Program and not to us.
-- **Ask Oira can run on her phone too.** A small Gemma model downloads once, after she is told
-  how big it is, and then answers on the device. Without it, questions go to our own server
-  with her coarse palette only, never her face or her reading in full.
+How it uses the phone and Android itself:
+
+- **Her Seeker wallet.** She connects and signs through Mobile Wallet Adapter
+  (`@solana-mobile/wallet-standard-mobile`, see `src/lib/wallet.ts`), so on a Seeker the wallet
+  she signs with is the one her phone shipped with.
+- **Passkeys through Android.** The app switches on WebAuthn for its WebView (`MainActivity.java`),
+  so a passkey goes through Android's Credential Manager, which checks the app's signing key
+  against `assetlinks.json` on our domain. She gets the same address in the app as on the web.
+- **Her fingerprint, asked by Android.** Where the phone's WebView has no passkeys, a small native
+  plugin (`OiraBiometricPlugin.java`, `androidx.biometric`) shows Android's own fingerprint sheet
+  before she scans and seals, with her PIN as the fallback on phones without a sensor.
+- **The camera, held still.** The scan reads her through the front camera, checks she's live with
+  a blink and a turn of the head, and holds exposure and white balance where the camera lets us
+  (`src/lib/camera-control.ts`), so the light can't drift while she is being read.
+- **Signing stays on her phone.** Every seal and every change to her rules is signed on the
+  device, and the app checks each message before it signs (`src/lib/signguard.ts`).
+- **Her reading stays on her phone too.** One scan reads her shade, undertone, depth, skin,
+  features and hair with models inside the app, and the photo never leaves the device. App
+  backups are switched off in the manifest so an adb backup can't carry her reading away.
+
+On Android and the Seeker, sealing is a real Solana transaction she signs: only the reading
+crosses to be sealed, never the image, and her palette account is delegated to MagicBlock's
+rollup.
 
 ### Build the APK
 

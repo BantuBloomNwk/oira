@@ -1,33 +1,14 @@
 name: Devnet e2e (manual/scheduled)
 
-# Slow tier, deliberately NOT run on every push: these scripts submit real transactions to
-# Solana devnet and a MagicBlock TEE endpoint, cost real (free but rate-limited) devnet SOL,
-# take real network round-trip time, and can fail on transient devnet/TEE health rather than a
-# real regression. None of that belongs gating a PR. This is best-effort visibility, not a merge
-# gate — read each step's own result rather than trusting the overall run status.
+# The slow tests, run by hand or once a week rather than on every push. They send real
+# transactions to Solana devnet and MagicBlock, spend devnet SOL, and can fail because devnet
+# is having a bad day rather than because something broke. Treat a run as a health check, not
+# a merge gate, and read each step's own result.
 #
-# HISTORY: a real live run on 2026-07-21 (7.24 SOL funded, ~4.4 SOL spent) found 6 of the then-12
-# scripts stale against a program hardening: match_query's on-chain signature became
-# (target_undertone, target_depth, target_season, depth_tol, offer_salt) — the PROGRAM now computes
-# the verdict from her sealed traits, and each budget-consuming query needs its own escrowed,
-# co-delegated campaign. The 6 have since been reconciled to that ABI:
-#   • night-rules-e2e, per-palette-e2e — rebuilt (they were entirely pre-campaign, pre-traits).
-#     per-palette-e2e now proves the per-epoch budget via a small her-set epoch_cap (a default-8
-#     proof would need 8 escrowed campaigns; the on-chain enforcement path is identical).
-#   • match-real-e2e — rebuilt onto committed campaigns; still owns the unique binding-rejection
-#     and read-gating assertions. The budget proof moved to per-palette-e2e to avoid redundant SOL.
-#   • model-b-e2e, perbrand-e2e — mechanical fix (target_hash = sha256(offer_salt‖shade),
-#     match_query passes the shade+salt; model-b's campaign decoder + payee_commit check corrected).
-#   • campaign-e2e — RETIRED. It proved a brand could settle by self-asserting accepted=true; that
-#     path was deliberately deleted (settle_offer now requires a real in-enclave match receipt).
-#     settle-match-e2e is the canonical campaign create→match→settle→close money-rail proof.
-# Still known-red: overnight-real-e2e failed on insufficient lamports mid-flow (a stale funding
-# amount in client/oira-chain.mjs's runOffer/seal path, NOT ABI drift) — not yet root-caused, so a
-# red X there is expected until that funding bug is fixed.
+# overnight-real-e2e is expected to fail for now: it runs short of devnet SOL partway through.
 #
-# Requires one repo secret: OIRA_DEPLOYER_KEY — the JSON array content of a funded devnet
-# keypair (the same shape client/oira-chain.mjs's loadDeployer() and these scripts expect).
-# Add it under Settings -> Secrets and variables -> Actions. Nothing runs without it.
+# Needs one repo secret, OIRA_DEPLOYER_KEY: the JSON array of a funded devnet keypair. Add it
+# under Settings -> Secrets and variables -> Actions. Without it the whole suite skips.
 on:
   workflow_dispatch: {} # manual trigger from the Actions tab or `gh workflow run`
   schedule:

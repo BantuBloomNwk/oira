@@ -1,6 +1,6 @@
 // Governed server-side concierge reasoning. This is the "real reasoning" layer behind the app's
-// concierge: it reuses the SAME trust boundary as the MCP tools (mcp/policy.mjs) — only the coarse
-// palette may cross, any raw trait/secret/wallet is rejected — grounds the answer in the real
+// concierge: it reuses the SAME trust boundary as the MCP tools (mcp/policy.mjs). Only the coarse
+// palette may cross, any raw trait/secret/wallet is rejected. Grounds the answer in the real
 // concierge (single source of truth), then refines it with an LLM ONLY when one is configured.
 //
 // Privacy: identical boundary to the on-device path. The server receives only the whitelisted
@@ -24,6 +24,14 @@ function buildMessages(ctx, question, lang, draft) {
   if (typeof ctx.earned === 'number') her.push('Earned so far: $' + ctx.earned.toFixed(2));
   const system = [
     'You are Oira, a warm, expert, discreet beauty concierge. You speak like a knowledgeable friend, never like a chatbot.',
+    // Talk TO her, not about her. Small models read the "what you know about her" framing in the
+    // user message as an instruction to write in the third person, and a real run came back
+    // "She prefers a bold, rich lipstick" three times out of four. A friend does not describe
+    // you to the room. Contractions for the same reason: without asking, the model writes
+    // "you are" and "it is" and the whole thing goes stiff, which is the exact register the
+    // founder's voice rule exists to keep out.
+    'Speak straight to her as "you". Never call her "she" or "her", and never describe her in the third person.',
+    'Use contractions: you\'re, it\'s, that\'ll, I\'d. Write the way a friend texts, not the way a brochure reads.',
     'You cannot see her face, her exact measurements, her keys, or her wallet, and you must never claim to or ask for them.',
     'Answer in ' + (LANGNAME[lang] || 'English') + '. Keep it to one to three warm, specific sentences.',
     'No em-dashes, no filler. Never say you are an AI or a language model, and never claim to be human.',
@@ -44,7 +52,14 @@ function buildMessages(ctx, question, lang, draft) {
 // house-voice output guard: strip dashes and any model tells; null => caller keeps the grounded draft.
 function guardOutput(text) {
   if (!text) return null;
-  let t = String(text).trim().replace(/\s*[—–]\s*/g, ', ').replace(/^Oira:\s*/i, '').trim();
+  /* The dashes are written as \u escapes on purpose. This was an em-dash and an en-dash as
+     literal characters, and a global "strip em-dashes" pass over the repo rewrote the one
+     inside this character class into ". ", which turned it into [period, space, en-dash].
+     A space in a character class matches every space, so guardOutput replaced every space in
+     every answer with a comma and she was served "You, need, a, lipstick, that, complements".
+     The committed file has been wrong for a while; the box was running an older build, so
+     nothing showed until it was redeployed. Escapes cannot be mangled that way. */
+  let t = String(text).trim().replace(/\s*[\u2014\u2013]\s*/g, ', ').replace(/^Oira:\s*/i, '').trim();
   if (/\b(as an ai|language model|i am an ai|as a chatbot)\b/i.test(t)) return null;
   if (t.length < 2) return null;
   if (t.length > 700) t = t.slice(0, 700).replace(/\s+\S*$/, '') + '.';
@@ -70,7 +85,12 @@ async function refine(messages) {
       headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key },
       body: JSON.stringify({
         model: process.env.OIRA_LLM_MODEL || 'qwen2.5-14b-instruct', // self-hosted, commercial-safe
-        messages, temperature: 0.6, max_tokens: 240,
+        messages, temperature: 0.6,
+        // The prompt asks for one to three sentences, which is 60 to 90 tokens. 240 was a
+        // budget nothing needed and every unused token is real time on a CPU box: the tail of
+        // the distribution was the tail that got aborted. Capped where a long answer still
+        // fits and a runaway one cannot cost her ten seconds.
+        max_tokens: Number(process.env.OIRA_LLM_MAX_TOKENS || 160),
       }),
     });
     if (!r.ok) return null;
@@ -87,13 +107,13 @@ export async function reason({ question, palette, hex }) {
   const q = String(question || '').slice(0, 300);
   const p = Palette.parse(palette || {});      // .strict() drops/blocks anything that is not the coarse palette
   // A photographed colour (shopping-companion check) is a plain hex she sampled on-device, same
-  // shape as the hex values already allowed through in palette.checks[].h / offers[].shade — not a
+  // shape as the hex values already allowed through in palette.checks[].h / offers[].shade, not a
   // raw trait/secret. Validate the shape defensively since it skips the Palette schema (it isn't
   // part of her palette, it's the thing being judged against it).
   const h = typeof hex === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(hex) ? hex : null;
   guard('ask_oira', { question: q, palette: p, hex: h }); // allowlist + deny-list scan (raw trait / secret / wallet)
   // A photographed hex has no colour NAME for the text-intent parser to find, so ground it with the
-  // same judgeHex() logic the on-device photo flow uses instead of answer()'s keyword matching —
+  // same judgeHex() logic the on-device photo flow uses instead of answer()'s keyword matching,
   // otherwise a raw hex silently falls through to a generic "your season is..." non-answer.
   const draft = withPalette(p, (C) => (h ? C.judgeHex(h) : C.answer(q)));
   const resolved = (draft && draft.then) ? await draft : draft;

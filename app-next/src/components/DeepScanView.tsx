@@ -5,8 +5,9 @@ import {
   type Finding, type ScanFrame, scanError, scanStatus, scanStage
 } from '../lib/scan';
 import {
-  HEADWEAR_NUDGE, HEADWEAR_PROMPT, LIGHT_NUDGE, LIGHT_WHY, SCAN_COPY, SCAN_STAGES,
+  HEADWEAR_NUDGE, HEADWEAR_PROMPT, LIGHT_NUDGE, LIGHT_WHY, LIVE_COPY, SCAN_COPY, SCAN_STAGES,
 } from '../lib/voice';
+import { Liveness, type LiveStep } from '../lib/liveness';
 import { GoldenFigBranch } from './GoldenFigBranch';
 import { openCamera, type CaptureSession, type CapturePath } from '../lib/capture';
 import { CameraControl, cameraControlEnabled } from '../lib/camera-control';
@@ -28,6 +29,26 @@ const HOLD_MS = 3200;
 const READ_GAP_MS = isLowEnd() ? 120 : 0;
 
 const SLOW_MS = 12_000;
+
+/* Where the camera picture actually sits on screen. The video is shown with object-fit:
+   cover, so when the camera's frame is a different shape from the screen it is scaled up and
+   its edges cropped. Landmarks are fractions of the camera frame, so anything drawn over the
+   picture has to go through the same scale and crop or it lands beside the face it describes.
+   Android cameras often hand back a frame shape that does not match a tall phone screen, which
+   is where this showed. */
+function coverOf(video: HTMLVideoElement | null, cssW: number, cssH: number, host?: Element | null) {
+  /* Measured off the video element's real box rather than assumed from the container, because
+     on some Android browsers the element does not end up the size its classes ask for. */
+  let bx = 0, by = 0, bw = cssW, bh = cssH;
+  if (video && host) {
+    const v = video.getBoundingClientRect(), c = host.getBoundingClientRect();
+    if (v.width > 0 && v.height > 0) { bx = v.left - c.left; by = v.top - c.top; bw = v.width; bh = v.height; }
+  }
+  const vw = video?.videoWidth || bw, vh = video?.videoHeight || bh;
+  const scale = Math.max(bw / vw, bh / vh);
+  const w = vw * scale, h = vh * scale;
+  return { w, h, x0: bx + (bw - w) / 2, y0: by + (bh - h) / 2 };
+}
 
 export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -59,6 +80,11 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
   const [findings, setFindings] = useState<Finding[]>([]);
   const [nudge, setNudge] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  /* The quick blink and head turn before her colours are read. See src/lib/liveness.ts. */
+  const liveRef = useRef(new Liveness());
+  const liveStepRef = useRef<LiveStep | null>(null);
+  const [livePrompt, setLivePrompt] = useState<string | null>(null);
+  const [liveNote, setLiveNote] = useState<string | null>(null);
   /* Which camera path she actually got, carried into the reading so the seal records it and a
      browser capture is never later mistaken for one we controlled. Refs, not state: the scan
      loop is a callback made once per render cycle, and state read inside it could be stale,
@@ -99,9 +125,11 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
     ctx.clearRect(0, 0, cssW, cssH);
 
     const pts = frame.landmarks;
-    /* Mirrored, so what she sees matches the face she is pulling. */
-    const px = (x: number) => (1 - x) * cssW;
-    const py = (y: number) => y * cssH;
+    /* Mirrored, so what she sees matches the face she is pulling, and placed through the same
+       scale and crop as the picture. See coverOf(). */
+    const fit = coverOf(videoRef.current, cssW, cssH, canvas);
+    const px = (x: number) => fit.x0 + (1 - x) * fit.w;
+    const py = (y: number) => fit.y0 + y * fit.h;
 
     /* The band. A soft horizontal window that travels with the scan line and brightens
        whatever it is over, so the geometry reads as being worked through rather than
@@ -194,6 +222,7 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
       ctx.arc(px(p.x), py(p.y), 1.1, 0, Math.PI * 2);
       ctx.fill();
     }
+
   }, []);
 
   const tick = useCallback((now: number) => {
@@ -217,7 +246,15 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
     paint(frame, now);
 
     if (frame.landmarks) {
-      setFindings(frame.findings);
+      /* The labels are positioned as fractions of the screen, so their anchors go through the
+         same scale and crop as the mesh. x stays unmirrored here; placeFindings mirrors it. */
+      const host = canvasRef.current?.parentElement;
+      if (host && host.clientWidth && host.clientHeight) {
+        const W = host.clientWidth, H = host.clientHeight, fit = coverOf(video, W, H, canvasRef.current);
+        setFindings(frame.findings.map((f) => ({ ...f, at: { x: (fit.x0 + f.at.x * fit.w) / W, y: (fit.y0 + f.at.y * fit.h) / H } })));
+      } else {
+        setFindings(frame.findings);
+      }
       setPhase('reading');
 
       /* Camera control first, when it is on: the hold does not start until exposure has been
@@ -249,6 +286,39 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
         heldSinceRef.current = null;
         samplesRef.current = [];
         setProgress(0);
+        /* The light comes first. The check waits, so its prompt waits too rather than asking
+           for a blink under a light that is about to be rejected anyway. */
+        setLivePrompt(null);
+        setLiveNote(null);
+        rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
+        return;
+      }
+
+      /* Liveness, before the hold. Nothing read while she blinks or turns is kept. */
+      const live = liveRef.current;
+      if (!live.passed) {
+        const r = live.feed(frame, now);
+        heldSinceRef.current = null;
+        samplesRef.current = [];
+        setProgress(0);
+        if (r === 'passed') setLiveNote(LIVE_COPY.still);
+        else if (r === 'failed') setLiveNote(LIVE_COPY.again);
+        else if (r === 'restarted') setLiveNote(LIVE_COPY.stay);
+        else if (live.step !== liveStepRef.current) setLiveNote(null);
+        liveStepRef.current = live.step;
+        setLivePrompt(live.passed ? null : live.step === 'blink' ? LIVE_COPY.blink : live.turned ? LIVE_COPY.back : LIVE_COPY.turn);
+        if (!live.passed) {
+          rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
+          return;
+        }
+      } else if (!live.stillSameFace(frame)) {
+        /* The face jumped after the check passed. Whoever is there now has not done it. */
+        live.reset();
+        liveStepRef.current = live.step;
+        heldSinceRef.current = null;
+        samplesRef.current = [];
+        setProgress(0);
+        setLiveNote(LIVE_COPY.stay);
         rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
         return;
       }
@@ -292,6 +362,10 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
       setProgress(0);
       setNudge(null);
       setPhase('looking');
+      if (liveRef.current.passed || liveRef.current.step !== liveStepRef.current) setLiveNote(null);
+      liveRef.current.lost();
+      liveStepRef.current = liveRef.current.step;
+      setLivePrompt(null);
     }
 
     rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
@@ -453,6 +527,18 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
           >
             {SCAN_COPY.retry}
           </button>
+        )}
+
+        {phase === 'reading' && livePrompt && (
+          <p className="relative z-10 text-[13px] leading-snug text-gold font-medium max-w-[250px] mx-auto mt-2.5">
+            {livePrompt}
+          </p>
+        )}
+
+        {phase === 'reading' && liveNote && (
+          <p className="relative z-10 text-[11.5px] leading-snug text-moon/70 max-w-[240px] mx-auto mt-1.5">
+            {liveNote}
+          </p>
         )}
 
         {phase === 'reading' && (

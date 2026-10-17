@@ -133,6 +133,24 @@ function recordSeal(ip) {
   e.count++;
 }
 setInterval(() => { const now = Date.now(); for (const [ip, e] of sealHits) if (now > e.resetAt) sealHits.delete(ip); }, SEAL_WINDOW_MS).unref();
+// Sponsored SOL leaves the deployer before she has signed anything, so the sponsored budget is
+// charged when the money moves, not when the seal completes. sealPaletteRelay calls this only
+// when it is about to send SOL, so a retry that needs no top-up is free.
+const SPONSOR_MAX = process.env.OIRA_SPONSOR_MAX != null ? Number(process.env.OIRA_SPONSOR_MAX) : SEAL_MAX;
+const sponsorHits = new Map();
+const sponsorDay = { day: '', count: 0 };
+class SponsorLimit extends Error {}
+function chargeSponsor(ip) {
+  const now = Date.now();
+  if (sponsorDay.day !== today()) { sponsorDay.day = today(); sponsorDay.count = 0; }
+  if (sponsorDay.count >= SEAL_DAY_CAP) throw new SponsorLimit("We've sealed a lot of Palettes today, so new ones are paused until tomorrow. Your reading's still safe on your phone.");
+  let e = sponsorHits.get(ip);
+  if (!e || now > e.resetAt) { e = { count: 0, resetAt: now + SEAL_WINDOW_MS }; sponsorHits.set(ip, e); }
+  if (e.count >= SPONSOR_MAX) throw new SponsorLimit("You've started a few Palettes from this connection today, so the next one waits until tomorrow. Your reading's still safe on your phone.");
+  e.count++;
+  sponsorDay.count++;
+}
+setInterval(() => { const now = Date.now(); for (const [ip, e] of sponsorHits) if (now > e.resetAt) sponsorHits.delete(ip); }, SEAL_WINDOW_MS).unref();
 app.use((req, res, next) => {
   if (req.method === 'POST' && ['/api/seal', '/api/campaign', '/api/payout', '/api/brand/campaign', '/api/brand/match', '/api/concierge'].includes(req.path)
       && rateLimited(clientIp(req))) {
@@ -200,10 +218,11 @@ app.post('/api/payout', async (_req, res) => {
 });
 
 // ---- proof of privacy: a live chain read anyone can open to confirm her palette is sealed.
-// Reads only the PUBLIC base layer; no keys, no writes. owner pubkey from ?owner= or the session.
+// Reads only the PUBLIC base layer; no keys, no writes. The caller names the owner; without one
+// there is nothing to show, never someone else's palette.
 app.get('/api/privacy-proof', async (req, res) => {
   try {
-    const ownerPubkey = req.query.owner || session.her || session.paletteOwner;
+    const ownerPubkey = req.query.owner;
     if (!ownerPubkey) return res.json({ sealed: false, network: 'Solana devnet' });
     res.json(await privacyProof({ ownerPubkey }));
   } catch (e) { console.error('privacy-proof', e.message); res.status(500).json({ error: String(e.message || e) }); }
@@ -279,6 +298,9 @@ app.post('/api/campaign', async (req, res) => {
 // Two-step so we never trust a bare pubkey string over HTTP: (1) issue a nonce for her
 // to sign with the MWA-connected wallet, (2) verify that signature + the on-chain SGT
 // checks + the anti-replay claim together. See client/genesis-check.mjs.
+// Off unless OIRA_GENESIS=1. The current app does not use these routes.
+const GENESIS_ON = process.env.OIRA_GENESIS === '1';
+app.use('/api/genesis', (req, res, next) => (GENESIS_ON ? next() : res.status(404).json({ error: 'not found' })));
 app.post('/api/genesis/challenge', (req, res) => {
   const pubkey = String((req.body && req.body.pubkey) || '');
   if (!pubkey) return res.status(400).json({ error: 'pubkey required' });
@@ -384,7 +406,9 @@ wss.on('connection', (ws, req) => {
       // assurance travels straight from her client ('wallet' vs 'passkey'/'fallback'/absent) —
       // it decides whether sealPaletteRelay sponsors her shortfall or requires her own funds.
       const assurance = m.assurance === 'wallet' ? 'wallet' : m.assurance;
-      sealPaletteRelay({ ownerPubkey: m.ownerPubkey, traits, encBlob, lifetimeCap: m.lifetimeCap || 0, salt, sign, assurance })
+      let charged = false;
+      const beforeSponsor = () => { if (charged) return; chargeSponsor(ip); charged = true; };
+      sealPaletteRelay({ ownerPubkey: m.ownerPubkey, traits, encBlob, lifetimeCap: m.lifetimeCap || 0, salt, sign, assurance, beforeSponsor })
         .then((r) => {
           // server keeps ONLY the bounded agent key + her pubkey/traits (for the overnight);
           // never her owner secret and never her salt (device holds/derives that).
@@ -393,7 +417,10 @@ wss.on('connection', (ws, req) => {
           console.log('sealed (relayed)', r.palette, 'her', r.her);
           ws.send(JSON.stringify({ t: 'done', palette: r.palette, her: r.her, sealSig: r.sealSig, explorer: r.explorer }));
         })
-        .catch((e) => { recordError('relay-seal', e, { alert: true }); try { ws.send(JSON.stringify({ t: 'error', message: String(e.message || e) })); } catch {} });
+        .catch((e) => {
+          if (!(e instanceof SponsorLimit)) recordError('relay-seal', e, { alert: true });
+          try { ws.send(JSON.stringify({ t: 'error', message: String(e.message || e) })); } catch {}
+        });
     }
   });
   ws.on('close', () => pending.clear());

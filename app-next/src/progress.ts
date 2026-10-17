@@ -4,6 +4,7 @@
 
 import './fonts.css';
 import { MONK_SWATCHES } from './lib/monk';
+import { h, fill } from './lib/dom';
 
 type Count = {
   women?: number; countries?: number; submissions: number; readings: number; phoneModels: number; byMake?: Record<string, number>;
@@ -30,9 +31,8 @@ const ago = (iso: string) => {
 
 function rows(el: HTMLElement, data: Record<string, number>, names: Record<string, string>) {
   const entries = Object.entries(data).sort((a, b) => b[1] - a[1]);
-  el.innerHTML = entries.length
-    ? entries.map(([k, v]) => `<div><span>${names[k] ?? k}</span><b>${v}</b></div>`).join('')
-    : '<div class="empty">None yet</div>';
+  if (!entries.length) return fill(el, h('div', { class: 'empty' }, 'None yet'));
+  fill(el, ...entries.map(([k, v]) => h('div', {}, h('span', {}, names[k] ?? k), h('b', {}, v))));
 }
 
 async function load() {
@@ -54,10 +54,13 @@ async function load() {
     : 'Live. The study opened on 5 October 2026. Be one of the first.';
 
   const max = Math.max(1, ...Object.values(c.byShade));
-  $('shades').innerHTML = MONK_SWATCHES.map((hex, i) => {
-    const n = c.byShade[String(i + 1)] || 0;
-    return `<div class="shade"><span class="n">${n}</span><div class="bar" style="height:${Math.max(3, (n / max) * 100)}%;background:${hex}"></div><span class="k">${i + 1}</span></div>`;
-  }).join('');
+  fill($('shades'), ...MONK_SWATCHES.map((hex, i) => {
+    const n = Number(c.byShade[String(i + 1)]) || 0;
+    const bar = h('div', { class: 'bar' });
+    bar.style.height = `${Math.max(3, (n / max) * 100)}%`;
+    bar.style.background = hex;
+    return h('div', { class: 'shade' }, h('span', { class: 'n' }, n), bar, h('span', { class: 'k' }, i + 1));
+  }));
 
   rows($('phones'), c.byPlatform, PHONES);
   rows($('makers'), c.byMake ?? {}, { unknown: 'Not known' });
@@ -65,9 +68,15 @@ async function load() {
 
   const days = Object.entries(c.byDay).sort(([a], [b]) => a.localeCompare(b));
   const dmax = Math.max(1, ...days.map(([, v]) => v));
-  $('days').innerHTML = days.length
-    ? days.map(([d, v]) => `<div title="${d}: ${v}" style="height:${(v / dmax) * 100}%"></div>`).join('')
-    : '<div class="empty" style="background:none;flex:1">The first day is today.</div>';
+  if (days.length) {
+    fill($('days'), ...days.map(([d, v]) => {
+      const bar = h('div', { title: `${d}: ${v}` });
+      bar.style.height = `${(Number(v) / dmax) * 100}%`;
+      return bar;
+    }));
+  } else {
+    fill($('days'), h('div', { class: 'empty', style: 'background:none;flex:1' }, 'The first day is today.'));
+  }
   $('days-range').textContent = days.length ? `${days[0][0]} to ${days[days.length - 1][0]}` : '';
 }
 

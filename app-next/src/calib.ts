@@ -4,6 +4,7 @@
 import { FilesetResolver, FaceLandmarker } from '@mediapipe/tasks-vision';
 import { readSkin } from './lib/skin';
 import { skinNote, skinTitle } from './lib/voice';
+import { h as el, fill } from './lib/dom';
 
 const FACES = [
   'eze', 'agbede-a', 'robertson', 'u-fair', 'u-tan-a', 'u-tan-b',
@@ -30,7 +31,7 @@ async function main() {
     const row = document.createElement('tr');
 
     if (!pts) {
-      row.innerHTML = `<td><img src="${src}"></td><td colspan="9">no face found</td>`;
+      fill(row, el('td', {}, el('img', { src })), el('td', { colspan: 9 }, 'no face found'));
       body.appendChild(row);
       continue;
     }
@@ -44,16 +45,19 @@ async function main() {
     const reading = readSkin(ctx.getImageData(0, 0, w, h).data, w, h, pts);
 
     if (!reading) {
-      row.innerHTML = `<td><img src="${src}"></td><td colspan="9">not enough skin</td>`;
+      fill(row, el('td', {}, el('img', { src })), el('td', { colspan: 9 }, 'not enough skin'));
     } else {
       const { band, ita, undertone, lab, ribbonHex, samples, whiteBalanced } = reading;
-      row.innerHTML =
-        `<td><img src="${src}"></td>` +
-        `<td class="band">${band}<br><span style="font:11px system-ui;color:#8A6580">${skinTitle(band)}, ${skinNote(undertone)}</span></td>` +
-        `<td>${ita.toFixed(1)}</td><td>${undertone}</td>` +
-        `<td>${lab.L.toFixed(1)}</td><td>${lab.a.toFixed(1)}</td><td>${lab.b.toFixed(1)}</td>` +
-        `<td>${whiteBalanced ? 'sclera' : 'none'}${reading.strongCast ? '<br><span style="color:#A85578">tinted</span>' : ''}</td><td>${samples}</td>` +
-        `<td><div class="sw" style="background:${ribbonHex}"></div></td>`;
+      const sw = el('div', { class: 'sw' });
+      sw.style.background = ribbonHex;
+      fill(row,
+        el('td', {}, el('img', { src })),
+        el('td', { class: 'band' }, band, el('br'), el('span', { style: 'font:11px system-ui;color:#8A6580' }, `${skinTitle(band)}, ${skinNote(undertone)}`)),
+        el('td', {}, ita.toFixed(1)), el('td', {}, undertone),
+        el('td', {}, lab.L.toFixed(1)), el('td', {}, lab.a.toFixed(1)), el('td', {}, lab.b.toFixed(1)),
+        el('td', {}, whiteBalanced ? 'sclera' : 'none', reading.strongCast ? el('br') : null, reading.strongCast ? el('span', { style: 'color:#A85578' }, 'tinted') : null),
+        el('td', {}, samples),
+        el('td', {}, sw));
     }
     body.appendChild(row);
   }

@@ -12,6 +12,7 @@ import { warmUp, readFrame, consolidate, type ScanFrame } from './lib/scan';
 import { openCamera } from './lib/capture';
 import { monkFromIta, MONK_SWATCHES } from './lib/monk';
 import { LIGHT_NUDGE } from './lib/voice';
+import { h, fill } from './lib/dom';
 
 const HOLD_MS = 3200;
 const STEP_MS = 95;
@@ -116,7 +117,7 @@ MONK_SWATCHES.forEach((hex, i) => {
   d.style.background = hex;
   d.setAttribute('role', 'button');
   d.setAttribute('aria-label', `Shade ${i + 1}`);
-  d.innerHTML = `<b>${i + 1}</b>`;
+  fill(d, h('b', {}, i + 1));
   d.addEventListener('click', () => {
     monkSelf = i + 1;
     sw.querySelectorAll('.sw').forEach((x) => x.classList.remove('on'));
@@ -357,13 +358,23 @@ async function review() {
   const modelSelf = $<HTMLSelectElement>('iphone').value;
   const country = $<HTMLSelectElement>('country').value === 'none' ? '' : $<HTMLSelectElement>('country').value;
   const countryName = $<HTMLSelectElement>('country').selectedOptions[0]?.text || '';
-  const rows = readings.map((r, i) => `<tr><td>${i + 1}</td><td>${r.L.toFixed(1)}</td><td>${r.a.toFixed(1)}</td><td>${r.b.toFixed(1)}</td><td>${r.monk}</td><td>${r.cct ?? '-'}</td><td>${Math.round(r.confidence * 100)}%</td></tr>`).join('');
-  $('review').innerHTML = `
-    <p><b>The shade you picked:</b> ${monkSelf} of 10</p>
-    <p><b>Your device:</b> ${make && make !== 'unknown' ? `${make} ` : ''}${modelSelf || model} (${browser}) &nbsp; <b>Camera:</b> ${camera || '-'}${country ? ` &nbsp; <b>Country:</b> ${countryName}` : ''}</p>
-    <p><b>Where you scanned:</b> ${({ window: 'by a window, in daylight', outdoor: 'outside', indoor: 'indoors, under lights', unsure: 'not sure' } as Record<string, string>)[setting] ?? '-'} &nbsp; <b>Your local hour:</b> ${new Date().getHours()}:00</p>
-    <table><thead><tr><th>Scan</th><th>Lightness</th><th>Redness</th><th>Yellowness</th><th>Shade</th><th>Room light (K)</th><th>How sure</th></tr></thead><tbody>${rows}</tbody></table>
-    <p class="muted" style="margin-top:10px">Also sent with each scan, for the science: the angle those colours make, how bright the light was, whether the white of your eye could be used to check the light, and how many points of skin were read. All numbers.</p>`;
+  const NB = '\u00a0';
+  const where = ({ window: 'by a window, in daylight', outdoor: 'outside', indoor: 'indoors, under lights', unsure: 'not sure' } as Record<string, string>)[setting] ?? '-';
+  const head = ['Scan', 'Lightness', 'Redness', 'Yellowness', 'Shade', 'Room light (K)', 'How sure'];
+  const note = h('p', { class: 'muted', style: 'margin-top:10px' }, 'Also sent with each scan, for the science: the angle those colours make, how bright the light was, whether the white of your eye could be used to check the light, and how many points of skin were read. All numbers.');
+  fill($('review'),
+    h('p', {}, h('b', {}, 'The shade you picked:'), ` ${monkSelf} of 10`),
+    h('p', {},
+      h('b', {}, 'Your device:'), ` ${make && make !== 'unknown' ? `${make} ` : ''}${modelSelf || model} (${browser}) ${NB} `,
+      h('b', {}, 'Camera:'), ` ${camera || '-'}`,
+      country ? ` ${NB} ` : null, country ? h('b', {}, 'Country:') : null, country ? ` ${countryName}` : null),
+    h('p', {}, h('b', {}, 'Where you scanned:'), ` ${where} ${NB} `, h('b', {}, 'Your local hour:'), ` ${new Date().getHours()}:00`),
+    h('table', {},
+      h('thead', {}, h('tr', {}, ...head.map((t) => h('th', {}, t)))),
+      h('tbody', {}, ...readings.map((r, i) => h('tr', {},
+        h('td', {}, i + 1), h('td', {}, r.L.toFixed(1)), h('td', {}, r.a.toFixed(1)), h('td', {}, r.b.toFixed(1)),
+        h('td', {}, r.monk), h('td', {}, r.cct ?? '-'), h('td', {}, `${Math.round(r.confidence * 100)}%`))))),
+    note);
   show('s-review');
 }
 

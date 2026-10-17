@@ -30,12 +30,12 @@ import fs from 'fs';
 const PROGRAM = new PublicKey('CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP');
 const TEE_VALIDATOR = new PublicKey('MTEWGuqxUpYZGFJQcp8tLN7x5v9BSeoFHYWQQ3n3xzo');
 const TEE_RPC = 'https://devnet-tee.magicblock.app';
-const BASE_RPC = 'https://api.devnet.solana.com';
+const BASE_RPC = process.env.OIRA_BASE_RPC || 'https://api.devnet.solana.com';
 const SYS = new PublicKey('11111111111111111111111111111111');
 const RENT = new PublicKey('SysvarRent111111111111111111111111111111111');
 const MINT = new PublicKey(JSON.parse(fs.readFileSync(new URL('../payout-config.json', import.meta.url))).mint);
 
-const deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(new URL('../../keys/oira-deployer.json', import.meta.url)))));
+const deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(process.env.OIRA_KEYPAIR || new URL('../../keys/oira-deployer.json', import.meta.url)))));
 const owner = Keypair.generate();    // her
 const agent = Keypair.generate();    // her offline-owner's session key
 const brand = Keypair.generate();

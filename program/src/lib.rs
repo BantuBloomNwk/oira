@@ -49,6 +49,11 @@ pub const TREASURY: Pubkey = anchor_lang::pubkey!("6wWrCWZ3y9UveFG1t5GzupJ1qkWn5
 // traits into a validator they control instead of the real TEE. Matches the client's own
 // TEE_VALIDATOR constant (client/*.mjs).
 pub const TEE_VALIDATOR: Pubkey = anchor_lang::pubkey!("MTEWGuqxUpYZGFJQcp8tLN7x5v9BSeoFHYWQQ3n3xzo");
+// MagicBlock's fixed accounts, pinned wherever the program hands them on.
+pub const MAGIC_PROGRAM: Pubkey = anchor_lang::pubkey!("Magic11111111111111111111111111111111111111");
+pub const MAGIC_CONTEXT: Pubkey = anchor_lang::pubkey!("MagicContext1111111111111111111111111111111");
+pub const EPHEMERAL_VAULT: Pubkey = anchor_lang::pubkey!("MagicVau1t999999999999999999999999999999999");
+pub const PERMISSION_PROGRAM: Pubkey = anchor_lang::pubkey!("ACLseoPoyC3cBqoUtkbjZ4aDrkurZW86v19pXz2XQnp1");
 
 #[ephemeral]
 #[program]
@@ -610,12 +615,15 @@ pub struct DelegateCampaign<'info> {
 pub struct CommitCampaign<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
-    #[account(mut)]
+    // Only once it has been answered, or by the brand that owns it.
+    #[account(mut, seeds = [CAMPAIGN_SEED, campaign.brand.as_ref(), &campaign.offer_id.to_le_bytes()], bump = campaign.bump,
+        constraint = campaign.answered || payer.key() == campaign.brand @ OiraError::NotAllowedToCommit)]
     pub campaign: Account<'info, Campaign>,
-    /// CHECK: magic context
-    #[account(mut)]
+    /// CHECK: pinned
+    #[account(mut, address = MAGIC_CONTEXT)]
     pub magic_context: AccountInfo<'info>,
-    /// CHECK: magic program
+    /// CHECK: pinned
+    #[account(address = MAGIC_PROGRAM)]
     pub magic_program: AccountInfo<'info>,
 }
 
@@ -632,12 +640,14 @@ pub struct SetPalettePrivacy<'info> {
     /// CHECK: permission metadata account (Permission Program)
     #[account(mut)]
     pub permission: AccountInfo<'info>,
-    /// CHECK: ER vault
-    #[account(mut)]
+    /// CHECK: ER vault, pinned
+    #[account(mut, address = EPHEMERAL_VAULT)]
     pub vault: AccountInfo<'info>,
-    /// CHECK: Magic program
+    /// CHECK: Magic program, pinned
+    #[account(address = MAGIC_PROGRAM)]
     pub magic_program: AccountInfo<'info>,
-    /// CHECK: Permission (ACL) program
+    /// CHECK: Permission (ACL) program, pinned
+    #[account(address = PERMISSION_PROGRAM)]
     pub permission_program: AccountInfo<'info>,
 }
 
@@ -652,12 +662,14 @@ pub struct SetTraitsPrivacy<'info> {
     /// CHECK: permission metadata account (Permission Program)
     #[account(mut)]
     pub permission: AccountInfo<'info>,
-    /// CHECK: ER vault
-    #[account(mut)]
+    /// CHECK: ER vault, pinned
+    #[account(mut, address = EPHEMERAL_VAULT)]
     pub vault: AccountInfo<'info>,
-    /// CHECK: Magic program
+    /// CHECK: Magic program, pinned
+    #[account(address = MAGIC_PROGRAM)]
     pub magic_program: AccountInfo<'info>,
-    /// CHECK: Permission (ACL) program
+    /// CHECK: Permission (ACL) program, pinned
+    #[account(address = PERMISSION_PROGRAM)]
     pub permission_program: AccountInfo<'info>,
 }
 
@@ -699,12 +711,15 @@ pub struct SetNightRules<'info> {
 pub struct CommitPalette<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
-    #[account(mut)]
+    // Only her, or her agent.
+    #[account(mut, seeds = [PALETTE_SEED, palette.owner.as_ref()], bump,
+        constraint = payer.key() == palette.owner || payer.key() == palette.agent @ OiraError::NotAllowedToCommit)]
     pub palette: Account<'info, PaletteVault>,
-    /// CHECK: magic context
-    #[account(mut)]
+    /// CHECK: pinned
+    #[account(mut, address = MAGIC_CONTEXT)]
     pub magic_context: AccountInfo<'info>,
-    /// CHECK: magic program
+    /// CHECK: pinned
+    #[account(address = MAGIC_PROGRAM)]
     pub magic_program: AccountInfo<'info>,
 }
 
@@ -806,4 +821,5 @@ pub enum OiraError {
     #[msg("insufficient escrow for this settlement")] InsufficientEscrow,
     #[msg("brand token account owner mismatch")] BadTokenOwner,
     #[msg("brand token account mint mismatch")] BadMint,
+    #[msg("not allowed to commit this account")] NotAllowedToCommit,
 }

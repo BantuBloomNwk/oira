@@ -1,10 +1,10 @@
-# Oira landing (myoira.com) — static, no JS, minimal external deps (Google Fonts only).
+# Oira landing (myoira.com). Static, no JS, minimal external deps (Google Fonts only).
 # Headers tuned for an A+ on securityheaders.com and Mozilla Observatory.
 
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; script-src 'none'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests"
+    Content-Security-Policy = "default-src 'none'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; script-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; upgrade-insecure-requests"
     Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
@@ -12,3 +12,27 @@
     Permissions-Policy = "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
     Cross-Origin-Opener-Policy = "same-origin"
     Cross-Origin-Resource-Policy = "same-origin"
+
+# The Android app. Served as a download, never rendered, and never cached as immutable
+# because the file name stays the same across versions.
+[[headers]]
+  for = "/downloads/*.apk"
+  [headers.values]
+    Content-Type = "application/vnd.android.package-archive"
+    Content-Disposition = "attachment; filename=oira-seeker.apk"
+    Cache-Control = "public, max-age=300"
+
+# The open skin study lives in the app, so its camera and scanner are the app's own.
+# myoira.com/study is the address people are given.
+# The study's live totals, for judges, investors and anyone curious.
+[[redirects]]
+  from = "/study/live"
+  to = "https://app.myoira.com/progress"
+  status = 302
+  force = true
+
+[[redirects]]
+  from = "/study"
+  to = "https://app.myoira.com/join"
+  status = 302
+  force = true

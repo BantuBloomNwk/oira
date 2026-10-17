@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Oira for brands: reach exactly her shade.</title>
+<meta name="description" content="Tell us the shade you are trying to reach. Oira returns verified matches from women who consented and were paid, and never hands you their identity.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Oira for brands: reach exactly her shade.">
+<meta property="og:description" content="A verified yes from a real woman whose shade matches, who agreed to be asked, and who was paid for answering.">
+<meta property="og:url" content="https://myoira.com/for-brands.html">
+<meta property="og:image" content="https://myoira.com/brand/png/avatar-dark-1024.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#1B1120">
+<link rel="icon" type="image/png" sizes="512x512" href="/brand/png/favicon-plum-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Karla:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blush:#FBF3EE; --paper:#FFFBF7; --ink:#43203B; --mauve:#C9799B; --mauve-deep:#A85578;
+    --gold:#D6A756; --lilac:#B49BE0; --night:#1B1120; --moon:#F3E9E4; --rose-glow:#E9B8D2;
+    --body:#6e4f66; --faint:#9c7c93; --line:rgba(67,32,59,.14);
+    --ease: cubic-bezier(.16,1,.3,1);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{font-family:'Karla',sans-serif;color:var(--ink);background:var(--blush);line-height:1.5;-webkit-font-smoothing:antialiased}
+  em{font-style:italic;color:var(--gold)}
+  a{color:inherit}
+  .wrap{max-width:1000px;margin:0 auto;padding:0 28px}
+  @media (max-width:640px){.wrap{padding:0 20px}}
+  :focus-visible{outline:2px solid var(--mauve);outline-offset:3px;border-radius:6px}
+  .eyebrow{font-size:13px;letter-spacing:.24em;text-transform:uppercase;font-weight:600;color:var(--mauve-deep)}
+
+  /* ---- nav ---- */
+  .nav{border-bottom:1px solid rgba(243,233,228,.14);background:var(--night)}
+  .navin{display:flex;align-items:center;justify-content:space-between;height:66px;gap:20px}
+  .brandline{display:flex;align-items:center;gap:10px;text-decoration:none}
+  .wordmark-img{height:21px;width:auto;display:block}
+  .omark{width:32px;height:32px;flex:none;display:block}
+  .backlink{font-size:14px;color:#C6AFC1;text-decoration:none;display:inline-flex;align-items:center;gap:7px;
+    transition:color .35s var(--ease)}
+  .backlink:hover{color:var(--moon)}
+  .backlink svg{width:13px;height:13px}
+
+  /* ---- hero, night ---- */
+  .top{background:linear-gradient(172deg,#241528 0%,#1B1120 66%);color:var(--moon);padding:76px 0 96px;position:relative;overflow:hidden}
+  .top::before{content:"";position:absolute;top:-34%;right:-8%;width:600px;height:600px;border-radius:50%;
+    background:conic-gradient(from 210deg,#F4A7B9,#E8C79A,#BFE3C0,#A9CBEF,#C9A9EF,#F4A7B9);opacity:.1;filter:blur(74px);pointer-events:none}
+  .top .eyebrow{color:#CBA0BE}
+  .top h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(34px,4.6vw,54px);line-height:1.1;margin-top:16px;max-width:19ch;position:relative}
+  .top .lede{color:#BBA5B8;max-width:56ch;margin-top:22px;font-size:17.5px;line-height:1.7;position:relative}
+  .facts{display:grid;grid-template-columns:repeat(3,1fr);margin-top:56px;position:relative}
+  @media (max-width:720px){.facts{grid-template-columns:1fr}}
+  .fact{padding-right:28px}
+  .fact + .fact{padding-left:28px;border-left:1px solid rgba(243,233,228,.15)}
+  @media (max-width:720px){.fact{padding:20px 0}.fact + .fact{padding-left:0;border-left:none;border-top:1px solid rgba(243,233,228,.15)}}
+  .fact b{display:block;font-family:'Fraunces',serif;font-weight:500;font-size:19px;color:var(--moon)}
+  .fact span{display:block;color:#B49CB1;font-size:14.5px;margin-top:8px;line-height:1.6}
+
+  /* ---- form ---- */
+  .formwrap{padding:76px 0 96px}
+  .formhead h2{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(26px,3.4vw,38px);margin-top:12px;line-height:1.16}
+  .formhead p{color:var(--body);max-width:56ch;margin-top:16px;font-size:16.5px;line-height:1.7}
+  form{margin-top:52px}
+  fieldset{border:none;padding:0;margin:0 0 44px}
+  legend{font-family:'Fraunces',serif;font-style:italic;font-size:15px;color:var(--gold);padding:0;margin-bottom:6px}
+  .fsdesc{font-size:14.5px;color:var(--faint);margin-bottom:24px;max-width:58ch;line-height:1.65}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:22px 26px}
+  @media (max-width:680px){.grid2{grid-template-columns:1fr}}
+  .field{display:flex;flex-direction:column}
+  .field.full{grid-column:1 / -1}
+  label{font-size:13px;font-weight:600;letter-spacing:.04em;color:var(--ink);margin-bottom:8px}
+  label .opt{font-weight:400;color:var(--faint);letter-spacing:0}
+  input[type=text],input[type=email],input[type=url],select,textarea{
+    font-family:'Karla',sans-serif;font-size:16px;color:var(--ink);background:var(--paper);
+    border:1px solid var(--line);border-radius:12px;padding:13px 15px;width:100%;min-height:48px;
+    transition:border-color .35s var(--ease), box-shadow .35s var(--ease)}
+  textarea{min-height:132px;resize:vertical;line-height:1.6}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--mauve);box-shadow:0 0 0 3px rgba(201,121,155,.16)}
+  input::placeholder,textarea::placeholder{color:#c0aab9}
+  select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239c7c93' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 14px center;background-size:17px;padding-right:44px}
+
+  /* the depth range, drawn from the melanin ribbon rather than a dropdown */
+  .depth{display:flex;gap:0;border-radius:14px;overflow:hidden;border:1px solid var(--line);margin-top:2px}
+  .depth label{flex:1;margin:0;cursor:pointer;position:relative;min-height:76px}
+  .depth input{position:absolute;opacity:0;width:100%;height:100%;margin:0;cursor:pointer}
+  .depth .sw{display:block;height:76px;position:relative;transition:transform .4s var(--ease)}
+  .depth .sw::after{content:"";position:absolute;inset:0;border:0 solid var(--ink);transition:border-width .25s var(--ease)}
+  .depth input:checked + .sw::after{border-width:4px}
+  .depth input:focus-visible + .sw{outline:2px solid var(--mauve);outline-offset:-4px}
+  .depth .sw i{position:absolute;left:0;right:0;bottom:7px;text-align:center;font-size:10.5px;font-style:normal;
+    letter-spacing:.06em;font-weight:600;color:rgba(255,255,255,.9)}
+  .depth .sw.lightlbl i{color:rgba(67,32,59,.65)}
+  .hint{font-size:13.5px;color:var(--faint);margin-top:10px;line-height:1.6}
+
+  .checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+  .chk{display:flex;align-items:flex-start;gap:10px;background:var(--paper);border:1px solid var(--line);
+    border-radius:12px;padding:14px 15px;cursor:pointer;transition:border-color .35s var(--ease), background .35s var(--ease)}
+  .chk:hover{border-color:var(--mauve)}
+  .chk input{margin-top:2px;accent-color:var(--mauve-deep);width:17px;height:17px;flex:none}
+  .chk span{font-size:14.5px;line-height:1.45}
+
+  .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+
+  .submitrow{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:8px;
+    border-top:1px solid var(--line);padding-top:32px}
+  .btn{display:inline-flex;align-items:center;gap:9px;text-decoration:none;border:none;cursor:pointer;
+    font-family:'Karla',sans-serif;border-radius:99px;padding:16px 34px;font-weight:600;font-size:15.5px;min-height:48px;
+    background:linear-gradient(150deg,#E7A6C0,#C9799B);color:#fff;box-shadow:0 12px 28px rgba(201,121,155,.34);
+    position:relative;overflow:hidden;transition:transform .45s var(--ease), box-shadow .45s var(--ease)}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 18px 36px rgba(201,121,155,.42)}
+  .submitnote{font-size:13.5px;color:var(--faint);max-width:38ch;line-height:1.6}
+
+  footer{padding:48px 0 40px;text-align:center;font-size:13px;color:var(--faint);border-top:1px solid rgba(67,32,59,.08)}
+  footer .flinks{display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-bottom:16px}
+  footer a{text-decoration:none;color:var(--body)}
+  footer a:hover{color:var(--mauve-deep)}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="passLight" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F4A7B9"/><stop offset="28%" stop-color="#E8C79A"/>
+      <stop offset="52%" stop-color="#BFE3C0"/><stop offset="76%" stop-color="#A9CBEF"/>
+      <stop offset="100%" stop-color="#C9A9EF"/>
+    </linearGradient>
+    <path id="oPath" d="M 90 26 C 132 26 152 56 152 90 C 152 124 132 154 90 154 C 48 154 28 124 28 90 C 28 56 48 26 90 26 Z M 90 42 C 58 42 46 62 46 90 C 46 118 58 138 90 138 C 122 138 134 118 134 90 C 134 62 122 42 90 42 Z"/>
+  </defs>
+</svg>
+
+<nav class="nav">
+  <div class="wrap navin">
+    <a class="brandline" href="/" aria-label="Oira, home">
+      <svg class="omark" viewBox="0 0 180 180" aria-hidden="true">
+        <defs>
+          <mask id="navRingD" maskUnits="userSpaceOnUse" x="0" y="0" width="180" height="180">
+            <use href="#oPath" fill="#fff" fill-rule="evenodd" transform="rotate(-18 90 90)"/>
+          </mask>
+        </defs>
+        <use href="#oPath" fill="#F3E9E4" fill-rule="evenodd" transform="rotate(-18 90 90)"/>
+        <g mask="url(#navRingD)">
+          <g>
+            <ellipse cx="90" cy="30" rx="62" ry="46" fill="url(#passLight)"/>
+            <animateTransform attributeName="transform" type="rotate" from="0 90 90" to="360 90 90" dur="11s" repeatCount="indefinite"/>
+          </g>
+        </g>
+      </svg>
+      <img class="wordmark-img" src="/brand/png/wordmark-dark-2000w.png" alt="Oira" width="115" height="21">
+    </a>
+    <a class="backlink" href="/">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg>
+      Back to Oira
+    </a>
+  </div>
+</nav>
+
+<div class="top">
+  <div class="wrap">
+    <span class="eyebrow">For brands</span>
+    <h1>Reach exactly her shade. Learn nothing about her.</h1>
+    <p class="lede">You have spent years buying audiences that were guessed at, from people who never agreed to be in the file. Oira sells you something better: a verified yes from a real woman whose shade actually matches, who chose to be asked, and who was paid for answering.</p>
+    <div class="facts">
+      <div class="fact">
+        <b>You pay for a yes</b>
+        <span>A no costs nothing. There is no list to buy and no impressions to gamble on.</span>
+      </div>
+      <div class="fact">
+        <b>You never receive her identity</b>
+        <span>Not her name, not her face, not her reading. The match happens in an enclave and returns one bit.</span>
+      </div>
+      <div class="fact">
+        <b>The receipt is public</b>
+        <span>Settlement is on Solana, so the match you paid for is one you can prove you got.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="formwrap">
+  <div class="wrap">
+    <div class="formhead">
+      <span class="eyebrow">Start a campaign</span>
+      <h2>Tell us the shade you are trying to <em>reach</em>.</h2>
+      <p>This is the whole brief. Describe the colour, not the person. We will come back to you with what a campaign at that specification costs and how many women currently match it.</p>
+    </div>
+
+    <form name="brand-campaign" method="POST" data-netlify="true" netlify-honeypot="company-website-2" action="/brands-thanks.html">
+      <input type="hidden" name="form-name" value="brand-campaign">
+      <p class="hp"><label>Leave this empty <input name="company-website-2" tabindex="-1" autocomplete="off"></label></p>
+
+      <fieldset>
+        <legend>Who you are</legend>
+        <div class="grid2">
+          <div class="field">
+            <label for="brand">Brand</label>
+            <input id="brand" name="brand" type="text" required placeholder="The name on the packaging">
+          </div>
+          <div class="field">
+            <label for="person">Your name</label>
+            <input id="person" name="person" type="text" required placeholder="Who we should reply to">
+          </div>
+          <div class="field">
+            <label for="email">Work email</label>
+            <input id="email" name="email" type="email" required placeholder="you@brand.com">
+          </div>
+          <div class="field">
+            <label for="site">Website <span class="opt">optional</span></label>
+            <input id="site" name="site" type="url" placeholder="https://">
+          </div>
+          <div class="field full">
+            <label for="market">Where you sell</label>
+            <input id="market" name="market" type="text" placeholder="Nigeria, Kenya, the UK diaspora, wherever it actually is">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>The shade</legend>
+        <p class="fsdesc">Oira reads undertone, depth and season. Give us as much of that as you know. If you only know the shade codes in your own range, put those in the notes and we will map them.</p>
+
+        <div class="field full" style="margin-bottom:26px">
+          <label>Depth you are trying to reach <span class="opt">choose the range that matters most</span></label>
+          <div class="depth">
+            <label><input type="checkbox" name="depth" value="Very light"><span class="sw lightlbl" style="background:#F1DCCB"><i>1</i></span></label>
+            <label><input type="checkbox" name="depth" value="Light"><span class="sw lightlbl" style="background:#DDB699"><i>2</i></span></label>
+            <label><input type="checkbox" name="depth" value="Medium"><span class="sw" style="background:#BC8563"><i>3</i></span></label>
+            <label><input type="checkbox" name="depth" value="Tan"><span class="sw" style="background:#96603F"><i>4</i></span></label>
+            <label><input type="checkbox" name="depth" value="Deep"><span class="sw" style="background:#6E4128"><i>5</i></span></label>
+            <label><input type="checkbox" name="depth" value="Very deep"><span class="sw" style="background:#4A2B1C"><i>6</i></span></label>
+          </div>
+          <p class="hint">Most brands arrive asking for three and five. The women who have waited longest are in five and six.</p>
+        </div>
+
+        <div class="grid2">
+          <div class="field">
+            <label for="undertone">Undertone</label>
+            <select id="undertone" name="undertone">
+              <option value="">No preference</option>
+              <option>Cool</option>
+              <option>Neutral</option>
+              <option>Warm</option>
+              <option>Olive</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="season">Season <span class="opt">optional</span></label>
+            <select id="season" name="season">
+              <option value="">No preference</option>
+              <option>Deep Winter</option>
+              <option>Cool Summer</option>
+              <option>Deep Autumn</option>
+              <option>Warm Autumn</option>
+              <option>Warm Spring</option>
+              <option>Not sure yet</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="tolerance">How close a match must be</label>
+            <select id="tolerance" name="tolerance">
+              <option>Exact shade only</option>
+              <option selected>One step either side</option>
+              <option>Anywhere in the range</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="size">How many matches you want</label>
+            <select id="size" name="size">
+              <option>Under 500, a pilot</option>
+              <option>500 to 5,000</option>
+              <option>5,000 to 50,000</option>
+              <option>More than 50,000</option>
+              <option>Not sure yet</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>What she gets</legend>
+        <p class="fsdesc">She is paid for every yes. You set the floor; she sets her own minimum, and if yours is under hers the question is turned away without either side learning anything.</p>
+        <div class="grid2">
+          <div class="field">
+            <label for="pay">What a yes is worth to you</label>
+            <select id="pay" name="pay">
+              <option>Under $0.25</option>
+              <option selected>$0.25 to $1</option>
+              <option>$1 to $5</option>
+              <option>More than $5</option>
+              <option>Tell us what is normal</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="offer">Anything beyond the payment <span class="opt">optional</span></label>
+            <input id="offer" name="offer" type="text" placeholder="A sample, early access, a discount code">
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>What you are launching</legend>
+        <div class="checks">
+          <label class="chk"><input type="checkbox" name="category" value="Foundation or concealer"><span>Foundation or concealer</span></label>
+          <label class="chk"><input type="checkbox" name="category" value="Colour cosmetics"><span>Colour cosmetics</span></label>
+          <label class="chk"><input type="checkbox" name="category" value="Skincare"><span>Skincare</span></label>
+          <label class="chk"><input type="checkbox" name="category" value="Haircare"><span>Haircare</span></label>
+          <label class="chk"><input type="checkbox" name="category" value="Clothing or accessories"><span>Clothing or accessories</span></label>
+          <label class="chk"><input type="checkbox" name="category" value="Something else"><span>Something else</span></label>
+        </div>
+        <div class="field full" style="margin-top:26px">
+          <label for="notes">Anything we should know <span class="opt">optional</span></label>
+          <textarea id="notes" name="notes" placeholder="Your shade codes, when you are launching, what went wrong last time you tried to reach this customer."></textarea>
+        </div>
+      </fieldset>
+
+      <div class="submitrow">
+        <button class="btn" type="submit">Send the brief</button>
+        <p class="submitnote">It reaches info@myoira.com. We answer every one, usually within two working days.</p>
+      </div>
+    </form>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="flinks">
+      <a href="/">Home</a>
+      <a href="/#how">How it works</a>
+      <a href="/#privacy">Privacy</a>
+      <a href="mailto:info@myoira.com">info@myoira.com</a>
+    </div>
+    <div>A partnership between BantuBloomNwk &times; Aurora K. &copy; 2026</div>
+  </div>
+</footer>
+
+</body>
+</html>

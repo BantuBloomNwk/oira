@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thank you: Oira for brands</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#1B1120">
+<link rel="icon" type="image/png" sizes="512x512" href="/brand/png/favicon-plum-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,400&family=Karla:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--night:#1B1120;--moon:#F3E9E4;--gold:#D6A756;--ease:cubic-bezier(.16,1,.3,1)}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Karla',sans-serif;background:linear-gradient(172deg,#241528,#1B1120 66%);color:var(--moon);
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:40px 28px;text-align:center;position:relative;overflow:hidden}
+  body::before{content:"";position:absolute;top:-30%;left:50%;transform:translateX(-50%);width:680px;height:680px;border-radius:50%;
+    background:conic-gradient(from 210deg,#F4A7B9,#E8C79A,#BFE3C0,#A9CBEF,#C9A9EF,#F4A7B9);opacity:.1;filter:blur(78px)}
+  .card{position:relative;max-width:52ch}
+  .omark{width:66px;height:66px;margin:0 auto 30px;display:block}
+  .eyebrow{font-size:12.5px;letter-spacing:.24em;text-transform:uppercase;font-weight:600;color:#CBA0BE}
+  h1{font-family:'Fraunces',serif;font-weight:500;font-size:clamp(30px,4.4vw,44px);line-height:1.14;margin-top:16px}
+  h1 em{font-style:italic;color:var(--gold)}
+  p{color:#BBA5B8;font-size:17px;line-height:1.7;margin-top:20px}
+  a.back{display:inline-flex;align-items:center;gap:8px;margin-top:36px;text-decoration:none;color:var(--moon);
+    border:1.5px solid rgba(243,233,228,.3);border-radius:99px;padding:14px 30px;font-weight:600;font-size:15px;
+    transition:background .4s var(--ease), border-color .4s var(--ease)}
+  a.back:hover{background:rgba(243,233,228,.08);border-color:rgba(243,233,228,.55)}
+</style>
+</head>
+<body>
+  <div class="card">
+    <svg class="omark" viewBox="0 0 180 180" aria-hidden="true">
+      <defs>
+        <linearGradient id="pl" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#F4A7B9"/><stop offset="28%" stop-color="#E8C79A"/>
+          <stop offset="52%" stop-color="#BFE3C0"/><stop offset="76%" stop-color="#A9CBEF"/>
+          <stop offset="100%" stop-color="#C9A9EF"/>
+        </linearGradient>
+        <path id="oPath" d="M 90 26 C 132 26 152 56 152 90 C 152 124 132 154 90 154 C 48 154 28 124 28 90 C 28 56 48 26 90 26 Z M 90 42 C 58 42 46 62 46 90 C 46 118 58 138 90 138 C 122 138 134 118 134 90 C 134 62 122 42 90 42 Z"/>
+        <mask id="ring" maskUnits="userSpaceOnUse" x="0" y="0" width="180" height="180">
+          <use href="#oPath" fill="#fff" fill-rule="evenodd" transform="rotate(-18 90 90)"/>
+        </mask>
+      </defs>
+      <use href="#oPath" fill="#F3E9E4" fill-rule="evenodd" transform="rotate(-18 90 90)"/>
+      <g mask="url(#ring)"><g>
+        <ellipse cx="90" cy="30" rx="62" ry="46" fill="url(#pl)"/>
+        <animateTransform attributeName="transform" type="rotate" from="0 90 90" to="360 90 90" dur="11s" repeatCount="indefinite"/>
+      </g></g>
+    </svg>
+    <div class="eyebrow">Brief received</div>
+    <h1>We have it, and we will <em>answer</em>.</h1>
+    <p>Someone reads every one of these, not a queue. Expect a reply at the address you gave us, usually within two working days, with what a campaign at your specification costs and how many women currently match it.</p>
+    <a class="back" href="/">Back to Oira</a>
+  </div>
+</body>
+</html>

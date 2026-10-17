@@ -4,7 +4,7 @@
     "name": "oira_palette",
     "version": "0.1.0",
     "spec": "0.1.0",
-    "description": "Oira Palette vault — private beauty/colour traits matched inside a MagicBlock Private ER (TEE)"
+    "description": "Oira Palette vault \u2014 private beauty/colour traits matched inside a MagicBlock Private ER (TEE)"
   },
   "instructions": [
     {
@@ -119,14 +119,37 @@
         },
         {
           "name": "palette",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  108,
+                  101,
+                  116,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "palette.owner",
+                "account": "PaletteVault"
+              }
+            ]
+          }
         },
         {
           "name": "magic_context",
-          "writable": true
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
         },
         {
-          "name": "magic_program"
+          "name": "magic_program",
+          "address": "Magic11111111111111111111111111111111111111"
         }
       ],
       "args": []
@@ -272,7 +295,8 @@
           "signer": true
         },
         {
-          "name": "brand"
+          "name": "brand",
+          "signer": true
         },
         {
           "name": "buffer_campaign",
@@ -298,38 +322,38 @@
             "program": {
               "kind": "const",
               "value": [
-                174,
-                227,
-                59,
-                234,
+                84,
+                167,
                 99,
-                60,
-                238,
-                110,
-                171,
-                152,
-                179,
-                181,
-                72,
-                120,
-                11,
-                4,
-                248,
-                245,
-                217,
-                149,
+                42,
+                223,
                 215,
-                229,
-                24,
-                144,
-                71,
-                181,
-                65,
-                7,
-                46,
-                237,
-                142,
-                34
+                49,
+                9,
+                242,
+                218,
+                26,
+                56,
+                203,
+                206,
+                50,
+                31,
+                184,
+                170,
+                121,
+                239,
+                250,
+                168,
+                244,
+                180,
+                68,
+                233,
+                130,
+                95,
+                152,
+                69,
+                26,
+                138
               ]
             }
           }
@@ -411,7 +435,7 @@
         },
         {
           "name": "owner_program",
-          "address": "CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP"
+          "address": "6hTHXFGSWmnRTsV4oNjN4dhEhkWs5hKm8d5pT36CGF9T"
         },
         {
           "name": "delegation_program",
@@ -432,7 +456,7 @@
     {
       "name": "delegate_palette",
       "docs": [
-        "Delegate the Palette (receipt + budget state) into the ER (TEE validator first remaining account)."
+        "Delegate the Palette (receipt + budget state) into the ER (pinned TEE_VALIDATOR only)."
       ],
       "discriminator": [
         126,
@@ -451,7 +475,8 @@
           "signer": true
         },
         {
-          "name": "owner"
+          "name": "owner",
+          "signer": true
         },
         {
           "name": "buffer_palette",
@@ -477,38 +502,38 @@
             "program": {
               "kind": "const",
               "value": [
-                174,
-                227,
-                59,
-                234,
+                84,
+                167,
                 99,
-                60,
-                238,
-                110,
-                171,
-                152,
-                179,
-                181,
-                72,
-                120,
-                11,
-                4,
-                248,
-                245,
-                217,
-                149,
+                42,
+                223,
                 215,
-                229,
-                24,
-                144,
-                71,
-                181,
-                65,
-                7,
-                46,
-                237,
-                142,
-                34
+                49,
+                9,
+                242,
+                218,
+                26,
+                56,
+                203,
+                206,
+                50,
+                31,
+                184,
+                170,
+                121,
+                239,
+                250,
+                168,
+                244,
+                180,
+                68,
+                233,
+                130,
+                95,
+                152,
+                69,
+                26,
+                138
               ]
             }
           }
@@ -590,7 +615,7 @@
         },
         {
           "name": "owner_program",
-          "address": "CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP"
+          "address": "6hTHXFGSWmnRTsV4oNjN4dhEhkWs5hKm8d5pT36CGF9T"
         },
         {
           "name": "delegation_program",
@@ -607,7 +632,7 @@
       "name": "delegate_traits",
       "docs": [
         "Delegate the TraitsSession into the ER. This account is marked private and NEVER",
-        "undelegated — her bucketed traits live only inside the enclave."
+        "undelegated \u2014 her bucketed traits live only inside the enclave."
       ],
       "discriminator": [
         250,
@@ -626,7 +651,8 @@
           "signer": true
         },
         {
-          "name": "owner"
+          "name": "owner",
+          "signer": true
         },
         {
           "name": "buffer_traits",
@@ -652,38 +678,38 @@
             "program": {
               "kind": "const",
               "value": [
-                174,
-                227,
-                59,
-                234,
+                84,
+                167,
                 99,
-                60,
-                238,
-                110,
-                171,
-                152,
-                179,
-                181,
-                72,
-                120,
-                11,
-                4,
-                248,
-                245,
-                217,
-                149,
+                42,
+                223,
                 215,
-                229,
-                24,
-                144,
-                71,
-                181,
-                65,
-                7,
-                46,
-                237,
-                142,
-                34
+                49,
+                9,
+                242,
+                218,
+                26,
+                56,
+                203,
+                206,
+                50,
+                31,
+                184,
+                170,
+                121,
+                239,
+                250,
+                168,
+                244,
+                180,
+                68,
+                233,
+                130,
+                95,
+                152,
+                69,
+                26,
+                138
               ]
             }
           }
@@ -765,7 +791,7 @@
         },
         {
           "name": "owner_program",
-          "address": "CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP"
+          "address": "6hTHXFGSWmnRTsV4oNjN4dhEhkWs5hKm8d5pT36CGF9T"
         },
         {
           "name": "delegation_program",
@@ -782,7 +808,7 @@
       "name": "init_palette",
       "docs": [
         "Create her Palette vault on base. Stores an opaque recovery blob, her owner pubkey,",
-        "and the COMMITMENT ROOT keccak(salt‖traits) the phone computed over her confirmed",
+        "and the COMMITMENT ROOT keccak(salt\u2016traits) the phone computed over her confirmed",
         "reading. Plaintext traits never touch this account. WRITE-ONCE per owner."
       ],
       "discriminator": [
@@ -849,7 +875,7 @@
     {
       "name": "init_traits",
       "docs": [
-        "Create the (empty) TraitsSession account on base. It holds NO traits yet — traits are",
+        "Create the (empty) TraitsSession account on base. It holds NO traits yet \u2014 traits are",
         "written only later, inside the enclave, by `set_traits`, so plaintext buckets never",
         "exist on public base even for one slot."
       ],
@@ -903,7 +929,7 @@
       "name": "match_query",
       "docs": [
         "THE match. Runs INSIDE the TEE, signed by the agent session key (owner offline). READS",
-        "her sealed traits and computes the verdict itself — the client supplies only the offer,",
+        "her sealed traits and computes the verdict itself \u2014 the client supplies only the offer,",
         "never the answer. Enforces the query budget and her night rules on-chain. Commits only",
         "a HASHED receipt so the public base never learns which offer matched."
       ],
@@ -921,7 +947,7 @@
         {
           "name": "agent",
           "docs": [
-            "The agent SESSION KEY — least privilege, only this instruction. Owner may be offline."
+            "The agent SESSION KEY \u2014 least privilege, only this instruction. Owner may be offline."
           ],
           "signer": true
         },
@@ -982,7 +1008,7 @@
         {
           "name": "campaign",
           "docs": [
-            "The brand's campaign, co-delegated into this ER — the ONLY offer the agent can query her",
+            "The brand's campaign, co-delegated into this ER \u2014 the ONLY offer the agent can query her",
             "against (L2). Mutated in-enclave (answered/receipt/payee/queries), then undelegated to base."
           ],
           "writable": true,
@@ -1061,14 +1087,82 @@
           "writable": true
         },
         {
-          "name": "buffer"
+          "name": "buffer",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  110,
+                  100,
+                  101,
+                  108,
+                  101,
+                  103,
+                  97,
+                  116,
+                  101,
+                  45,
+                  98,
+                  117,
+                  102,
+                  102,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "base_account"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                181,
+                183,
+                0,
+                225,
+                242,
+                87,
+                58,
+                192,
+                204,
+                6,
+                34,
+                1,
+                52,
+                74,
+                207,
+                151,
+                184,
+                53,
+                6,
+                235,
+                140,
+                229,
+                25,
+                152,
+                204,
+                98,
+                126,
+                24,
+                147,
+                128,
+                167,
+                62
+              ]
+            }
+          }
         },
         {
           "name": "payer",
           "writable": true
         },
         {
-          "name": "system_program"
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -1158,7 +1252,14 @@
     {
       "name": "set_palette_privacy",
       "docs": [
-        "Mark the delegated Palette private inside the TEE, whitelisting exactly one reader."
+        "Mark the delegated Palette private inside the TEE, whitelisting exactly one reader.",
+        "IDEMPOTENT/RE-BINDABLE: the permission group is CREATED on her first seal and UPDATED on",
+        "any later one. Create is create-only in the permission program (re-running it on an",
+        "existing group dies with InvalidAccountData \u2014 the bug that broke every monthly re-seal),",
+        "so when the permission account already exists we issue the update CPI instead, with the",
+        "palette PDA (the group's authority, established at create) signing via its seeds. This",
+        "also REPAIRS palettes sealed before the deterministic-agent fix: their group is bound to",
+        "a lost random agent, and the update re-points the sole reader at the current agent."
       ],
       "discriminator": [
         23,
@@ -1177,7 +1278,11 @@
           "signer": true
         },
         {
-          "name": "owner"
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "palette"
+          ]
         },
         {
           "name": "palette",
@@ -1209,13 +1314,16 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "address": "MagicVau1t999999999999999999999999999999999"
         },
         {
-          "name": "magic_program"
+          "name": "magic_program",
+          "address": "Magic11111111111111111111111111111111111111"
         },
         {
-          "name": "permission_program"
+          "name": "permission_program",
+          "address": "ACLseoPoyC3cBqoUtkbjZ4aDrkurZW86v19pXz2XQnp1"
         }
       ],
       "args": [
@@ -1232,8 +1340,8 @@
     {
       "name": "set_traits",
       "docs": [
-        "Write her bucketed traits INTO the private TraitsSession — runs inside the enclave,",
-        "owner-signed. BINDS them to the commitment root: recomputes keccak(salt‖traits) and",
+        "Write her bucketed traits INTO the private TraitsSession \u2014 runs inside the enclave,",
+        "owner-signed. BINDS them to the commitment root: recomputes keccak(salt\u2016traits) and",
         "requires it to equal the root the phone published at init. Traits that don't match",
         "what she confirmed are rejected, so no one (agent or server) can substitute them."
       ],
@@ -1331,7 +1439,8 @@
       "name": "set_traits_privacy",
       "docs": [
         "Mark the delegated TraitsSession private inside the TEE, whitelisting only the agent.",
-        "This is what makes her traits readable by the match engine but no one else."
+        "This is what makes her traits readable by the match engine but no one else.",
+        "Create-or-update, same as set_palette_privacy above (re-seal idempotency + agent repair)."
       ],
       "discriminator": [
         85,
@@ -1350,7 +1459,11 @@
           "signer": true
         },
         {
-          "name": "owner"
+          "name": "owner",
+          "signer": true,
+          "relations": [
+            "traits"
+          ]
         },
         {
           "name": "traits",
@@ -1381,13 +1494,16 @@
         },
         {
           "name": "vault",
-          "writable": true
+          "writable": true,
+          "address": "MagicVau1t999999999999999999999999999999999"
         },
         {
-          "name": "magic_program"
+          "name": "magic_program",
+          "address": "Magic11111111111111111111111111111111111111"
         },
         {
-          "name": "permission_program"
+          "name": "permission_program",
+          "address": "ACLseoPoyC3cBqoUtkbjZ4aDrkurZW86v19pXz2XQnp1"
         }
       ],
       "args": [
@@ -1404,10 +1520,10 @@
     {
       "name": "settle_offer",
       "docs": [
-        "Settle an accepted offer — the payout is now AUTHORIZED BY THE REAL ON-CHAIN MATCH,",
+        "Settle an accepted offer \u2014 the payout is now AUTHORIZED BY THE REAL ON-CHAIN MATCH,",
         "not a brand-supplied boolean. The brand presents (offer_hash, verdict, nonce); the",
         "program requires the offer to be this campaign's target, the verdict to be MATCH, and",
-        "sha256(offer_hash‖verdict‖nonce) to equal the committed match receipt on her Palette.",
+        "sha256(offer_hash\u2016verdict\u2016nonce) to equal the committed match receipt on her Palette.",
         "She (the payee) must own the Palette. No match, no money."
       ],
       "discriminator": [
@@ -1535,14 +1651,43 @@
         },
         {
           "name": "campaign",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  97,
+                  109,
+                  112,
+                  97,
+                  105,
+                  103,
+                  110
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "campaign.brand",
+                "account": "Campaign"
+              },
+              {
+                "kind": "account",
+                "path": "campaign.offer_id",
+                "account": "Campaign"
+              }
+            ]
+          }
         },
         {
           "name": "magic_context",
-          "writable": true
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
         },
         {
-          "name": "magic_program"
+          "name": "magic_program",
+          "address": "Magic11111111111111111111111111111111111111"
         }
       ],
       "args": []
@@ -1567,14 +1712,37 @@
         },
         {
           "name": "palette",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  97,
+                  108,
+                  101,
+                  116,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "palette.owner",
+                "account": "PaletteVault"
+              }
+            ]
+          }
         },
         {
           "name": "magic_context",
-          "writable": true
+          "writable": true,
+          "address": "MagicContext1111111111111111111111111111111"
         },
         {
-          "name": "magic_program"
+          "name": "magic_program",
+          "address": "Magic11111111111111111111111111111111111111"
         }
       ],
       "args": []
@@ -1736,6 +1904,11 @@
       "code": 6022,
       "name": "BadMint",
       "msg": "brand token account mint mismatch"
+    },
+    {
+      "code": 6023,
+      "name": "NotAllowedToCommit",
+      "msg": "not allowed to commit this account"
     }
   ],
   "types": [

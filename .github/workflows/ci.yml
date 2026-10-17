@@ -6,7 +6,7 @@ name: CI
 # on a live network and is deliberately NOT run here.
 on:
   push:
-    branches: [master]
+    branches: [main, master]
   pull_request:
 
 jobs:

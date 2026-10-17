@@ -19,6 +19,7 @@
 
 import { all, clear, summary, type Residual } from './lib/residual';
 import { hexToLab } from './lib/match';
+import { h, fill } from './lib/dom';
 
 /* Lab back to something a browser will paint, so the two dots can sit side by side and be
    compared by eye as well as by number. Reversing what residual.ts did on the way in. */
@@ -49,45 +50,35 @@ function render() {
   const actions = document.getElementById('actions')!;
   const dump = document.getElementById('dump') as HTMLTextAreaElement;
 
-  body.innerHTML = '';
+  fill(body);
 
   if (!sum) {
-    box.innerHTML = '<p class="empty">Nothing collected on this device yet. Open a product, tap the shade, photograph one you own.</p>';
-    actions.innerHTML = '';
+    fill(box, h('p', { class: 'empty' }, 'Nothing collected on this device yet. Open a product, tap the shade, photograph one you own.'));
+    fill(actions);
     return;
   }
 
-  box.innerHTML = `
-    <div style="margin-top:14px">
-      <div><span class="k">readings</span><span class="big">${sum.n}</span></div>
-      <div><span class="k">median error</span><span class="big">${sum.deltaE.toFixed(2)}</span> dE76</div>
-      <div><span class="k">spread (MAD)</span>${sum.spread.toFixed(2)}</div>
-      <div><span class="k">bias L* a* b*</span><span class="big">${f(sum.bias.dL)} ${f(sum.bias.da)} ${f(sum.bias.db)}</span></div>
-      <div><span class="k">devices</span>${sum.devices}</div>
-      <div><span class="k">with illuminant</span>${sum.withIlluminant} of ${sum.n}</div>
-    </div>`;
+  const k = (t: string) => h('span', { class: 'k' }, t);
+  const big = (t: string | number) => h('span', { class: 'big' }, t);
+  fill(box, h('div', { style: 'margin-top:14px' },
+    h('div', {}, k('readings'), big(sum.n)),
+    h('div', {}, k('median error'), big(sum.deltaE.toFixed(2)), ' dE76'),
+    h('div', {}, k('spread (MAD)'), sum.spread.toFixed(2)),
+    h('div', {}, k('bias L* a* b*'), big(`${f(sum.bias.dL)} ${f(sum.bias.da)} ${f(sum.bias.db)}`)),
+    h('div', {}, k('devices'), sum.devices),
+    h('div', {}, k('with illuminant'), `${sum.withIlluminant} of ${sum.n}`)));
 
   for (const r of [...rows].reverse()) {
-    const tr = document.createElement('tr');
-    const read = labToHex(r.measured);
-    const cat = labToHex(r.catalog);
-    tr.innerHTML = `
-      <td>${when(r.at)}</td>
-      <td>${r.sku}</td>
-      <td><span class="sw" style="background:${read}"></span></td>
-      <td><span class="sw" style="background:${cat}"></span></td>
-      <td>${f(r.delta.dL)}</td>
-      <td>${f(r.delta.da)}</td>
-      <td>${f(r.delta.db)}</td>
-      <td>${r.deltaE.toFixed(1)}</td>
-      <td>${r.cct ?? '-'}</td>
-      <td>${r.quality.toFixed(2)}</td>
-      <td>${r.capture}</td>
-      <td>${r.device}</td>`;
-    body.appendChild(tr);
+    const swatch = (hex: string) => { const sw = h('span', { class: 'sw' }); sw.style.background = hex; return sw; };
+    body.appendChild(h('tr', {},
+      h('td', {}, when(r.at)), h('td', {}, r.sku),
+      h('td', {}, swatch(labToHex(r.measured))), h('td', {}, swatch(labToHex(r.catalog))),
+      h('td', {}, f(r.delta.dL)), h('td', {}, f(r.delta.da)), h('td', {}, f(r.delta.db)),
+      h('td', {}, r.deltaE.toFixed(1)), h('td', {}, r.cct ?? '-'), h('td', {}, r.quality.toFixed(2)),
+      h('td', {}, r.capture), h('td', {}, r.device)));
   }
 
-  actions.innerHTML = '';
+  fill(actions);
 
   /* Export exists because the analysis happens on a machine and the data is on a phone.
      Clipboard first since it is the one thing that reliably works in a mobile browser, with

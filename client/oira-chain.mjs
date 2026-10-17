@@ -373,15 +373,22 @@ async function topUpOwnerTo(ownerPk, need) {
 // LOUDLY with an amount + address she can act on, instead of either silently gifting her SOL or
 // letting the tx die later with a cryptic "insufficient lamports" from the runtime.
 const fmtSol = (l) => (l / 1e9).toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
-async function ensureOwnerFunds(ownerPk, need, selfFunded) {
-  if (!selfFunded) return topUpOwnerTo(ownerPk, need);
+async function ensureOwnerFunds(ownerPk, need, selfFunded, beforeSponsor) {
+  if (!selfFunded) {
+    // Charge the sponsorship budget only when the deployer is really about to send SOL. A retry
+    // that finds her wallet already holding enough costs nothing and is not counted.
+    const bal = await base.getBalance(ownerPk);
+    if (bal >= need) return;
+    if (beforeSponsor) await beforeSponsor(need - bal);
+    return fund({ publicKey: ownerPk }, need - bal);
+  }
   const bal = await base.getBalance(ownerPk);
   if (bal < need) throw new Error(
     `Your connected wallet needs about ${fmtSol(need)} SOL (devnet) for this step, but it holds ${fmtSol(bal)}. ` +
     `Oira only sponsors device-key sign-ins — please add at least ${fmtSol(need - bal)} SOL to ${ownerPk.toBase58()} and try again.`);
 }
 
-export async function sealPaletteRelay({ ownerPubkey, traits = { undertone: 2, depth: 8, season: 3 }, encBlob, lifetimeCap = 0, salt: saltArg, sign, assurance } = {}) {
+export async function sealPaletteRelay({ ownerPubkey, traits = { undertone: 2, depth: 8, season: 3 }, encBlob, lifetimeCap = 0, salt: saltArg, sign, assurance, beforeSponsor } = {}) {
   if (!ownerPubkey || typeof sign !== 'function') throw new Error('sealPaletteRelay needs ownerPubkey + sign()');
   // 'wallet' = she signed in with her own external wallet => she funds herself (see the gate
   // above). Anything else ('passkey', 'fallback', or absent — the headless e2e harnesses and any
@@ -421,7 +428,7 @@ export async function sealPaletteRelay({ ownerPubkey, traits = { undertone: 2, d
     // padded flat guess. The tx-fee sponsorship in sendRelayedBase means she doesn't need slack
     // for network fees either; the only real requirement left is the money her Signer role
     // literally transfers (Anchor's payer=owner, and the explicit fromPubkey:ownerPk transfers).
-    await ensureOwnerFunds(ownerPk, await estimateOwnerFirstSealCost(), selfFunded);
+    await ensureOwnerFunds(ownerPk, await estimateOwnerFirstSealCost(), selfFunded, beforeSponsor);
     const initP = new TransactionInstruction({ programId: PROGRAM, keys: [{ pubkey: palettePda, isSigner: false, isWritable: true }, { pubkey: ownerPk, isSigner: true, isWritable: true }, { pubkey: SYS, isSigner: false, isWritable: false }], data: Buffer.concat([disc('init_palette'), bBytes(enc), commitmentRoot]) });
     const initT = new TransactionInstruction({ programId: PROGRAM, keys: [{ pubkey: traitsPda, isSigner: false, isWritable: true }, { pubkey: ownerPk, isSigner: true, isWritable: true }, { pubkey: SYS, isSigner: false, isWritable: false }], data: disc('init_traits') });
     initSig = await sendRelayedBase(new Transaction().add(initP).add(initT), ownerSigner);
@@ -441,7 +448,7 @@ export async function sealPaletteRelay({ ownerPubkey, traits = { undertone: 2, d
     // spends nothing from her wallet and funds her nothing at all.
     for (const [pda, info, name] of [[palettePda, paletteInfo, 'delegate_palette'], [traitsPda, traitsInfo, 'delegate_traits']]) {
       if (info && info.owner.equals(PROGRAM)) {
-        await ensureOwnerFunds(ownerPk, RENT_FLOAT + DELEGATION_RENT_PER_ACCOUNT + TOPUP_MARGIN, selfFunded);
+        await ensureOwnerFunds(ownerPk, RENT_FLOAT + DELEGATION_RENT_PER_ACCOUNT + TOPUP_MARGIN, selfFunded, beforeSponsor);
         await sendRelayedBase(new Transaction()
           .add(SystemProgram.transfer({ fromPubkey: ownerPk, toPubkey: pda, lamports: RENT_FLOAT }))
           .add(delIx(pda, name)), ownerSigner);
@@ -452,7 +459,7 @@ export async function sealPaletteRelay({ ownerPubkey, traits = { undertone: 2, d
       // her escrow already exists by this point in every real case, so this is really just
       // ESCROW_TOPUP + fee — but fund for a from-scratch creation too so a wiped-clean edge case
       // (e.g. a test harness resetting only the escrow) never underfunds like the agent bug above.
-      await ensureOwnerFunds(ownerPk, ESCROW_TOPUP + ESCROW_RENT + TOPUP_MARGIN, selfFunded);
+      await ensureOwnerFunds(ownerPk, ESCROW_TOPUP + ESCROW_RENT + TOPUP_MARGIN, selfFunded, beforeSponsor);
       await sendRelayedBase(new Transaction().add(createTopUpEscrowInstruction(escrowPdaFromEscrowAuthority(ownerPk, 255), ownerPk, ownerPk, ESCROW_TOPUP, 255)), ownerSigner);
     }
   }

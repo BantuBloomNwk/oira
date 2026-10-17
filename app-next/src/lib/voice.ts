@@ -129,6 +129,17 @@ export const SCAN_COPY = {
   chips: ['On your phone', 'Never uploaded'] as const,
 };
 
+/* The quick check before her colours are read. Friendly and short, and never "prove you're
+   real" at her: she's being asked to do two little things, not accused of anything. */
+export const LIVE_COPY = {
+  blink: 'One slow blink for me.',
+  turn: "Turn your head a little to one side, then come back to me.",
+  back: "That's it, now back to me.",
+  still: "Perfect. Now hold still while I read your colours.",
+  again: "I didn't quite catch that, love. Let's go again.",
+  stay: 'Stay with me, keep your face in the frame.',
+};
+
 /* What to say when the light will not do. One short line, her fault never, and always with
    the fix in it. She is being asked to move to a window, not told she failed a check. */
 export const LIGHT_NUDGE: Record<string, string> = {

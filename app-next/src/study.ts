@@ -25,6 +25,7 @@ import { toLinear, scleraFullRes, linearToLab, type PatchName, type Lin } from '
 import { readPaper, paperZone, type PaperSide } from './lib/paper';
 import { readLight } from './lib/light';
 import { CameraControl } from './lib/camera-control';
+import { h, fill } from './lib/dom';
 
 const STORE = 'oira.study';
 
@@ -560,24 +561,28 @@ const median = (xs: number[]) => {
 function render() {
   const rows = read();
   const body = document.querySelector('#out tbody')!;
-  body.innerHTML = '';
+  fill(body);
   for (const t of [...rows].reverse()) {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${t.subject}</td><td>${t.monkVisual}</td><td>${t.site}</td><td>${t.light}</td>
-      <td>${t.device}</td>
-      <td><b>${f1(t.de2000, 2)}</b></td>
-      <td>${f1(t.dL)}</td><td>${f1(t.da)}</td><td>${f1(t.db)}</td>
-      <td>${f1(t.appIta)}${t.norm ? ` (${f1(t.norm.ita)})` : ''}</td><td>${t.appMonk ?? '-'}${t.norm ? ` (${monkFromIta(t.norm.ita)})` : ''}</td>
-      <td>${f1(t.patches?.cheekL?.ita)} / ${f1(t.patches?.cheekR?.ita)}</td>
-      <td>${t.facing ?? '-'}${t.camctl === 'on' ? (t.capture === 'controlled' ? ' locked' : ' unlocked') : ''}</td><td>${t.lightVerdict ?? '-'}</td>
-      <td>${t.confidence?.toFixed(2) ?? '-'}</td><td>${t.cct ?? '-'}${t.eyeFullCct ? ` / ${t.eyeFullCct}` : ''}</td>
-      <td>${t.paperSide && t.paperSide !== 'none' ? `${t.paperCct ?? '-'}K ${t.paperFrames ?? ''}${t.byPaper ? `, ITA ${f1(t.byPaper.ita)} (${monkFromIta(t.byPaper.ita)})` : ` ${t.paperWhy ?? ''}`}` : '-'}</td>`;
-    body.appendChild(tr);
+    const paper = t.paperSide && t.paperSide !== 'none'
+      ? `${t.paperCct ?? '-'}K ${t.paperFrames ?? ''}${t.byPaper ? `, ITA ${f1(t.byPaper.ita)} (${monkFromIta(t.byPaper.ita)})` : ` ${t.paperWhy ?? ''}`}`
+      : '-';
+    body.appendChild(h('tr', {},
+      h('td', {}, t.subject), h('td', {}, t.monkVisual), h('td', {}, t.site), h('td', {}, t.light),
+      h('td', {}, t.device),
+      h('td', {}, h('b', {}, f1(t.de2000, 2))),
+      h('td', {}, f1(t.dL)), h('td', {}, f1(t.da)), h('td', {}, f1(t.db)),
+      h('td', {}, `${f1(t.appIta)}${t.norm ? ` (${f1(t.norm.ita)})` : ''}`),
+      h('td', {}, `${t.appMonk ?? '-'}${t.norm ? ` (${monkFromIta(t.norm.ita)})` : ''}`),
+      h('td', {}, `${f1(t.patches?.cheekL?.ita)} / ${f1(t.patches?.cheekR?.ita)}`),
+      h('td', {}, `${t.facing ?? '-'}${t.camctl === 'on' ? (t.capture === 'controlled' ? ' locked' : ' unlocked') : ''}`),
+      h('td', {}, t.lightVerdict ?? '-'),
+      h('td', {}, t.confidence?.toFixed(2) ?? '-'),
+      h('td', {}, `${t.cct ?? '-'}${t.eyeFullCct ? ` / ${t.eyeFullCct}` : ''}`),
+      h('td', {}, paper)));
   }
 
   const box = $('summary');
-  if (!rows.length) { box.innerHTML = '<p class="empty">No trials yet.</p>'; return; }
+  if (!rows.length) { fill(box, h('p', { class: 'empty' }, 'No trials yet.')); return; }
 
   /* REPEATABILITY, which needs no instrument at all.
    *
@@ -596,19 +601,20 @@ function render() {
     const k = `${t.subject} / ${t.site} / ${t.light} / ${t.device} / ${t.facing ?? '?'} / control ${t.camctl ?? 'off'}`;
     groups.set(k, [...(groups.get(k) ?? []), t]);
   }
+  const table = (heads: string[], trs: HTMLElement[]) =>
+    h('table', { class: 'sum' }, h('thead', {}, h('tr', {}, ...heads.map((x) => h('th', {}, x)))), h('tbody', {}, ...trs));
   const repeats = [...groups.entries()].filter(([, v]) => v.length > 1);
   if (repeats.length) {
-    let rh = '<div class="big">Repeatability, no instrument needed</div><table class="sum"><thead><tr><th>subject / site / light / device / camera / control</th><th>n</th><th>spread dE2000</th><th>worst pair</th></tr></thead><tbody>';
-    for (const [k, v] of repeats) {
+    const trs = repeats.map(([k, v]) => {
       /* Every pair against every other, so one outlier cannot hide behind an average. */
       const ds: number[] = [];
       for (let i = 0; i < v.length; i++) for (let j = i + 1; j < v.length; j++) ds.push(ciede2000(v[i].app, v[j].app));
-      rh += `<tr><td>${k}</td><td>${v.length}</td><td><b>${median(ds).toFixed(2)}</b></td><td>${Math.max(...ds).toFixed(2)}</td></tr>`;
-    }
-    rh += '</tbody></table>';
-    box.innerHTML = rh;
+      return h('tr', {}, h('td', {}, k), h('td', {}, v.length), h('td', {}, h('b', {}, median(ds).toFixed(2))), h('td', {}, Math.max(...ds).toFixed(2)));
+    });
+    fill(box, h('div', { class: 'big' }, 'Repeatability, no instrument needed'),
+      table(['subject / site / light / device / camera / control', 'n', 'spread dE2000', 'worst pair'], trs));
   } else {
-    box.innerHTML = '<p class="empty">Capture the same subject, site and light more than once to get a repeatability figure. That one needs no instrument.</p>';
+    fill(box, h('p', { class: 'empty' }, 'Capture the same subject, site and light more than once to get a repeatability figure. That one needs no instrument.'));
   }
   const accuracy = rows.filter((r) => r.de2000 !== null) as Array<Trial & { de2000: number; dL: number; da: number; db: number }>;
   if (!accuracy.length) return;
@@ -621,28 +627,25 @@ function render() {
     ['5-6', (m) => m >= 5 && m <= 6], ['7-8', (m) => m >= 7 && m <= 8],
     ['9-10', (m) => m >= 9],
   ];
-  let html = `<div class="big">Accuracy, against the instrument &nbsp; n=${accuracy.length} &nbsp; median dE2000 <b>${median(accuracy.map((r) => r.de2000)).toFixed(2)}</b></div>
-    <table class="sum"><thead><tr><th>Monk</th><th>n</th><th>median dE</th><th>bias dL</th><th>bias da</th><th>bias db</th></tr></thead><tbody>`;
-  for (const [name, test] of bands) {
+  const NB = ' ';
+  box.append(h('div', { class: 'big' }, `Accuracy, against the instrument ${NB} n=${accuracy.length} ${NB} median dE2000 `,
+    h('b', {}, median(accuracy.map((r) => r.de2000)).toFixed(2))));
+  box.append(table(['Monk', 'n', 'median dE', 'bias dL', 'bias da', 'bias db'], bands.map(([name, test]) => {
     const r = accuracy.filter((x) => test(x.monkVisual));
-    if (!r.length) { html += `<tr><td>${name}</td><td>0</td><td colspan="4" class="empty">not covered yet</td></tr>`; continue; }
-    html += `<tr><td>${name}</td><td>${r.length}</td><td><b>${median(r.map((x) => x.de2000)).toFixed(2)}</b></td>
-      <td>${median(r.map((x) => x.dL)).toFixed(1)}</td><td>${median(r.map((x) => x.da)).toFixed(1)}</td><td>${median(r.map((x) => x.db)).toFixed(1)}</td></tr>`;
-  }
-  html += '</tbody></table>';
+    if (!r.length) return h('tr', {}, h('td', {}, name), h('td', {}, 0), h('td', { colspan: 4, class: 'empty' }, 'not covered yet'));
+    return h('tr', {}, h('td', {}, name), h('td', {}, r.length), h('td', {}, h('b', {}, median(r.map((x) => x.de2000)).toFixed(2))),
+      h('td', {}, median(r.map((x) => x.dL)).toFixed(1)), h('td', {}, median(r.map((x) => x.da)).toFixed(1)), h('td', {}, median(r.map((x) => x.db)).toFixed(1)));
+  })));
 
   /* And by light, because the other half of the question is whether the room or the camera is
      doing the damage. */
   const lights = [...new Set(accuracy.map((r) => r.light))];
   if (lights.length > 1) {
-    html += '<table class="sum"><thead><tr><th>light</th><th>n</th><th>median dE</th></tr></thead><tbody>';
-    for (const l of lights) {
+    box.append(table(['light', 'n', 'median dE'], lights.map((l) => {
       const r = accuracy.filter((x) => x.light === l);
-      html += `<tr><td>${l}</td><td>${r.length}</td><td><b>${median(r.map((x) => x.de2000)).toFixed(2)}</b></td></tr>`;
-    }
-    html += '</tbody></table>';
+      return h('tr', {}, h('td', {}, l), h('td', {}, r.length), h('td', {}, h('b', {}, median(r.map((x) => x.de2000)).toFixed(2))));
+    })));
   }
-  box.innerHTML += html;
 }
 
 function csv() {

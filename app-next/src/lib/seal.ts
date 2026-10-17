@@ -18,11 +18,12 @@
  */
 
 import { b64, type Owner } from './owner';
+import { sealSignGuard } from './signguard';
 
 /* Traits are the only thing about her that crosses. No image, no landmarks, no Lab values,
    no key. The bridge enforces the same boundary again on its side. */
 export interface SealRequest {
-  traits: unknown;
+  traits: { undertone: number; depth: number; season: number };
   /* Base64 AES-GCM recovery blob, when there is one. */
   encBlob?: string | null;
   lifetimeCap?: number;
@@ -63,6 +64,7 @@ export function sealViaDevice(
 ): Promise<SealResult> {
   return new Promise((resolve, reject) => {
     let done = false;
+    const allowed = sealSignGuard(owner.address, traits, owner.salt);
     const ws = new WebSocket(bridgeWsUrl());
 
     const fail = (e: unknown) => {
@@ -96,7 +98,12 @@ export function sealViaDevice(
            bytes already in memory; a wallet signature is a round trip into another app that
            she can decline. A rejection has to fail the whole seal rather than hang here until
            the timeout, which is what an unhandled promise would have done. */
-        owner.sign(b64.dec(m.msg))
+        const bytes = b64.dec(m.msg);
+        try { allowed(bytes); } catch {
+          fail(new Error("Something asked me to sign a message that isn't part of your seal, so I stopped. Nothing was signed."));
+          return;
+        }
+        owner.sign(bytes)
           .then((sig) => ws.send(JSON.stringify({ t: 'sig', id: m.id, sig: b64.enc(sig) })))
           .catch(fail);
         return;

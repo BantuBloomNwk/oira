@@ -338,6 +338,14 @@ export interface ScanFrame {
   shape: ShapeReading | null;
   /* The hair silhouette, measured rather than counted. */
   hair: HairReading | null;
+  /* For the liveness check. How closed her eyes are, 0 open to 1 shut, from the landmarker's
+     own blendshapes. */
+  eyesClosed: number | null;
+  /* Which way her head is turned, roughly -0.5 to 0.5, zero facing the camera. The sign
+     depends on mirroring, so the check only ever uses how far it moves. */
+  yaw: number | null;
+  /* The face's box in the frame, 0..1, so a face that jumps or swaps can be noticed. */
+  box: { cx: number; cy: number; size: number } | null;
   ready: boolean;
 }
 
@@ -354,6 +362,26 @@ let lastCondition: ConditionReading | null = null;
 let hairTurn = 0;
 let lastHair: HairReading | null = null;
 
+/* The frame the models read, copied onto a plain 2D canvas first.
+ *
+ * Handing MediaPipe the video element directly worked on desktop and iPhone and drifted on
+ * Android. There Chrome crops and rescales the camera ("crop-and-scale"), and the WebGL upload
+ * MediaPipe uses for a video can take the camera's whole buffer rather than the cropped picture
+ * the page displays, so the face was found in a different image from the one on screen: the
+ * mesh landed low and to one side, and the skin was sampled from the wrong place. A 2D drawImage
+ * always takes exactly what is displayed, so every model and the mesh now work from that. */
+let frameCanvas: HTMLCanvasElement | null = null;
+function copyFrame(video: HTMLVideoElement): HTMLCanvasElement | null {
+  const w = video.videoWidth, h = video.videoHeight;
+  if (!w || !h) return null;
+  if (!frameCanvas) frameCanvas = document.createElement('canvas');
+  if (frameCanvas.width !== w || frameCanvas.height !== h) { frameCanvas.width = w; frameCanvas.height = h; }
+  const c = frameCanvas.getContext('2d', { willReadFrequently: true });
+  if (!c) return null;
+  c.drawImage(video, 0, 0, w, h);
+  return frameCanvas;
+}
+
 export function readFrame(
   video: HTMLVideoElement,
   scratch: HTMLCanvasElement,
@@ -362,6 +390,7 @@ export function readFrame(
   const empty: ScanFrame = {
     landmarks: null, findings: [], hairCoverage: 0, hairLikelyCovered: false,
     light: null, skin: null, monk: null, condition: null, shape: null, hair: null,
+    eyesClosed: null, yaw: null, box: null,
     ready: status === 'ready',
   };
   /* Hair is deliberately NOT required here. It used to be, which meant the whole scan waited
@@ -370,9 +399,22 @@ export function readFrame(
      the frames that follow. See load(). */
   if (!landmarker || !video.videoWidth) return empty;
 
-  const faces = landmarker.detectForVideo(video, timestampMs);
+  const source = copyFrame(video);
+  if (!source) return empty;
+  const faces = landmarker.detectForVideo(source, timestampMs);
   const landmarks = faces.faceLandmarks?.[0] ?? null;
   if (!landmarks) return empty;
+
+  const blend = faces.faceBlendshapes?.[0]?.categories ?? [];
+  const score = (name: string) => blend.find((c) => c.categoryName === name)?.score;
+  const bl = score('eyeBlinkLeft'), br = score('eyeBlinkRight');
+  const eyesClosed = bl != null && br != null ? (bl + br) / 2 : null;
+  /* Nose tip against the midpoint of the two cheek edges, over the face's width. */
+  const left = landmarks[234], right = landmarks[454], nose = landmarks[1];
+  const width = left && right ? Math.abs(right.x - left.x) : 0;
+  const yaw = width > 0.02 && nose ? (nose.x - (left.x + right.x) / 2) / width : null;
+  const box = width > 0.02 ? { cx: (left.x + right.x) / 2, cy: nose.y, size: width } : null;
+  const live = { eyesClosed, yaw, box };
 
   /* One scratch canvas, reused, sized down. We are sampling colour, not saving a photo. */
   const w = 256;
@@ -380,8 +422,8 @@ export function readFrame(
   scratch.width = w;
   scratch.height = h;
   const ctx = scratch.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return { ...empty, landmarks };
-  ctx.drawImage(video, 0, 0, w, h);
+  if (!ctx) return { ...empty, ...live, landmarks };
+  ctx.drawImage(source, 0, 0, w, h);
   const { data } = ctx.getImageData(0, 0, w, h);
 
   const at = (i: number) => landmarks[i];
@@ -405,7 +447,7 @@ export function readFrame(
   /* Null until the second model lands, which is a normal early-frame state rather than an
      error. consolidate() takes the plurality across the hold, so a few hairless opening
      frames cost nothing. */
-  const seg = hairSegmenter?.segmentForVideo(video, timestampMs);
+  const seg = hairSegmenter?.segmentForVideo(source, timestampMs);
   const mask = seg?.categoryMask;
   if (mask) {
     hair = readHair(
@@ -506,6 +548,7 @@ export function readFrame(
     hairLikelyCovered: !hair?.readable,
     light: skin ? readLight(skin.white, skin.clipped) : null,
     skin, monk, condition, shape, hair,
+    ...live,
     ready: true,
   };
 }

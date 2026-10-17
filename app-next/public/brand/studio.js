@@ -11,30 +11,41 @@ $('tol').addEventListener('input', (e) => $('tolval').textContent = e.target.val
 let toastTimer;
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3200); }
 
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = String(text); return e; }
+
 function badge(c) {
   const s = c.status;
-  if (s === 'matched') return '<span class="badge b-matched">matched · $' + (c.amount || 0) + ' paid</span>';
-  if (s === 'no-match') return '<span class="badge b-nomatch">no match</span>';
-  if (c.live && c.live.phase === 'matching') return '<span class="badge b-matching">matching…</span>';
-  return '<span class="badge b-open">open</span>';
+  if (s === 'matched') return el('span', 'badge b-matched', 'matched · $' + (Number(c.amount) || 0) + ' paid');
+  if (s === 'no-match') return el('span', 'badge b-nomatch', 'no match');
+  if (c.live && c.live.phase === 'matching') return el('span', 'badge b-matching', 'matching…');
+  return el('span', 'badge b-open', 'open');
 }
 
 function render(campaigns) {
   const board = $('board');
-  if (!campaigns.length) { board.innerHTML = '<div class="empty">No campaigns yet. Post one to see it here.</div>'; return; }
-  board.innerHTML = campaigns.map((c) => {
-    const canMatch = c.status === 'open';
-    return '<div class="camp">'
-      + '<div class="top"><div class="name">' + esc(c.label) + '</div><div class="pay">$' + c.payout + ' / match</div></div>'
-      + '<div class="meta">' + (CATS[c.category] || 'Other') + ' · escrow $' + c.escrowUi + '</div>'
-      + '<div class="actions">' + badge(c)
-      + (canMatch ? '<button class="run" data-c="' + c.campaign + '">Run overnight match</button>' : '')
-      + '<a class="ex" href="' + c.explorer + '" target="_blank" rel="noopener">on-chain ↗</a>'
-      + '</div></div>';
-  }).join('');
-  board.querySelectorAll('.run').forEach((b) => b.addEventListener('click', () => runMatch(b.dataset.c, b)));
+  if (!campaigns.length) { board.replaceChildren(el('div', 'empty', 'No campaigns yet. Post one to see it here.')); return; }
+  board.replaceChildren(...campaigns.map((c) => {
+    const camp = el('div', 'camp');
+    const top = el('div', 'top');
+    top.append(el('div', 'name', c.label), el('div', 'pay', '$' + c.payout + ' / match'));
+    const actions = el('div', 'actions');
+    actions.append(badge(c));
+    if (c.status === 'open') {
+      const run = el('button', 'run', 'Run overnight match');
+      run.dataset.c = String(c.campaign);
+      run.addEventListener('click', () => runMatch(run.dataset.c, run));
+      actions.append(run);
+    }
+    // The explorer link comes from the bridge; only ever follow it to the Solana explorer.
+    if (typeof c.explorer === 'string' && c.explorer.startsWith('https://explorer.solana.com/')) {
+      const a = el('a', 'ex', 'on-chain ↗');
+      a.href = c.explorer; a.target = '_blank'; a.rel = 'noopener';
+      actions.append(a);
+    }
+    camp.append(top, el('div', 'meta', (CATS[c.category] || 'Other') + ' · escrow $' + c.escrowUi), actions);
+    return camp;
+  }));
 }
-function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
 // Posting and matching spend real devnet SOL, so the studio needs its key. Asked for once,
 // kept on this browser only.

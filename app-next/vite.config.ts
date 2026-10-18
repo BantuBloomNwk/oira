@@ -25,6 +25,40 @@ import {defineConfig} from 'vite';
  * to production and sit there on a public URL: real photographs of real people, uploaded
  * for a colour-science bench test, served from a beauty app's origin with no page linking
  * to them. Nobody would ever see them, which is exactly why nobody would ever notice. */
+/* The same lock-down inside the Android app.
+ *
+ * On the web, Netlify sends the Content-Security-Policy header (public/_headers). The APK serves
+ * these files itself, so no header ever arrives there and the page would run with no policy at
+ * all. This writes the policy into the page, for production builds only: the dev server injects
+ * inline scripts for hot reload, which the policy rightly refuses. It matches the header, plus
+ * the bridge's https address, which the app calls by name when it runs as the APK. On the web the
+ * header still applies on top, and a page obeys both, so nothing gets looser there.
+ * frame-ancestors only works as a header, so it stays in _headers. */
+const APP_CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'wasm-unsafe-eval'",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self'",
+  "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
+  "worker-src 'self' blob:",
+  "connect-src 'self' https://models.myoira.com https://oira.161-97-74-212.sslip.io wss://oira.161-97-74-212.sslip.io ws://localhost:* ws://127.0.0.1:*",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "object-src 'none'",
+  'upgrade-insecure-requests',
+].join('; ');
+
+function cspMeta() {
+  return {
+    name: 'oira-csp-meta',
+    apply: 'build' as const,
+    transformIndexHtml(html: string) {
+      return html.replace('<head>', `<head>\n    <meta http-equiv="Content-Security-Policy" content="${APP_CSP}" />`);
+    },
+  };
+}
+
 function dropDevAssets() {
   return {
     name: 'oira-drop-dev-assets',
@@ -85,7 +119,7 @@ export default defineConfig(() => {
 
   return {
     define: { __BUILD_ID__: JSON.stringify(buildId) },
-    plugins: [react(), tailwindcss(), dropDevAssets(), stampServiceWorker()],
+    plugins: [react(), tailwindcss(), cspMeta(), dropDevAssets(), stampServiceWorker()],
     build: {
       rollupOptions: {
         input: {

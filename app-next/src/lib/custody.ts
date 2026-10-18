@@ -26,6 +26,8 @@ import {
   APP_PRF_SALT, OWNER_INFO, SEAL_SALT_INFO, b64, base58, hkdf32,
   type Owner,
 } from './owner';
+import { diag } from './diag';
+import { passkeyCreate, passkeyGet, type PasskeyResult } from './native-passkey';
 
 const RP_NAME = 'Oira';
 /* On the web the passkey belongs to whatever host she is on, which is how every existing
@@ -41,7 +43,16 @@ const LS_PRF = 'oira.prf';
 /* The reduced assurance seed, for browsers with no PRF. */
 const LS_FALLBACK = 'oira.fbseed';
 
+/* The error's name and a short message, for the diagnostics log. Never the request itself. */
+const errName = (e: unknown): string => {
+  const x = e as { name?: string; message?: string } | null;
+  return `${x?.name || 'Error'}${x?.message ? `: ${String(x.message).slice(0, 120)}` : ''}`;
+};
+
 export function prfSupported(): boolean {
+  /* In the Android app passkeys go through Credential Manager, not the WebView. See
+     native-passkey.ts. */
+  if (isNativeApp()) return true;
   return !!(window.PublicKeyCredential && navigator.credentials && window.isSecureContext);
 }
 
@@ -68,7 +79,7 @@ function ownerFromSeed(seed: Uint8Array, assurance: 'passkey' | 'fallback', salt
   };
 }
 
-const prfFirst = (c: PublicKeyCredential | null): ArrayBuffer | undefined => {
+const prfFirst = (c: PasskeyResult | null): ArrayBuffer | undefined => {
   const ext = c?.getClientExtensionResults() as { prf?: { results?: { first?: ArrayBuffer }, enabled?: boolean } } | undefined;
   return ext?.prf?.results?.first;
 };
@@ -93,8 +104,8 @@ export interface Enrolled {
 export async function enroll(userLabel?: string): Promise<Enrolled> {
   if (!prfSupported()) throw new Error('This browser cannot do passkeys in a secure context.');
   const userId = crypto.getRandomValues(new Uint8Array(16));
-  const cred = (await navigator.credentials.create({
-    publicKey: {
+  const cred = await passkeyCreate({
+    ...{
       rp: rpId ? { name: RP_NAME, id: rpId } : { name: RP_NAME },
       user: { id: userId, name: userLabel || 'oira-user', displayName: userLabel || 'Oira' },
       challenge: crypto.getRandomValues(new Uint8Array(32)),
@@ -111,7 +122,7 @@ export async function enroll(userLabel?: string): Promise<Enrolled> {
       /* Evaluate PRF during creation so one biometric prompt covers enrol and first unlock. */
       extensions: { prf: { eval: { first: APP_PRF_SALT } } } as AuthenticationExtensionsClientInputs,
     },
-  })) as PublicKeyCredential | null;
+  } as PublicKeyCredentialCreationOptions);
   if (!cred) throw new Error('No passkey was created.');
 
   const first = prfFirst(cred);
@@ -130,7 +141,7 @@ export async function enroll(userLabel?: string): Promise<Enrolled> {
   };
 }
 
-async function ownerFromAssertion(assertion: PublicKeyCredential): Promise<Owner> {
+async function ownerFromAssertion(assertion: PasskeyResult): Promise<Owner> {
   const first = prfFirst(assertion);
   if (!first) {
     throw new Error('That did not return the secret Oira needs. Try once more; if it keeps happening this device may not support it.');
@@ -145,15 +156,15 @@ async function ownerFromAssertion(assertion: PublicKeyCredential): Promise<Owner
 }
 
 const getAssertion = (options: Partial<PublicKeyCredentialRequestOptions>) =>
-  navigator.credentials.get({
-    publicKey: {
+  passkeyGet({
+    ...{
       challenge: crypto.getRandomValues(new Uint8Array(32)),
       userVerification: 'required',
       extensions: { prf: { eval: { first: APP_PRF_SALT } } } as AuthenticationExtensionsClientInputs,
       ...(rpId ? { rpId } : {}),
       ...options,
     },
-  }) as Promise<PublicKeyCredential | null>;
+  } as PublicKeyCredentialRequestOptions);
 
 /* Single flight.
  *
@@ -181,12 +192,13 @@ async function doUnlock(): Promise<Owner> {
        fresh one in its place, which is the "it makes me a new wallet every time" bug.
        Omitting allowCredentials makes this discoverable: it asks the platform whether it
        already holds one for us rather than assuming it does not. */
-    let found: PublicKeyCredential | null = null;
+    let found: PasskeyResult | null = null;
     try {
       /* `hints` biases WebAuthn Level 3 browsers toward her own device instead of leading
          with the QR and Bluetooth chooser. A harmless no-op where unrecognised. */
       found = await getAssertion({ hints: ['client-device'] } as Partial<PublicKeyCredentialRequestOptions>);
-    } catch {
+    } catch (e) {
+      diag('passkey', `lookup refused: ${errName(e)}`);
       /* Nothing resident, or she dismissed this first prompt. A genuine first time device, so
          falling through to enroll() below is correct. */
     }
@@ -213,14 +225,21 @@ async function doUnlock(): Promise<Owner> {
     }
 
     let made: Enrolled;
-    try { made = await enroll(); } catch { return unlockLocal(); }
+    try { made = await enroll(); } catch (e) {
+      diag('passkey', `create refused: ${errName(e)}`);
+      return unlockLocal();
+    }
+    diag('passkey', `created, secret ${made.prfEnabled ? 'available' : 'NOT available'}`);
     if (made.owner) return made.owner;
   }
 
   /* The authenticator told us at enrol that it cannot do PRF. Use the device key directly and
      do not prompt for a biometric only to substitute a different key when it fails. That
      mismatch between a PRF unlock and a fallback unlock was the recovery bug. */
-  if (localStorage.getItem(LS_PRF) === '0') return unlockLocal();
+  if (localStorage.getItem(LS_PRF) === '0') {
+    diag('passkey', 'this phone said at enrolment it cannot give the secret; using the device key');
+    return unlockLocal();
+  }
 
   const credId = localStorage.getItem(LS_CRED);
   try {
@@ -234,7 +253,7 @@ async function doUnlock(): Promise<Owner> {
     /* The credential we remember is gone: she deleted her passkeys, or changed browser or
        profile. Clearing LS_CRED blindly would be the duplicate identity bug again, so ask the
        platform first. If anything still exists, that one is real. */
-    let recovered: PublicKeyCredential | null = null;
+    let recovered: PasskeyResult | null = null;
     try {
       recovered = await getAssertion({ hints: ['client-device'] } as Partial<PublicKeyCredentialRequestOptions>);
     } catch { /* nothing resident, or dismissed */ }

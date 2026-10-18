@@ -78,6 +78,20 @@ const config: CapacitorConfig = {
        Seeker owner cannot connect the wallet her phone shipped with. */
     appendUserAgent: 'Solana Mobile Web Shell',
   },
+
+  plugins: {
+    /* The overnight check: wakes about every fifteen minutes while the app is closed and asks the
+       bridge whether any brand has asked about her since she last looked. See
+       public/runners/answers.js and src/lib/alerts.ts. */
+    BackgroundRunner: {
+      label: 'app.myoira.answers',
+      src: 'runners/answers.js',
+      event: 'checkAnswers',
+      repeat: true,
+      interval: 15,
+      autoStart: true,
+    },
+  },
 };
 
 export default config;

@@ -7,6 +7,8 @@ import {
 import { UserProfile, SeasonPalette } from '../types';
 import type { ToastMessage } from './Toast';
 import { DeleteEverything } from './DeleteEverything';
+import { DiagnosticsSheet } from './DiagnosticsSheet';
+import { alertsWanted, setAlertsWanted } from '../lib/alerts';
 
 interface NavigationMenuDrawerProps {
   isOpen: boolean;
@@ -93,13 +95,24 @@ export const NavigationMenuDrawer: React.FC<NavigationMenuDrawerProps> = ({
   /* Two switches, because a woman looking for settings expects to find some. They are the
      two that are genuinely hers to set and that nothing else in the app owns. */
   const [nightNudges, setNightNudges] = useState(true);
-  const [morningNote, setMorningNote] = useState(true);
+  /* Wired to the overnight notifications in the Android app. See src/lib/alerts.ts. */
+  const [morningNote, setMorningNote] = useState(alertsWanted);
+  /* Five taps on the build number inside three seconds open the diagnostics panel. */
+  const [diagOpen, setDiagOpen] = useState(false);
+  const [taps, setTaps] = useState<number[]>([]);
+  const tapBuild = () => {
+    const now = Date.now();
+    const recent = [...taps.filter((t) => now - t < 3000), now];
+    if (recent.length >= 5) { setTaps([]); setDiagOpen(true); } else setTaps(recent);
+  };
 
   if (!isOpen) return null;
 
   const go = (fn: () => void) => () => { onClose(); fn(); };
 
   return (
+    <>
+    {diagOpen && <DiagnosticsSheet onClose={() => setDiagOpen(false)} />}
     <AnimatePresence>
       {/* Comes in from the left, under the button that opens it. The cart comes in from the
           right, under the bag. Two drawers sharing one edge is how you end up with one of
@@ -229,7 +242,7 @@ export const NavigationMenuDrawer: React.FC<NavigationMenuDrawerProps> = ({
                 <input
                   type="checkbox"
                   checked={morningNote}
-                  onChange={(e) => setMorningNote(e.target.checked)}
+                  onChange={(e) => { setMorningNote(e.target.checked); void setAlertsWanted(e.target.checked); }}
                   className="w-4 h-4 accent-[#A85578] shrink-0 cursor-pointer"
                 />
               </label>
@@ -270,12 +283,14 @@ export const NavigationMenuDrawer: React.FC<NavigationMenuDrawerProps> = ({
             </p>
             {/* Which build she is actually looking at. Two words to her, and the difference
                 between "the change did not work" and "you are on last week's link". */}
-            <p className="text-[9px] text-[#8A6580]/70 text-center font-mono mt-1">
+            {/* Five quick taps here open the hidden diagnostics panel. */}
+            <p onClick={tapBuild} className="text-[9px] text-[#8A6580]/70 text-center font-mono mt-1 select-none">
               build {typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'dev'}
             </p>
           </div>
         </motion.div>
       </div>
     </AnimatePresence>
+    </>
   );
 };

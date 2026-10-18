@@ -129,6 +129,17 @@ export const SCAN_COPY = {
   chips: ['On your phone', 'Never uploaded'] as const,
 };
 
+/* When the scan has been stuck long enough that waiting longer won't help. Each one names what
+   is in the way and what to do about it, and the buttons under it do the rest. */
+export const STUCK_COPY = {
+  noFace: "I can't find your face yet. Hold me at arm's length, face the light, and keep your whole face in the frame.",
+  light: "This light keeps getting in my way. A window in the day works best, then tap Start over.",
+  check: "We keep missing each other on the blink and the turn. Go slow, one at a time, and I'll catch it.",
+  noPicture: "Your camera's on but I'm not getting a picture from it. Let's give it a fresh start.",
+  startOver: 'Start over',
+  restart: 'Restart camera',
+};
+
 /* The quick check before her colours are read. Friendly and short, and never "prove you're
    real" at her: she's being asked to do two little things, not accused of anything. */
 export const LIVE_COPY = {

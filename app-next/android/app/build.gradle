@@ -17,8 +17,8 @@ android {
          *
          * It also has to be signed with the TWA's existing key, alias `oira`. A fresh key
          * produces an app Play will not accept over the old one at any version. */
-        versionCode 15
-        versionName "1.2.9"
+        versionCode 20
+        versionName "1.4.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -37,6 +37,7 @@ android {
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+		dirs '../../node_modules/@capacitor/background-runner/android/src/main/libs', 'libs'
     }
 }
 
@@ -47,6 +48,10 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation "androidx.webkit:webkit:$androidxWebkitVersion"
     implementation "androidx.biometric:biometric:1.1.0"
+    // Passkeys asked of Android directly; see OiraPasskeyPlugin. play-services-auth is the
+    // provider that reaches Google Password Manager on phones before Android 14.
+    implementation "androidx.credentials:credentials:1.5.0"
+    implementation "androidx.credentials:credentials-play-services-auth:1.5.0"
     implementation project(':capacitor-android')
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"

@@ -17,12 +17,15 @@
  * came here about her skin.
  */
 
-import { unlockLocal, unlockOwner, reset as resetCustody, prfSupported } from './custody';
+import { unlockLocal, unlockOwner, reset as resetCustody, prfSupported, hasEnrolled } from './custody';
+import { loadProof } from './proof';
 import { connect, walletOwner, disconnect, isSupported as walletSupported, getCached } from './wallet';
 import { clear as clearResiduals } from './residual';
 import type { Owner } from './owner';
 import { isNativeApp } from './native';
-import { initNativeBiometric, nativeBiometricAvailable, confirmWithBiometric } from './biometric';
+import { initNativeBiometric, nativeBiometricAvailable, nativeBiometricReady, confirmWithBiometric } from './biometric';
+import { diag } from './diag';
+import { forgetAnswerAlerts } from './alerts';
 
 export type { Owner };
 
@@ -50,14 +53,40 @@ export async function boot(): Promise<Owner> {
  * no longer uses.
  */
 export async function useFingerprint(): Promise<Owner> {
-  /* Inside the app on a phone whose WebView has no passkeys, unlockOwner would carry on with
-     the device key and no prompt at all. Android's own fingerprint sheet asks first instead, so
-     scanning and sealing always begin with her fingerprint, as they do on the web. */
-  if (isNativeApp() && !prfSupported() && nativeBiometricAvailable()) {
-    await confirmWithBiometric('Is it you?', 'Your fingerprint keeps your reading yours');
+  /* Inside the app, a passkey is tried first, and on many phones the WebView cannot do one:
+     no WebAuthn in that WebView, or no PRF from the authenticator. Both quietly land on the
+     device key, with no prompt at all, which on the A13 meant "Use my fingerprint" went straight
+     to the camera. So the check happens after the unlock, on what she actually got: if it is the
+     device key rather than a passkey, Android's own fingerprint sheet asks before anything else
+     happens. Cancelling it stops here; nothing opens. */
+  const native = isNativeApp() && await nativeBiometricReady();
+  /* Already sealed on the device key, before the app could make passkeys. A passkey is a
+     different key and so a different address, and switching now would strand that seal. She
+     keeps the identity her seal belongs to, behind her fingerprint; moving it to a passkey is
+     a step of its own, never a side effect of tapping this. */
+  if (isNativeApp() && loadProof() && !hasEnrolled()) {
+    diag('identity', 'sealed on the device key, keeping it');
+    if (native) await askFingerprint();
+    current = await unlockLocal();
+    return current;
   }
-  current = await unlockOwner();
+  if (native && !prfSupported()) await askFingerprint();
+  const owner = await unlockOwner();
+  diag('identity', `unlocked with ${owner.assurance === 'passkey' ? 'a passkey' : 'the device key'}`);
+  if (native && prfSupported() && owner.assurance !== 'passkey') await askFingerprint();
+  current = owner;
   return current;
+}
+
+async function askFingerprint(): Promise<void> {
+  diag('identity', 'asking for fingerprint');
+  try {
+    await confirmWithBiometric('Is it you?', 'Your fingerprint keeps your reading yours');
+    diag('identity', 'fingerprint confirmed');
+  } catch (e) {
+    diag('identity', `fingerprint not given: ${(e as Error)?.message || 'cancelled'}`);
+    throw new Error("I need your fingerprint before we start, love. Tap again whenever you're ready.");
+  }
 }
 
 /** The wallet door. Also behind a tap. `name` comes from listWallets(). */
@@ -100,6 +129,8 @@ export async function deleteEverything(): Promise<void> {
   try { disconnect(); } catch { /* nothing connected */ }
   try { resetCustody(); } catch { /* nothing stored */ }
   try { clearResiduals(); } catch { /* nothing stored */ }
+  /* The overnight check keeps its own small store outside the page, so it is told to forget. */
+  try { await forgetAnswerAlerts(); } catch { /* not the Android app */ }
 
   try {
     localStorage.removeItem('oira_device_key');

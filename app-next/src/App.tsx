@@ -4,7 +4,7 @@ import { Sparkles, ShoppingBag, ShieldCheck, Moon, Disc3, Palette, Users, ArrowL
 import confetti from 'canvas-confetti';
 import type { SealedReading } from './lib/confidence';
 import { IdentitySheet } from './components/IdentitySheet';
-import { boot, currentOwner, type Owner } from './lib/identity';
+import { boot, currentOwner, connectedWalletAddress, type Owner } from './lib/identity';
 import { warmUp } from './lib/scan';
 import { load as loadHer, save as saveHer, hasBeenReadBefore } from './lib/remember';
 import { sealViaDevice } from './lib/seal';
@@ -68,6 +68,8 @@ import { activate as activateLocalModel, modelState } from './lib/localModel';
 import { sampleBrandQuery, type HerRules } from './lib/brandsim';
 import { undertoneCode, seasonCode } from './lib/traitcodes';
 import { fetchMyAnswers, type MyAnswer } from './lib/answers';
+import { enableAnswerAlerts } from './lib/alerts';
+import { diag } from './lib/diag';
 import { saveRulesToPalette } from './lib/rulesync';
 
 interface CartItemEntry {
@@ -248,17 +250,21 @@ export default function App() {
          saw a sealed screen with nothing on it. */
       const p = proofFrom(done);
       if (p) { saveProof(p); setProof(p); }
+      diag('seal', `sealed (${owner.assurance === 'passkey' ? 'passkey' : 'device key'})${p ? '' : ', no receipt in the reply'}`);
       setProfile((prev) => ({ ...prev, isSealed: true }));
       setShowSeal(true);
+      afterSeal();
     } catch (e) {
       const msg = (e as Error)?.message || '';
       /* Her reading is locked to her Palette at the first seal, and a re-seal has to match it.
          When it does not (a new scan read her a step differently, or she sealed before the
          trait codes were corrected) the program refuses the change, and her Palette is still
          sealed exactly as it was. That is not a failure, so it is not shown as one. */
+      diag('seal', `seal did not go through: ${msg.slice(0, 140) || 'no message'}`);
       if (/Custom"?:\s*6005|BindingMismatch|do not match the published commitment/i.test(msg)) {
         setProfile((prev) => ({ ...prev, isSealed: true }));
         say({ title: SEAL_KEPT.title, body: SEAL_KEPT.body, tone: 'good' });
+        afterSeal();
       } else {
         setSealError(msg || SEAL_FAIL.generic);
       }
@@ -417,12 +423,26 @@ export default function App() {
   /* Her real answers, fetched when she opens the night screen rather than at launch: on the
      wallet path the signature is a prompt in her wallet, and that should follow something she
      did. */
+  /* Once she is sealed, brands can ask about her, so this is when the app asks whether it may
+     tell her. Fetching her answers brings the token the overnight check needs and, in the
+     Android app, Android's notification prompt. On the passkey and device paths the signature
+     is silent; a wallet would pop up a signing request out of nowhere, so wallets wait for
+     the night screen as before. */
+  const afterSeal = () => {
+    if (connectedWalletAddress()) return;
+    window.setTimeout(() => loadMyAnswers(), 1500);
+  };
+
   const loadMyAnswers = () => {
     const o = owner ?? currentOwner();
     if (!o) return;
     setAnswersState('loading');
     fetchMyAnswers(o, isNativeApp() ? BRIDGE_ORIGIN : '')
-      .then((r) => { setMyAnswers(r); setAnswersState('idle'); })
+      .then((r) => {
+        setMyAnswers(r);
+        setAnswersState('idle');
+        void enableAnswerAlerts(r.notifyToken, r.answers.reduce((m, a) => Math.max(m, a.at), 0));
+      })
       .catch(() => setAnswersState('failed'));
   };
   useEffect(() => {
@@ -939,7 +959,12 @@ export default function App() {
         onOpenProfile={() => setIsProfileOpen(true)}
         earned={nightRules.totalEarned}
         answered={brandLogs.length}
-        onOpenBoard={() => setIsBrandBoardOpen(true)}
+        onOpenBoard={() => {
+          setIsBrandBoardOpen(true);
+          /* Who asked is the question her answers answer, so they load here too, and with them
+             the overnight alerts. Wallets wait for the night screen, as above. */
+          if (profile.isSealed && myAnswers === null && answersState === 'idle' && !connectedWalletAddress()) loadMyAnswers();
+        }}
         onOpenPrivacy={() => setIsPrivacyOpen(true)}
         onOpenOnDevice={() => setIsOnDeviceOpen(true)}
         /* Earnings arrive as a notification rather than another card on the home page.

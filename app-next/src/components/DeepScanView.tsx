@@ -5,8 +5,9 @@ import {
   type Finding, type ScanFrame, scanError, scanStatus, scanStage
 } from '../lib/scan';
 import {
-  HEADWEAR_NUDGE, HEADWEAR_PROMPT, LIGHT_NUDGE, LIGHT_WHY, LIVE_COPY, SCAN_COPY, SCAN_STAGES,
+  HEADWEAR_NUDGE, HEADWEAR_PROMPT, LIGHT_NUDGE, LIGHT_WHY, LIVE_COPY, SCAN_COPY, SCAN_STAGES, STUCK_COPY,
 } from '../lib/voice';
+import { diag } from '../lib/diag';
 import { Liveness, type LiveStep } from '../lib/liveness';
 import { GoldenFigBranch } from './GoldenFigBranch';
 import { openCamera, type CaptureSession, type CapturePath } from '../lib/capture';
@@ -29,6 +30,16 @@ const HOLD_MS = 3200;
 const READ_GAP_MS = isLowEnd() ? 120 : 0;
 
 const SLOW_MS = 12_000;
+/* How long the scan waits before it stops hoping and says what is wrong. No face at all is
+   quick to call; being held up by the light or the blink check gets longer, because those
+   usually sort themselves out. A camera with no picture gets one quiet restart first. */
+const NO_FACE_MS = 10_000;
+const BLOCKED_MS = 25_000;
+const FIRST_FRAME_MS = 4_000;
+/* How long the light has to stay bad before it counts, so a light on the line does not flicker
+   the hold on and off. */
+const LIGHT_SETTLE_MS = 700;
+type Stuck = 'noFace' | 'light' | 'check' | 'noPicture';
 
 /* Where the camera picture actually sits on screen. The video is shown with object-fit:
    cover, so when the camera's frame is a different shape from the screen it is scaled up and
@@ -62,7 +73,21 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
   const samplesRef = useRef<ScanFrame[]>([]);
   const lastSampleRef = useRef(0);
 
-  const [phase, setPhase] = useState<'warming' | 'looking' | 'reading' | 'denied' | 'unsupported'>('warming');
+  const [phase, setPhase] = useState<'warming' | 'looking' | 'reading' | 'denied' | 'unsupported' | 'stalled'>('warming');
+  /* What is holding the scan up, once it has held it up for long enough to say so. */
+  const [stuck, setStuck] = useState<Stuck | null>(null);
+  const stuckRef = useRef<Stuck | null>(null);
+  const noFaceSinceRef = useRef<number | null>(null);
+  const blockedSinceRef = useRef<number | null>(null);
+  const lightBadSinceRef = useRef<number | null>(null);
+  const lightBlockedSinceRef = useRef<number | null>(null);
+  const autoRetriedRef = useRef(false);
+  const markStuck = useCallback((next: Stuck | null) => {
+    if (stuckRef.current === next) return;
+    stuckRef.current = next;
+    setStuck(next);
+    if (next) diag('scan', `stuck: ${next}`);
+  }, []);
   /* Which half of the warm up is still out, so a slow phone says what it is waiting on
      rather than spinning with nothing to show. Logged too, for anyone debugging a device. */
   const [waitingOn, setWaitingOn] = useState<'camera' | 'eyes' | null>('camera');
@@ -235,13 +260,15 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
 
     /* Read at most this often. A phone that cannot finish a reading in one frame used to
        queue them up, so the mesh drew where her face had been rather than where it is. */
-    if (now - lastReadRef.current < READ_GAP_MS) {
+    /* The gap is for the colour hold. During the blink and the turn every frame counts, and a
+       slow phone already reads few enough of them. */
+    if (liveRef.current.passed && now - lastReadRef.current < READ_GAP_MS) {
       rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
       return;
     }
     lastReadRef.current = now;
 
-    const frame = readFrame(video, scratchRef.current, now);
+    const frame = readFrame(video, scratchRef.current, now, !liveRef.current.passed);
     latestRef.current = frame;
     paint(frame, now);
 
@@ -256,6 +283,8 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
         setFindings(frame.findings);
       }
       setPhase('reading');
+      noFaceSinceRef.current = null;
+      if (stuckRef.current === 'noFace') markStuck(null);
 
       /* Camera control first, when it is on: the hold does not start until exposure has been
          metered off the whites of her eyes and locked, or control has given up and the scan
@@ -271,28 +300,19 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
         return;
       }
 
-      /* The gate. A reading taken under a warm bulb is not a slightly worse reading, it is
-         a different woman's colouring, so the hold resets rather than creeping forward and
-         finishing on something we would have to walk back. Her hair being tucked away is
-         the softer of the two: it does not corrupt the skin reading, so it is a nudge
-         while the clock keeps running. */
+      /* The light. A reading taken under a warm bulb is not a slightly worse reading, it is
+         a different woman's colouring, so the colour hold resets rather than creeping forward.
+         Two things changed after the A13: a light sitting right on the line used to flip
+         between good and bad from one frame to the next, so it now has to stay bad for a
+         moment before it counts; and it only guards the colour hold. The blink and turn
+         below do not care about colour and run whatever the light. Her hair being tucked
+         away is a nudge only. */
       const light = frame.light;
-      const lightBad = light && !light.ok ? LIGHT_NUDGE[light.verdict] ?? null : null;
+      const lightNow = light && !light.ok ? LIGHT_NUDGE[light.verdict] ?? null : null;
+      if (!lightNow) lightBadSinceRef.current = null;
+      else if (lightBadSinceRef.current == null) lightBadSinceRef.current = now;
+      const lightBad = lightNow && lightBadSinceRef.current != null && now - lightBadSinceRef.current >= LIGHT_SETTLE_MS ? lightNow : null;
       setNudge(lightBad ?? (frame.hairLikelyCovered ? HEADWEAR_NUDGE : null));
-
-      if (lightBad) {
-        /* The hold restarts, and so does the sample set: readings taken under a light we
-           have just rejected are not worth keeping to average against good ones. */
-        heldSinceRef.current = null;
-        samplesRef.current = [];
-        setProgress(0);
-        /* The light comes first. The check waits, so its prompt waits too rather than asking
-           for a blink under a light that is about to be rejected anyway. */
-        setLivePrompt(null);
-        setLiveNote(null);
-        rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
-        return;
-      }
 
       /* Liveness, before the hold. Nothing read while she blinks or turns is kept. */
       const live = liveRef.current;
@@ -308,10 +328,14 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
         liveStepRef.current = live.step;
         setLivePrompt(live.passed ? null : live.step === 'blink' ? LIVE_COPY.blink : live.turned ? LIVE_COPY.back : LIVE_COPY.turn);
         if (!live.passed) {
+          if (blockedSinceRef.current == null) blockedSinceRef.current = now;
+          else if (now - blockedSinceRef.current > BLOCKED_MS) markStuck('check');
           rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
           return;
         }
-      } else if (!live.stillSameFace(frame)) {
+        blockedSinceRef.current = null;
+        if (stuckRef.current === 'check') markStuck(null);
+      } else if (!live.stillSameFace(frame, now)) {
         /* The face jumped after the check passed. Whoever is there now has not done it. */
         live.reset();
         liveStepRef.current = live.step;
@@ -323,14 +347,27 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
         return;
       }
 
+      /* Now the light counts. The hold restarts under a light that has stayed bad, and so does
+         the sample set: readings taken under it are not worth averaging against good ones. */
+      if (lightBad) {
+        if (lightBlockedSinceRef.current == null) lightBlockedSinceRef.current = now;
+        else if (now - lightBlockedSinceRef.current > BLOCKED_MS) markStuck('light');
+        heldSinceRef.current = null;
+        samplesRef.current = [];
+        setProgress(0);
+        rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
+        return;
+      }
+      lightBlockedSinceRef.current = null;
+      if (stuckRef.current === 'light') markStuck(null);
+
       if (heldSinceRef.current == null) {
         heldSinceRef.current = now;
         samplesRef.current = [];
       }
-
       /* About ten a second. More does not make the median better and it does make the
          phone warmer. */
-      if (now - lastSampleRef.current > 95) {
+      if (now - lastSampleRef.current > 95 && !lightNow) {
         lastSampleRef.current = now;
         samplesRef.current.push(frame);
       }
@@ -353,6 +390,7 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
         /* `controlled` only when the camera itself reported the lock. */
         const report = controlRef.current?.report();
         if (report && report.phase !== 'off') console.info('[scan] camera control', report.phase, report.note);
+        diag('scan', `reading done (${captureRef.current})`);
         onDone(consolidate(samplesRef.current, frame, report?.locked ? 'controlled' : captureRef.current), still);
         return;
       }
@@ -362,6 +400,9 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
       setProgress(0);
       setNudge(null);
       setPhase('looking');
+      blockedSinceRef.current = null;
+      if (noFaceSinceRef.current == null) noFaceSinceRef.current = now;
+      else if (now - noFaceSinceRef.current > NO_FACE_MS) markStuck('noFace');
       if (liveRef.current.passed || liveRef.current.step !== liveStepRef.current) setLiveNote(null);
       liveRef.current.lost();
       liveStepRef.current = liveRef.current.step;
@@ -369,7 +410,7 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
     }
 
     rafRef.current = requestAnimationFrame((t) => tickRef.current(t));
-  }, [onDone, paint]);
+  }, [onDone, paint, markStuck]);
   const tickRef = useRef(tick);
   tickRef.current = tick;
 
@@ -378,7 +419,14 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
     let cancelled = false;
 
     (async () => {
+      noFaceSinceRef.current = null;
+      blockedSinceRef.current = null;
+      lightBadSinceRef.current = null;
+      lightBlockedSinceRef.current = null;
+      stuckRef.current = null;
+      setStuck(null);
       if (!navigator.mediaDevices?.getUserMedia) {
+        diag('scan', 'no getUserMedia in this browser');
         setPhase('unsupported');
         return;
       }
@@ -389,7 +437,7 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
       setSlow(false);
       const slowTimer = setTimeout(() => { if (!cancelled) setSlow(true); }, SLOW_MS);
       const warming = warmUp().then((ok) => {
-        console.info('[scan] models ready', ok, Math.round(performance.now() - t0), 'ms');
+        diag('scan', `models ${ok ? 'ready' : 'failed'} in ${Math.round(performance.now() - t0)} ms`);
         return ok;
       });
       let session: CaptureSession;
@@ -398,13 +446,14 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
            when it is switched on, takes over that stream below. Which path she got travels
            with the sealed reading. See src/lib/capture.ts and src/lib/camera-control.ts. */
         session = await openCamera();
-        console.info('[scan] camera open', session.path, session.locked ? 'locked' : 'unlocked', Math.round(performance.now() - t0), 'ms');
+        diag('scan', `camera open (${session.path}, ${session.locked ? 'locked' : 'unlocked'}) in ${Math.round(performance.now() - t0)} ms`);
         if (!cancelled) setWaitingOn('eyes');
         stream = session.stream;
         captureRef.current = session.path;
         controlRef.current = new CameraControl(stream, cameraControlEnabled());
-      } catch {
+      } catch (e) {
         clearTimeout(slowTimer);
+        diag('scan', `camera refused: ${(e as Error)?.name || 'error'}`);
         if (!cancelled) setPhase('denied');
         return;
       }
@@ -415,7 +464,39 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
       const video = videoRef.current;
       if (video) {
         video.srcObject = stream;
-        await video.play().catch(() => {});
+        /* play() itself can wait for ever on a camera that never sends a frame, so it gets
+           the same budget as the frame check rather than holding everything up. */
+        await Promise.race([video.play().catch(() => {}), new Promise((r) => setTimeout(r, FIRST_FRAME_MS))]);
+        /* Some phones hand over a camera that never sends a picture. Wait for real frames
+           before going on; if none come, restart it once quietly, then say so. */
+        const firstFrame = await new Promise<boolean>((resolve) => {
+          const until = performance.now() + FIRST_FRAME_MS;
+          let lastTime = -1;
+          const check = () => {
+            if (cancelled) return resolve(false);
+            const moving = video.currentTime > 0 && video.currentTime !== lastTime && lastTime >= 0;
+            lastTime = video.currentTime;
+            if (video.videoWidth > 0 && video.readyState >= 2 && moving) return resolve(true);
+            if (performance.now() > until) return resolve(false);
+            setTimeout(check, 200);
+          };
+          check();
+        });
+        if (cancelled) return;
+        if (!firstFrame) {
+          clearTimeout(slowTimer);
+          stream.getTracks().forEach((t) => t.stop());
+          if (!autoRetriedRef.current) {
+            autoRetriedRef.current = true;
+            diag('scan', 'camera sent no picture, restarting it once');
+            setAttempt((n) => n + 1);
+            return;
+          }
+          diag('scan', 'camera sent no picture after a restart');
+          setPhase('stalled');
+          markStuck('noPicture');
+          return;
+        }
       }
       const ok = await warming;
       clearTimeout(slowTimer);
@@ -423,6 +504,7 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
       setWaitingOn(null);
       setSlow(false);
       if (!ok) {
+        diag('scan', `face models could not load: ${scanError() || 'unknown'}`);
         setPhase('unsupported');
         return;
       }
@@ -443,6 +525,30 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
      through a ref instead. */
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt]);
+
+  /* The two ways out of a stuck scan. Starting over keeps the camera and clears everything the
+     scan was counting; restarting the camera opens it again from nothing. */
+  const startOver = () => {
+    diag('scan', 'start over');
+    liveRef.current.reset();
+    liveStepRef.current = liveRef.current.step;
+    heldSinceRef.current = null;
+    samplesRef.current = [];
+    noFaceSinceRef.current = null;
+    blockedSinceRef.current = null;
+    lightBadSinceRef.current = null;
+    lightBlockedSinceRef.current = null;
+    setProgress(0);
+    setLiveNote(null);
+    markStuck(null);
+  };
+  const restartCamera = () => {
+    diag('scan', 'restart camera');
+    cancelAnimationFrame(rafRef.current);
+    markStuck(null);
+    setPhase('warming');
+    setAttempt((n) => n + 1);
+  };
 
   return (
     <div className="absolute inset-0 bg-night text-moon flex flex-col overflow-hidden">
@@ -506,6 +612,8 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
             ? SCAN_COPY.denied
             : phase === 'unsupported'
             ? SCAN_COPY.unsupported
+            : phase === 'stalled'
+            ? STUCK_COPY.noPicture
             : phase === 'warming'
             ? (slow ? (waitingOn === 'camera' ? SCAN_COPY.slowCamera : SCAN_COPY.slowEyes) : SCAN_COPY.warming)
             : phase === 'looking'
@@ -561,6 +669,28 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
           </p>
         )}
 
+        {/* Stuck long enough that waiting won't fix it: say what is in the way, and offer the
+            way out. */}
+        {stuck && (
+          <div className="relative z-10 mt-3">
+            {stuck !== 'noPicture' && (
+              <p className="text-[12px] leading-snug text-gold max-w-[260px] mx-auto">{STUCK_COPY[stuck]}</p>
+            )}
+            <div className="flex gap-2 justify-center mt-2.5">
+              {stuck !== 'noPicture' && (
+                <button type="button" onClick={startOver}
+                  className="text-[12px] px-4 py-2 rounded-full bg-moon text-night font-semibold cursor-pointer active:scale-[0.98]">
+                  {STUCK_COPY.startOver}
+                </button>
+              )}
+              <button type="button" onClick={restartCamera}
+                className="text-[12px] px-4 py-2 rounded-full border border-moon/30 text-moon/90 cursor-pointer active:scale-[0.98]">
+                {STUCK_COPY.restart}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Standing from the moment the screen opens, because asking beforehand is worth
             more than telling her afterwards that the scan was of a wig. */}
         {(phase === 'looking' || phase === 'reading') && !nudge && (
@@ -580,7 +710,7 @@ export const DeepScanView: React.FC<DeepScanViewProps> = ({ onClose, onDone }) =
 
         {/* No camera, no reading, and no dead end either. She came in through the entrance
             and the entrance owes her a way out of this screen that is not the back button. */}
-        {(phase === 'denied' || phase === 'unsupported') && (
+        {(phase === 'denied' || phase === 'unsupported' || phase === 'stalled') && (
           <button
             onClick={onClose}
             className="relative z-10 w-full mt-4 rounded-full bg-moon text-night py-3 text-[13px] font-semibold cursor-pointer transition-transform active:scale-[0.98]"

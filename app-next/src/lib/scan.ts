@@ -385,7 +385,10 @@ function copyFrame(video: HTMLVideoElement): HTMLCanvasElement | null {
 export function readFrame(
   video: HTMLVideoElement,
   scratch: HTMLCanvasElement,
-  timestampMs: number
+  timestampMs: number,
+  /* During the blink and turn check, hair is not read: nothing from those frames is kept, and
+     on a slow phone the time is better spent catching the next frame. */
+  liveCheck = false
 ): ScanFrame {
   const empty: ScanFrame = {
     landmarks: null, findings: [], hairCoverage: 0, hairLikelyCovered: false,
@@ -441,7 +444,7 @@ export function readFrame(
      stands in between. Hair does not change in a quarter of a second, and running both
      models on every frame is most of why the mesh trailed her face on a Galaxy A13. */
   hairTurn = (hairTurn + 1) % (isLowEnd() ? 4 : 1);
-  if (hairTurn !== 0 && lastHair) {
+  if (liveCheck || (hairTurn !== 0 && lastHair)) {
     hair = lastHair;
   } else {
   /* Null until the second model lands, which is a normal early-frame state rather than an

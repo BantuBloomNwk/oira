@@ -26,14 +26,21 @@ const SHUT_MIN = 0.45;
 const OPEN_MARGIN = 0.15;    // back within this of her baseline to count as open again
 const TURN = 0.12;           // how far the head has to turn, in face widths
 const BACK = 0.06;           // close enough to facing the camera again
-const MAX_SHIFT = 0.15;      // between two readings, in frame widths
-const MAX_GROWTH = 1.4;      // between two readings, as a size ratio
+const MAX_SHIFT = 0.15;      // between two readings ~100 ms apart, in frame widths
+const MAX_GROWTH = 1.4;      // between two readings ~100 ms apart, as a size ratio
+/* A slow phone reads the face three or four times a second, and a head turn moves the face
+   further between two of those readings than between two at ten a second. The allowance grows
+   with the gap, up to a cap, so a normal turn on a Galaxy A13 is not mistaken for a new face,
+   while a photo swapped in still jumps well past it. */
+const GAP_UNIT_MS = 100;
+const GAP_SCALE_MAX = 2.2;
 
 export class Liveness {
   private order: LiveStep[] = [];
   private index = 0;
   private stepStarted = 0;
   private lastBox: LiveInput['box'] = null;
+  private lastAt = 0;
   // blink
   private opens: number[] = [];
   private sawShut = false;
@@ -53,6 +60,7 @@ export class Liveness {
     this.index = 0;
     this.stepStarted = 0;
     this.lastBox = null;
+    this.lastAt = 0;
     this.clearStep();
   }
 
@@ -81,23 +89,27 @@ export class Liveness {
 
   /* Watches the face after the check has passed, until the reading is done. Returns false if
      it jumped, and the caller starts the check again. */
-  stillSameFace(f: LiveInput): boolean {
-    return this.continuous(f.box);
+  stillSameFace(f: LiveInput, now?: number): boolean {
+    return this.continuous(f.box, now);
   }
 
-  private continuous(box: LiveInput['box']): boolean {
+  private continuous(box: LiveInput['box'], now?: number): boolean {
     if (!box) return false;
-    const prev = this.lastBox;
+    const prev = this.lastBox, prevAt = this.lastAt;
     this.lastBox = box;
+    if (now != null) this.lastAt = now;
     if (!prev) return true;
+    const gap = now != null && prevAt ? now - prevAt : GAP_UNIT_MS;
+    const k = Math.min(GAP_SCALE_MAX, Math.max(1, gap / GAP_UNIT_MS));
+    const shift = MAX_SHIFT * k, growth = 1 + (MAX_GROWTH - 1) * k;
     const ratio = box.size / prev.size;
-    return Math.abs(box.cx - prev.cx) <= MAX_SHIFT && Math.abs(box.cy - prev.cy) <= MAX_SHIFT
-      && ratio <= MAX_GROWTH && ratio >= 1 / MAX_GROWTH;
+    return Math.abs(box.cx - prev.cx) <= shift && Math.abs(box.cy - prev.cy) <= shift
+      && ratio <= growth && ratio >= 1 / growth;
   }
 
   feed(f: LiveInput, now: number): LiveResult {
     if (this.passed) return 'passed';
-    if (!this.continuous(f.box)) { this.reset(); return 'restarted'; }
+    if (!this.continuous(f.box, now)) { this.reset(); return 'restarted'; }
     if (!this.stepStarted) this.stepStarted = now;
     if (now - this.stepStarted > STEP_MS) { this.reset(); return 'failed'; }
 
@@ -115,7 +127,7 @@ export class Liveness {
   private blink(closed: number | null): boolean {
     if (closed == null) return false;
     if (!this.sawShut) {
-      const base = this.opens.length >= 3 ? Math.min(...this.opens) : null;
+      const base = this.opens.length >= 2 ? Math.min(...this.opens) : null;
       if (base != null && closed >= Math.max(SHUT_MIN, base + SHUT_RISE)) { this.sawShut = true; return false; }
       this.opens.push(closed);
       if (this.opens.length > 12) this.opens.shift();
@@ -130,7 +142,7 @@ export class Liveness {
     if (yaw == null) return false;
     if (this.baseline == null) {
       this.yaws.push(yaw);
-      if (this.yaws.length >= 4) {
+      if (this.yaws.length >= 3) {
         const sorted = [...this.yaws].sort((a, b) => a - b);
         this.baseline = sorted[sorted.length >> 1];
       }

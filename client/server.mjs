@@ -7,6 +7,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { Keypair } from '@solana/web3.js';
 import { sealPalette, sealPaletteRelay, privatePayout, runOffer, privacyProof, postCampaign, matchCampaign, campaignStatus, bridgeStatus, askHer, brandSeedFor, setRulesRelay } from './oira-chain.mjs';
 import { registerWoman, listWomen, addBrief, getBrief, listBriefs, updateBrief, addAsk, answersFor } from './brief-store.mjs';
+import { notifyToken, ownerOfToken } from './notify.mjs';
 import nacl from 'tweetnacl';
 import { PublicKey } from '@solana/web3.js';
 import { recordError, alertBridge, monitorStats } from './oira-monitor.mjs';
@@ -408,8 +409,24 @@ app.get('/api/me/answers', (req, res) => {
       payout: brief.payout, outcome: ask.outcome, reason: ask.reason || null,
       amount: ask.outcome === 'yes' ? ask.amount || 0 : 0, explorer: ask.outcome === 'yes' ? ask.explorer || null : null, at: ask.at,
     }));
-    res.json({ answers, earned: answers.reduce((t, a) => t + a.amount, 0) });
+    res.json({ answers, earned: answers.reduce((t, a) => t + a.amount, 0), notifyToken: notifyToken(owner) });
   } catch (e) { console.error('me/answers', e.message); res.status(500).json({ error: 'could not load answers' }); }
+});
+
+// ---- Overnight alerts: how many new answers since a time, for the holder of her read token ----
+// The phone's background check calls this with the token it got from /api/me/answers. It learns
+// a count and the time of the newest answer, nothing else. See notify.mjs.
+const newsSeen = new Map();
+app.get('/api/me/news', (req, res) => {
+  const owner = ownerOfToken(String(req.headers['x-oira-notify'] || ''));
+  if (!owner) return res.status(401).json({ error: 'unknown token' });
+  const now = Date.now();
+  const recent = (newsSeen.get(owner) || []).filter((t) => now - t < 3_600_000);
+  if (recent.length >= 30) return res.status(429).json({ error: 'too many checks' });
+  newsSeen.set(owner, [...recent, now]);
+  const since = Number(req.query.since) || 0;
+  const fresh = answersFor(owner).filter(({ ask }) => ask.at > since);
+  res.json({ count: fresh.length, latest: fresh.reduce((m, { ask }) => Math.max(m, ask.at), since) });
 });
 
 // ---- RELAYED SEAL over WebSocket: her owner key stays on her device ----

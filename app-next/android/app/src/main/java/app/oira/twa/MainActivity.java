@@ -27,6 +27,9 @@ public class MainActivity extends BridgeActivity {
         // Android's own fingerprint sheet, for phones where passkeys are not available in the
         // WebView. Registered before the bridge starts. See OiraBiometricPlugin.
         registerPlugin(OiraBiometricPlugin.class);
+        // Passkeys through Credential Manager, since the WebView refuses them for pages served
+        // from inside the APK. See OiraPasskeyPlugin.
+        registerPlugin(OiraPasskeyPlugin.class);
         super.onCreate(savedInstanceState);
         WebView webView = getBridge().getWebView();
         if (WebViewFeature.isFeatureSupported(WebViewFeature.WEB_AUTHENTICATION)) {

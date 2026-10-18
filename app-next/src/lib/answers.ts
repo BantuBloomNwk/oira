@@ -18,7 +18,7 @@ export interface MyAnswer {
   at: number;
 }
 
-export async function fetchMyAnswers(owner: Owner, bridgeBase: string): Promise<{ answers: MyAnswer[]; earned: number }> {
+export async function fetchMyAnswers(owner: Owner, bridgeBase: string): Promise<{ answers: MyAnswer[]; earned: number; notifyToken?: string }> {
   const time = Date.now();
   const sig = await owner.sign(new TextEncoder().encode(`oira:my-answers:v1\n${owner.address}\n${time}`));
   const r = await fetch(`${bridgeBase}/api/me/answers`, {

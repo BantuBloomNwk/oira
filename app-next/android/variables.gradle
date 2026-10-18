@@ -1,5 +1,5 @@
 ext {
-    minSdkVersion = 23
+    minSdkVersion = 24
     /* 36, not 35, and not by choice.
        androidx.camera 1.6.1 arrives with @capgo/camera-preview 8 and refuses to compile
        against anything lower, which is also what forced the Android Gradle plugin to 8.9.1

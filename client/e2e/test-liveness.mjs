@@ -39,5 +39,24 @@ check('a photo tilted to fake a turn cannot blink', run('turn', [...turn(), ...s
   check('after passing, a different face swapped in is caught', !l.stillSameFace({ eyesClosed: 0.1, yaw: 0.02, box: { cx: 0.5, cy: 0.5, size: 0.7 } })); }
 { let firsts = new Set(); for (let i = 0; i < 40; i++) firsts.add(new Liveness().step); check('the first prompt is random', firsts.size === 2); }
 
+// A slow phone: about three readings a second, as on a Galaxy A13.
+function runSlow(order, frames, gap = 330) {
+  const l = new Liveness(() => (order === 'blink' ? 0.1 : 0.9));
+  let t = 1000, result = 'pending';
+  for (const [e, y, b] of frames) { result = l.feed({ eyesClosed: e, yaw: y, box: b ?? box }, t); t += gap; if (result !== 'pending') break; }
+  return { result, l };
+}
+const moved = (dx) => ({ cx: 0.5 + dx, cy: 0.5, size: 0.4 });
+const slowTurn = [[0.1, 0.02], [0.1, 0.02], [0.1, 0.02], [0.1, 0.18, moved(0.2)], [0.1, 0.04, moved(0.02)]];
+const slowBlink = [[0.1, 0.02], [0.1, 0.02], [0.8, 0.02], [0.1, 0.02]];
+check('slow phone: a turn that moves the face 0.2 between readings passes', runSlow('turn', [...slowTurn, ...slowBlink]).result === 'passed');
+check('slow phone: blink first, then turn, passes in under 3 seconds', (() => { const r = runSlow('blink', [...slowBlink, ...slowTurn]); return r.result === 'passed'; })());
+check('slow phone: a photo swapped in (face doubles in size) is still caught',
+  runSlow('blink', [[0.1, 0.02], [0.1, 0.02], [0.1, 0.02, { cx: 0.5, cy: 0.5, size: 0.9 }]]).result === 'restarted');
+check('slow phone: a jump across the frame is still caught',
+  runSlow('blink', [[0.1, 0.02], [0.1, 0.02], [0.1, 0.02, moved(0.45)]]).result === 'restarted');
+check('fast phone: the old limit still holds between close readings',
+  run('blink', [[0.1, 0.02], [0.1, 0.02, moved(0.2)]]).result === 'restarted');
+
 console.log(failed ? `\n${failed} FAILED` : '\nALL GREEN');
 process.exit(failed ? 1 : 0);

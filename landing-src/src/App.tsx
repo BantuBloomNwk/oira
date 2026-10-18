@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BiometricScanModal } from './components/BiometricScanModal';
 import { ExampleWalletModal } from './components/ExampleWalletModal';
 import { BrandPortalModal } from './components/BrandPortalModal';
@@ -36,6 +36,15 @@ export default function App() {
   // Dynamic earnings calculations
   const simulatedMatches = Math.max(3, Math.round(35 / Math.sqrt(bidFee * 1.6)));
   const totalMonthly = (simulatedMatches * bidFee).toFixed(2);
+
+  // Links into the page (myoira.com/#get-app from the old site, for one) arrive before React has
+  // drawn the section, so the browser finds nothing to jump to. Jump once it is there.
+  useEffect(() => {
+    const id = decodeURIComponent(window.location.hash.slice(1));
+    if (!id) return;
+    const t = window.setTimeout(() => document.getElementById(id)?.scrollIntoView({ block: 'start' }), 80);
+    return () => window.clearTimeout(t);
+  }, []);
 
   // Smooth scroll handler
   const scrollTo = (id: string) => {
@@ -1194,6 +1203,8 @@ export default function App() {
         {/* SECTION 7: SOLANA SEEKER & CALIBRATE CTA                                */}
         {/* ======================================================================= */}
         <section className="relative w-full px-4 sm:px-8 xl:px-16 py-20 lg:py-28 bg-surface-container-low" id="calibrate">
+          {/* The old site's download block was #get-app, and links to it are still out there. */}
+          <span id="get-app" aria-hidden="true" className="block scroll-mt-36" />
           <div className="max-w-[1360px] mx-auto bg-surface-container-lowest rounded-3xl p-8 sm:p-12 lg:p-16 shadow-[0_20px_50px_rgba(56,30,56,0.08)] border border-surface-container/60 flex flex-col lg:flex-row items-center justify-between gap-10">
             <div className="flex flex-col gap-4 max-w-2xl">
               <div className="inline-flex items-center gap-2">

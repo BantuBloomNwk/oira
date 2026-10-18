@@ -1,9 +1,9 @@
-// Oira night-rules proof — her standing rules enforced INSIDE the enclave (current commitment ABI).
+// Oira night-rules proof, her standing rules enforced INSIDE the enclave (current commitment ABI).
 //   Reconciled to the leak-fixed ABI: payout + category are read off the CAMPAIGN, not passed by the
 //   client, and the verdict is computed in-enclave from her sealed, commitment-bound traits.
 //   Setup: init_palette(root)+init_traits → set_night_rules(min_payout=$2, block category 3) →
 //          delegate both → seal private (whitelist agent) → bind real traits.
-//   Then the AGENT runs three ESCROWED, committed offers in the TEE while she's offline — each offer
+//   Then the AGENT runs three ESCROWED, committed offers in the TEE while she's offline, each offer
 //   commits HER shade (so absent a rule it would MATCH), isolating the rule under test:
 //     A) $5 · category 0  -> MATCH (1)
 //     B) $1 · category 0  -> DECLINED, below her floor (2)
@@ -171,7 +171,7 @@ for (const [label, category, perAccept, expect] of cases) {
 
 console.log('\n────────── RESULT ──────────');
 console.log(pass
-  ? 'PASS ✓ — her night rules (min-payout floor + blocked category) enforced INSIDE the enclave, per-offer, while she was offline. Payout + category were read off the escrowed campaign (not client-asserted); below-floor and blocked-category offers were DECLINED on-chain; the qualifying offer matched.'
-  : 'CHECK — a verdict did not match; inspect above.');
+  ? 'PASS ✓, her night rules (min-payout floor + blocked category) enforced INSIDE the enclave, per-offer, while she was offline. Payout + category were read off the escrowed campaign (not client-asserted); below-floor and blocked-category offers were DECLINED on-chain; the qualifying offer matched.'
+  : 'CHECK: a verdict did not match; inspect above.');
 console.log('palette:', `https://explorer.solana.com/address/${palettePda.toBase58()}?cluster=devnet`);
 process.exit(pass ? 0 : 1);

@@ -1,6 +1,6 @@
 // Headless proof of the WebSocket seal relay end-to-end: a node WS client plays the browser
 // device, signing every relayed message with a local keypair. Verifies the same path the
-// real browser (window.OiraCustody) will drive — only the passkey->key leg differs.
+// real browser (window.OiraCustody) will drive, only the passkey->key leg differs.
 import nacl from 'tweetnacl';
 import { Keypair, Connection, PublicKey } from '@solana/web3.js';
 import WebSocket from 'ws';
@@ -28,7 +28,7 @@ ws.on('message', async (raw) => {
     const info = await base.getAccountInfo(new PublicKey(m.palette));
     const ok = info && info.owner.toBase58().startsWith('DELeG') && m.her === device.publicKey.toBase58();
     console.log('  delegated + her==device:', ok);
-    console.log(ok ? '\nALL GREEN — WS relay seals under the device key' : '\nFAILED');
+    console.log(ok ? '\nALL GREEN: WS relay seals under the device key' : '\nFAILED');
     ws.close(); process.exit(ok ? 0 : 1);
   } else if (m.t === 'error') { console.error('\nERROR from bridge:', m.message); ws.close(); process.exit(1); }
 });

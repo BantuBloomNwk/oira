@@ -32,7 +32,7 @@ for (const a of accts) {
 }
 console.log(`2. program-owned base accounts: ${accts.length}  (palettes ${palettes.length}, traits-sized ${traits.length}, other ${other.length})\n`);
 
-// 3. decode a public PaletteVault — prove it is OPAQUE (ciphertext + hash, no plaintext trait fields).
+// 3. decode a public PaletteVault, prove it is OPAQUE (ciphertext + hash, no plaintext trait fields).
 function decodePalette(d) {
   let o = 8; const owner = new PublicKey(d.subarray(o, o + 32)); o += 32;
   const encLen = d.readUInt32LE(o); o += 4; const enc = d.subarray(o, o + encLen); o += encLen;
@@ -64,7 +64,7 @@ if (rep) {
 //    getProgramAccounts(PROGRAM). We also derive each palette's traits PDA and inspect its owner.
 console.log('4. TraitsSession (plaintext traits + salt) exposure on base:');
 console.log('   traits-sized accounts still OWNED BY THE PROGRAM on base:', traits.length,
-  traits.length ? '(these would be undelegated)' : '(none — sealed traits are delegated into the enclave)');
+  traits.length ? '(these would be undelegated)' : '(none, sealed traits are delegated into the enclave)');
 let exposed = 0, protectedN = 0, missing = 0;
 for (const p of palettes.slice(0, 8)) {
   const owner = decodePalette(p.account.data).owner;
@@ -88,7 +88,7 @@ console.log(`   delegated/empty (protected): ${protectedN} | traits-not-created:
 console.log('=== readability matrix ===');
 console.log('  PUBLIC (anyone, base)   : sealed-palette exists, ciphertext blob, commitment hash, query counters, hashed receipts.');
 console.log('  HER ONLY (in-enclave)   : bucketed traits, salt, per-query verdict + nonce (TraitsSession delegated + whitelist-gated).');
-console.log('  JUDGES can verify       : a seal happened, a match/settle happened, a payout landed — WITHOUT reading her traits or verdict.');
+console.log('  JUDGES can verify       : a seal happened, a match/settle happened, a payout landed, WITHOUT reading her traits or verdict.');
 console.log('\nRESULT:', exposed === 0
-  ? 'PASS — no plaintext traits/salt on base; the public account is opaque. Model B holds live.'
-  : `FAIL — ${exposed} TraitsSession(s) expose plaintext on base. Investigate delegation.`);
+  ? 'PASS: no plaintext traits/salt on base; the public account is opaque. Model B holds live.'
+  : `FAIL: ${exposed} TraitsSession(s) expose plaintext on base. Investigate delegation.`);

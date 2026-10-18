@@ -1,9 +1,9 @@
-// Phase-2 proof — SETTLEMENT IS BOUND TO THE REAL MATCH (no brand boolean).
+// Phase-2 proof, SETTLEMENT IS BOUND TO THE REAL MATCH (no brand boolean).
 //   Reconciled to the leak-fixed ABI (2026-07-10). The chain, end-to-end on devnet:
 //     • base:    brand create_campaign(target_hash = sha256(offer_salt‖[tu,td,ts,tol])) escrows oUSDC;
 //                brand delegate_campaign → the SAME TEE ER as her Palette/Traits.
 //     • enclave: seal her commitment-bound traits; the AGENT runs match_query(tu,td,ts,tol,offer_salt)
-//                INSIDE the ER — the program opens the campaign's committed target, computes the verdict
+//                INSIDE the ER, the program opens the campaign's committed target, computes the verdict
 //                ITSELF from her sealed traits, derives a SECRET nonce from her static salt, and writes a
 //                HASHED receipt + a payee COMMITMENT onto the campaign. The agent reads the derived nonce
 //                in-ER (this is the agent "disclosing on an accept"); it is then WIPED before the palette
@@ -45,7 +45,7 @@ const KEYPATH = process.env.OIRA_KEYPAIR || (fs.existsSync(legacyKey) ? legacyKe
 let deployer;
 try { deployer = Keypair.fromSecretKey(Uint8Array.from(JSON.parse(fs.readFileSync(KEYPATH)))); }
 catch { console.error('Missing funded devnet keypair. Set OIRA_KEYPAIR=/path/to/id.json or place one at client/devnet-keypair.json (needs a little devnet SOL).'); process.exit(1); }
-// TREASURY (program const) == the deployer wallet on devnet — collects forfeited per-query stakes.
+// TREASURY (program const) == the deployer wallet on devnet, collects forfeited per-query stakes.
 const TREASURY = deployer.publicKey;
 
 // her = Palette owner AND payee (settle requires palette.owner == her_token.owner)
@@ -62,7 +62,7 @@ const sha = (...bufs) => createHash('sha256').update(Buffer.concat(bufs)).digest
 const commitmentRoot = sha(salt, Buffer.from([HER.undertone, HER.depth, HER.season])); // == set_traits binding
 
 // the brand's concrete offer, chosen to MATCH her (undertone==2, |depth-8|<=tol). The campaign's
-// on-chain target_hash is the COMMITMENT sha256(offer_salt‖[tu,td,ts,tol]) — the shade never hits base.
+// on-chain target_hash is the COMMITMENT sha256(offer_salt‖[tu,td,ts,tol]), the shade never hits base.
 const TGT = { tu: 2, td: 8, ts: 3, tol: 1 };
 const offerSalt = randomBytes(16);
 const targetHash = sha(offerSalt, Buffer.from([TGT.tu, TGT.td, TGT.ts, TGT.tol]));
@@ -138,7 +138,7 @@ const createCampaignIx = (category, perQuery, perAccept, tHash, escrowAmt) => ne
   { pubkey: brandAta, isSigner: false, isWritable: true }, { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
   { pubkey: SYS, isSigner: false, isWritable: false }, { pubkey: RENT, isSigner: false, isWritable: false }],
   data: Buffer.concat([disc('create_campaign'), bU64(offerId), Buffer.from([category]), bU64(perQuery), bU64(perAccept), Buffer.from(tHash), bU64(escrowAmt)]) });
-// NEW ABI: settle_offer(offer_hash[32], verdict[1], nonce[16]) — reads receipt+payee off the CAMPAIGN.
+// NEW ABI: settle_offer(offer_hash[32], verdict[1], nonce[16]), reads receipt+payee off the CAMPAIGN.
 // The palette is NOT an account here (its receipt moved onto the campaign).
 const settleOfferIx = (offerHash, verdict, nonce) => new TransactionInstruction({ programId: PROGRAM, keys: [
   { pubkey: brand.publicKey, isSigner: true, isWritable: false }, { pubkey: campaign, isSigner: false, isWritable: true },
@@ -215,7 +215,7 @@ const her0 = await bal(herAta);
 const PER_QUERY = 100_000;    // $0.10 stake per answered offer
 const PER_ACCEPT = 5_000_000; // $5.00 to her on an accepted match
 const ESCROW = 20_000_000;    // $20.00 escrowed up front
-console.log('\n[1] brand create_campaign — target_hash = sha256(offer_salt‖shade), escrow', usd(ESCROW), '…');
+console.log('\n[1] brand create_campaign, target_hash = sha256(offer_salt‖shade), escrow', usd(ESCROW), '…');
 await sendAndConfirmTransaction(base, new Transaction().add(createCampaignIx(0, PER_QUERY, PER_ACCEPT, targetHash, ESCROW)), [brand], opts);
 console.log('    escrow now holds', usd(await bal(escrow)));
 
@@ -236,7 +236,7 @@ for (const kp of [her, agent]) await sendAndConfirmTransaction(base, new Transac
 { const tee = await teeConn(her); await sendOnEr(tee, [privacyIx('palette', agent.publicKey)], [her], her); await sendOnEr(tee, [privacyIx('traits', agent.publicKey)], [her], her); }
 { const tee = await teeConn(her); await sendOnEr(tee, [setTraitsIx(HER.undertone, HER.depth, HER.season, salt)], [her], her); }
 
-console.log('\n[3] AGENT runs match_query(shade) INSIDE the enclave — matching offer → verdict MATCH(1):');
+console.log('\n[3] AGENT runs match_query(shade) INSIDE the enclave, matching offer → verdict MATCH(1):');
 { const tee = await teeConn(agent); await sendOnEr(tee, [matchIx(TGT.tu, TGT.td, TGT.ts, TGT.tol, offerSalt)], [agent], agent); }
 
 console.log('[3b] agent READS the in-enclave-derived nonce from the ER (disclosure-on-accept)…');
@@ -260,19 +260,19 @@ check('campaign payee_commit == sha256(her_wallet‖nonce)', cv.payee_commit.equ
 check('LEAK-FIX: base palette verdict WIPED to 0', pvBase.last_verdict === 0);
 check('LEAK-FIX: base palette nonce WIPED to zero', pvBase.last_nonce.equals(Buffer.alloc(16)));
 
-console.log('\n[5] settle_offer(target_hash, verdict=1, nonce) — the MATCH authorizes the payout:');
+console.log('\n[5] settle_offer(target_hash, verdict=1, nonce), the MATCH authorizes the payout:');
 await send([settleOfferIx(targetHash, 1, nonce)], [brand]);
 const herPaid = await bal(herAta) - her0;
 check(`her received exactly ${usd(PER_ACCEPT)} from escrow`, herPaid === PER_ACCEPT);
 
-console.log('\n[6] FORGERY-RESISTANCE — the brand cannot fabricate a settlement:');
+console.log('\n[6] FORGERY-RESISTANCE: the brand cannot fabricate a settlement:');
 await sleep(1200);
 try { await send([settleOfferIx(targetHash, 1, randomBytes(16))], [brand]); check('wrong-nonce settle rejected', false); }
 catch (e) { check('wrong-nonce settle rejected (ReceiptMismatch)', !isTransient(e)); }
 try { await send([settleOfferIx(randomBytes(32), 1, nonce)], [brand]); check('wrong-offer settle rejected', false); }
 catch (e) { check('wrong-offer settle rejected (OfferMismatch)', !isTransient(e)); }
 
-console.log('\n[7] close_campaign — refund unspent escrow to the brand, forfeited stake to the treasury…');
+console.log('\n[7] close_campaign, refund unspent escrow to the brand, forfeited stake to the treasury…');
 await sleep(1200);
 const brandBefore = await bal(brandAta);
 const treas0 = await bal(treasuryAta);
@@ -284,7 +284,7 @@ console.log('    refunded to brand', usd(refunded), '(escrowed', usd(ESCROW), '-
 
 console.log('\n────────── RESULT ──────────');
 console.log(pass
-  ? 'PASS ✓ — settlement is BOUND TO THE ENCLAVE MATCH: the program computed the verdict from her sealed traits, derived a secret nonce that never reached base (verdict+nonce wiped), the receipt+payee_commit rode the campaign to base, a genuine verdict==1 released her oUSDC, a forged nonce and a wrong offer were both rejected, and the remainder split brand/treasury. The brand can no longer self-assert an acceptance, and base never learned her shade or her verdict.'
-  : 'CHECK — a sub-assertion failed; inspect above.');
+  ? 'PASS ✓, settlement is BOUND TO THE ENCLAVE MATCH: the program computed the verdict from her sealed traits, derived a secret nonce that never reached base (verdict+nonce wiped), the receipt+payee_commit rode the campaign to base, a genuine verdict==1 released her oUSDC, a forged nonce and a wrong offer were both rejected, and the remainder split brand/treasury. The brand can no longer self-assert an acceptance, and base never learned her shade or her verdict.'
+  : 'CHECK: a sub-assertion failed; inspect above.');
 console.log('campaign:', `https://explorer.solana.com/address/${campaign.toBase58()}?cluster=devnet`);
 process.exit(pass ? 0 : 1);

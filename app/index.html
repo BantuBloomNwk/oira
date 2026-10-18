@@ -28,12 +28,12 @@
   @keyframes sheen{0%{background-position:0% 0}100%{background-position:300% 0}}
 
   .stage{position:relative;z-index:1}
-  /* phone — exact concept style; scaled up for use, hover-lift preserved */
+  /* phone, exact concept style; scaled up for use, hover-lift preserved */
   .phone{height:min(720px,95vh);height:min(720px,90svh);max-width:96vw;aspect-ratio:308/650;background:var(--blush);border-radius:44px;border:7px solid #3a1f34;box-shadow:0 30px 60px rgba(67,32,59,.22);overflow:hidden;position:relative;transition:transform .55s ease, box-shadow .55s ease, background .9s ease}
   .phone:hover{transform:translateY(-6px) rotate(-.3deg);box-shadow:0 46px 84px rgba(67,32,59,.3)}
   .notch{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:94px;height:22px;background:#3a1f34;border-radius:12px;z-index:6}
   /* Installed/wrapped app (incl. a Bubblewrap/TWA build on Seeker): the .phone/.notch above
-     are a desktop-demo mockup of "what this looks like on a phone" — inside an actual
+     are a desktop-demo mockup of "what this looks like on a phone", inside an actual
      installed app they'd render as a fake phone-within-a-phone, so strip them here and go
      edge-to-edge. display-mode:standalone fires automatically for a TWA (from manifest.json's
      "display":"standalone") and for "add to home screen," never for a normal browser tab. */
@@ -180,7 +180,7 @@
   .phone.d .verdict .tiny{color:#A6C4AC}
   .irisrim::before{content:"";position:absolute;inset:-3px;border-radius:47px;background:var(--iris);filter:blur(10px);opacity:.55;z-index:-1;animation:spinIris 12s linear infinite}
   @keyframes spinIris{to{transform:rotate(360deg)}}
-  /* Moonseal — the nested "O": an iris ring (outer O) whose glow EMITS from the ring
+  /* Moonseal, the nested "O": an iris ring (outer O) whose glow EMITS from the ring
      itself (not a halo around it), with a Fraunces "o" in the middle that the
      iridescent passing-light travels through. */
   .moonseal{width:120px;height:120px;border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;background:var(--iris);animation:spinIrisBG 14s linear infinite, moonemit 3.8s ease-in-out infinite}
@@ -401,7 +401,7 @@
     </div>
   </div>
 
-  <!-- skin trends: her own local history, read back to her — nothing here has ever left the phone -->
+  <!-- skin trends: her own local history, read back to her, nothing here has ever left the phone -->
   <div class="psheet" id="skinsheet">
     <div class="phead"><div class="pshield" style="background:linear-gradient(140deg,#C08A4A,#B4633A)">✦</div><div style="flex:1"><b>Your skin, over time</b><div class="tiny" style="text-align:left;margin:2px 0 0">From scans on this device. Never sent anywhere.</div></div>
       <button class="cx" onclick="closeSkinTrends()" aria-label="Close">×</button></div>
@@ -417,7 +417,7 @@
   </div>
 
   <!-- optional wallet connect: Wallet Standard wallets (desktop extensions + wallet
-       in-app browsers) and, on Android, MWA — she picks one; passkey stays the default -->
+       in-app browsers) and, on Android, MWA: she picks one; passkey stays the default -->
   <div class="nsheet" id="wsheet">
     <div class="chandle"></div>
     <div class="phead"><div class="pshield" style="background:linear-gradient(135deg,#9945FF,#14F195)">◎</div><div style="flex:1"><b>Connect a wallet</b><div class="tiny" style="text-align:left;margin:2px 0 0">Optional. Fingerprint sign-in stays the default.</div></div>
@@ -502,7 +502,7 @@
       </div>
     </div>
     <div style="margin-top:auto">
-      <button class="btn rose" id="sealBtn" onclick="seal()">This is me — seal it</button>
+      <button class="btn rose" id="sealBtn" onclick="seal()">This is me, seal it</button>
       <button class="btn ghost" style="margin-top:9px" onclick="go(1)">This isn't me · retake</button>
     </div>
   </div>
@@ -642,7 +642,7 @@ let deviceOwner=null; // her owner key, held in memory only after unlock
 let cachedAddr=''; try{ cachedAddr=localStorage.getItem('oira_addr')||''; }catch(e){}
 function rememberAddr(a){ if(!a) return; cachedAddr=a; try{ localStorage.setItem('oira_addr',a); }catch(e){} }
 
-// Passkey and an external wallet are two INDEPENDENT, mutually exclusive sign-in paths — she
+// Passkey and an external wallet are two INDEPENDENT, mutually exclusive sign-in paths, she
 // picks exactly one at the welcome screen, and whichever she picked signs everything from then
 // on (never a silent fallback to the other). This flag is the only thing that has to survive a
 // reload to know which one: 'wallet' once she's connected one, cleared back to passkey/local by
@@ -650,10 +650,10 @@ function rememberAddr(a){ if(!a) return; cachedAddr=a; try{ localStorage.setItem
 const SIGNMODE_KEY='oira_signmode';
 function setSignMode(m){ try{ if(m) localStorage.setItem(SIGNMODE_KEY,m); else localStorage.removeItem(SIGNMODE_KEY); }catch(e){} }
 function signMode(){ try{ return localStorage.getItem(SIGNMODE_KEY)||''; }catch(e){ return ''; } }
-// Build a deviceOwner-shaped signer from a connected wallet — sign() and address are all the
+// Build a deviceOwner-shaped signer from a connected wallet, sign() and address are all the
 // rest of the app (seal(), custody.js's relay protocol) already expects, so nothing else has
 // to know she's in wallet mode rather than passkey mode. sealSalt() is one wallet signature
-// (her commitment salt, stable across every future seal — see mwa.js).
+// (her commitment salt, stable across every future seal, see mwa.js).
 async function becomeWalletOwner(address){
   const salt=await window.OiraMWA.sealSalt();
   deviceOwner={ address, assurance:'wallet', salt, sign:(m)=>window.OiraMWA.signBytes(m), wipe:()=>{} };
@@ -663,10 +663,10 @@ async function becomeWalletOwner(address){
 
 // One stable identity per device, so her Palette address never changes on reload. Most of the
 // web has no biometric passkey, so we derive a PERSISTENT local key (custody's fallback seed)
-// silently here — same address every reload. A passkey is an UPGRADE she opts into via the
+// silently here, same address every reload. A passkey is an UPGRADE she opts into via the
 // welcome button; boot itself may never touch WebAuthn: Chrome shows the passkey sheet even
 // from load-time script (top-level WebAuthn needs no user activation there), so "no gesture,
-// so it silently fails" is NOT a safe assumption — silence has to be structural.
+// so it silently fails" is NOT a safe assumption, silence has to be structural.
 let bootPromise=null;
 function bootIdentity(){
   // Single-flight: the load-time call and any later caller share one run, so a slow boot can
@@ -675,7 +675,7 @@ function bootIdentity(){
     try{
       if(signMode()==='wallet'){
         // She signed in with a wallet last time. Never silently substitute the passkey/local
-        // identity here — that would swap her Palette address underneath her. Just show her
+        // identity here, that would swap her Palette address underneath her. Just show her
         // cached wallet address; regaining a live SIGNER needs a fresh connect() gesture
         // (wallets don't reliably reconnect silently), done on demand in seal() below.
         const a=window.OiraMWA&&window.OiraMWA.getCached(); if(a) rememberAddr(a);
@@ -694,12 +694,12 @@ function bootIdentity(){
 }
 
 // Welcome: proceed with her stable identity. This click is the ONE place a passkey can be
-// created — it has a real user activation, and boot (above) is structurally unable to reach
-// WebAuthn — so the biometric prompt appears exactly here, never on page load. If she
+// created, it has a real user activation, and boot (above) is structurally unable to reach
+// WebAuthn, so the biometric prompt appears exactly here, never on page load. If she
 // declines, unlockOwner hands back the same persistent local identity boot derived, and the
 // next welcome click simply offers the upgrade again.
 async function unlockDevice(){
-  setSignMode(''); // explicit choice of passkey/local — no longer wallet mode, even if she was
+  setSignMode(''); // explicit choice of passkey/local, no longer wallet mode, even if she was
   try{
     await bootIdentity(); // joins the load-time run; silent
     if(window.OiraCustody && !window.OiraCustody.hasEnrolled()){
@@ -710,7 +710,7 @@ async function unlockDevice(){
     }
   }catch(e){}
   // She may already have a sealed Palette even if THIS device's local "oira_palette" flag was
-  // lost — the same storage-eviction pattern that used to lose her passkey credential id.
+  // lost, the same storage-eviction pattern that used to lose her passkey credential id.
   // Check the chain by her recovered owner address before deciding where to send her, so a
   // returning woman lands straight on her agent instead of being walked through scan, confirm,
   // and seal again just because a cache got cleared.
@@ -727,7 +727,7 @@ const shorten=(s)=>s?s.slice(0,4)+'…'+s.slice(-4):'';
 const receipt=(url,label)=>`<a class="receipt" href="${url}" target="_blank" rel="noopener">${label}</a>`;
 
 /* ---- her reading (real, editable) ---- */
-// Official Google Monk Skin Tone Scale (10-point, CC-BY-4.0, skintone.google) — lightest to
+// Official Google Monk Skin Tone Scale (10-point, CC-BY-4.0, skintone.google), lightest to
 // deepest. Matches the depthBaro slider's real min=1/max=10 range (= reading.monk, the value
 // actually sealed on-chain) so the visual barometer never caps out short of the darkest tones.
 const DEPTHS=['#f6ede4','#f3e7db','#f7ead0','#eadaba','#d7bd96','#a07e56','#825c43','#604134','#3a312a','#292420'];
@@ -761,7 +761,7 @@ function renderConfirm(){
   set('uName',reading.under); set('sName',reading.season); set('depthName',dw); set('monkTag','Monk '+(reading.monk||6));
   // A returning (already-sealed) woman is rechecking, not first-time sealing: her Palette can't be
   // re-created, so the CTA saves her refreshed reading instead of trying (and failing) to re-seal.
-  const sealBtn=document.getElementById('sealBtn'); if(sealBtn) sealBtn.textContent = palettePubkey() ? 'Save my new reading' : 'This is me — seal it';
+  const sealBtn=document.getElementById('sealBtn'); if(sealBtn) sealBtn.textContent = palettePubkey() ? 'Save my new reading' : 'This is me, seal it';
   document.getElementById('readHead').innerHTML=`${dw} <em>&amp;</em> ${reading.under.toLowerCase()}.`;
   document.getElementById('readBasis').textContent = reading.measured
     ? `Scanned on your device · ITA° ${reading.ita} · Monk ${reading.monk} · ${reading.under.toLowerCase()} undertone`
@@ -777,7 +777,7 @@ function renderConfirm(){
   renderSkinCard();
 }
 // Soft, non-diagnostic copy for the skin-condition card. Stays silent (card hidden) rather than
-// guess when the scan came back low-light or she has no skin reading yet — matches this screen's
+// guess when the scan came back low-light or she has no skin reading yet, matches this screen's
 // own rule for everything else: a real read or nothing, never a placeholder.
 const DRY_LABEL={dry:'A little dry',normal:'Well balanced',hydrated:'Hydrated'};
 const SHINE_LABEL={shiny:'Some T-zone shine',balanced:'Balanced',matte:'Matte'};
@@ -798,7 +798,7 @@ function renderSkinCard(){
     : 'Reads calm and balanced today. From today\'s light, not a diagnosis.';
   const cu=document.getElementById('skinCloseup');
   if(cu){ cu.textContent = reading.skinCloseupMethod ? 'Get a closer read again' : 'Get a closer read'; cu.style.cursor='pointer'; cu.onclick=runCloseupRead; }
-  // a fresh reading is a fresh, un-rated log entry — reset the feedback row rather than leave a
+  // a fresh reading is a fresh, un-rated log entry, reset the feedback row rather than leave a
   // stale "thank you" showing against a read she has not actually judged yet.
   const fbRow=document.getElementById('skinFbRow'), fbThanks=document.getElementById('skinFbThanks');
   if(fbRow) fbRow.style.display=''; if(fbThanks) fbThanks.style.display='none';
@@ -811,18 +811,18 @@ let closeupRunning=false;
 let skinCheckMode=false;
 // One-tap on-device skin log (period-tracker style): re-check her skin CONDITION anytime, WITHOUT
 // the full palette/liveness/seal flow. Reuses the same on-device scan + trend; the entry never
-// leaves the phone (oira_skinlog in localStorage) — private by construction, no chain, no re-seal.
+// leaves the phone (oira_skinlog in localStorage), private by construction, no chain, no re-seal.
 async function quickSkinCheck(){
   closeMenu();
   skinCheckMode=true;
   go(1); // the reading screen starts + shows the camera
   const v=document.getElementById('cam');
-  setHint('Reading your skin — hold still in soft, even light');
+  setHint('Reading your skin, hold still in soft, even light');
   for(let i=0;i<50 && (!v||!v.videoWidth);i++) await new Promise(r=>setTimeout(r,100));
-  if(!v || !v.videoWidth){ skinCheckMode=false; setHint('Camera didn’t start — open the menu and tap Check my skin again'); return; }
+  if(!v || !v.videoWidth){ skinCheckMode=false; setHint('Camera didn’t start, open the menu and tap Check my skin again'); return; }
   const res=await runSkinLog();
   skinCheckMode=false;
-  if(!res){ setHint('Couldn’t read your skin clearly — soft, even light, then tap Check my skin again'); return; }
+  if(!res){ setHint('Couldn’t read your skin clearly, soft, even light, then tap Check my skin again'); return; }
   openSkinTrends(); // today’s reading + her trend
 }
 // Quick skin-CONDITION scan over live video frames (no high-res still, no seal). Appends one entry
@@ -877,15 +877,15 @@ async function runCloseupRead(){
   closeupRunning=false;
 }
 // Tags the MOST RECENT skin-log entry (the one just written by scanColour()/runCloseupRead())
-// with her own judgement of whether the read matched how her skin actually feels. This — not more
-// engineering guesswork — is the real calibration path for the skin-condition thresholds: there is
+// with her own judgement of whether the read matched how her skin actually feels. This, not more
+// engineering guesswork, is the real calibration path for the skin-condition thresholds: there is
 // no free public ground truth for "how rough is dry skin" the way the Monk scale gave depth.
 function skinFeedback(rating){
   oiraSkinTagLatest({ feedback:rating });
   const row=document.getElementById('skinFbRow'), thanks=document.getElementById('skinFbThanks');
   if(row) row.style.display='none'; if(thanks) thanks.style.display='';
 }
-// Optional product tag on the same entry — the seed of the trend view: "since logging Product X,
+// Optional product tag on the same entry, the seed of the trend view: "since logging Product X,
 // your reads have looked like Y." Free text, hers, never sent anywhere, capped to a sane length.
 function saveSkinProduct(){
   const el=document.getElementById('skinProduct'); if(!el) return;
@@ -894,7 +894,7 @@ function saveSkinProduct(){
   el.value=''; el.placeholder='Logged: '+name;
 }
 // Turns her local skin-condition history into something she can act on: is she trending
-// hydrated/dry lately regardless of any one product, and — for anything she explicitly tagged —
+// hydrated/dry lately regardless of any one product, and, for anything she explicitly tagged,
 // how has THAT product's tagged scans actually read. Only entries she explicitly tagged count
 // toward a product's numbers; this deliberately does not infer "she was probably still using it"
 // across untagged days, that inference is exactly how a correlation stops meaning anything.
@@ -918,13 +918,13 @@ function renderSkinTrends(){
     if(sR-sO>0.4) lines.push('T-zone shine has settled down compared to earlier scans.');
     else if(sO-sR>0.4) lines.push('T-zone shine has picked up a little compared to earlier scans.');
   }
-  // A SUSTAINED read (most of her recent scans in one state), not a one-off — the ONLY place a
+  // A SUSTAINED read (most of her recent scans in one state), not a one-off, the ONLY place a
   // gentle, NON-MEDICAL nudge to mention it to a professional belongs. No diagnosis, no health
-  // claim, no "you might have X" — just navigation, with the choice explicitly left to her.
+  // claim, no "you might have X", just navigation, with the choice explicitly left to her.
   const cntRec=(f,v)=>recent.filter(e=>e[f]===v).length; let nudge='';
   if(recent.length>=4){
-    if(cntRec('dryness','dry')>=Math.ceil(recent.length*0.8)) nudge='Your skin has read on the drier side across most of your recent scans. Usually that’s just weather, water, or your routine — but if it keeps up and bothers you, it can be worth mentioning to a skincare professional. Entirely your call.';
-    else if(cntRec('shine','shiny')>=Math.ceil(recent.length*0.8)) nudge='Your T-zone has read shiny across most of your recent scans. Often that’s heat, hormones, or products — if it’s bugging you, a skincare professional can help you dial it in. Only if you want to.';
+    if(cntRec('dryness','dry')>=Math.ceil(recent.length*0.8)) nudge='Your skin has read on the drier side across most of your recent scans. Usually that’s just weather, water, or your routine, but if it keeps up and bothers you, it can be worth mentioning to a skincare professional. Entirely your call.';
+    else if(cntRec('shine','shiny')>=Math.ceil(recent.length*0.8)) nudge='Your T-zone has read shiny across most of your recent scans. Often that’s heat, hormones, or products, if it’s bugging you, a skincare professional can help you dial it in. Only if you want to.';
   }
   let html=`<div class="tiny" style="text-align:left">${lines.length?lines.join(' '):'Reading steady, no clear shift yet.'} Based on ${hist.length} scan${hist.length>1?'s':''} on this device, never sent anywhere.</div>`;
   if(nudge) html+=`<div class="tiny" style="text-align:left;margin-top:11px;padding:9px 11px;background:rgba(214,167,86,.12);border-radius:12px">${nudge}</div>`;
@@ -935,23 +935,23 @@ function renderSkinTrends(){
     html+='<div class="chiplbl" style="margin-top:11px">What you\'ve logged</div>';
     products.forEach(p=>{
       const arr=byProduct[p], d=avgSkinScore(arr,'dryness',DRY_SCORE);
-      const word = d==null?'—':(d>1.4?'usually reading hydrated':d>0.6?'usually reading balanced':'usually reading dry');
+      const word = d==null?'–':(d>1.4?'usually reading hydrated':d>0.6?'usually reading balanced':'usually reading dry');
       html+=`<div class="tiny" style="text-align:left;margin-top:6px"><b>${esc(p)}</b> · ${arr.length} tagged scan${arr.length>1?'s':''} · ${word}</div>`;
     });
   } else {
     html+='<div class="tiny" style="text-align:left;margin-top:11px">Tag what you\'re using right after a scan (on the "Skin today" card), and this starts showing what actually works for your skin, not just your shade.</div>';
   }
-  // Legible privacy — the whole point of the health-adjacent layer is that she can SEE it's hers.
-  html+='<div class="tiny" style="text-align:left;margin-top:12px;opacity:.85">🔒 Your skin history lives only on this phone. No one else — not even Oira — can see it. You choose if you ever share it.</div>';
+  // Legible privacy, the whole point of the health-adjacent layer is that she can SEE it's hers.
+  html+='<div class="tiny" style="text-align:left;margin-top:12px;opacity:.85">🔒 Your skin history lives only on this phone. No one else, not even Oira, can see it. You choose if you ever share it.</div>';
   // One-time, opt-in intent probe: a soft signal (stored locally) of whether the private
-  // share-with-a-professional layer is even wanted — the trust question, asked gently, no commitment.
+  // share-with-a-professional layer is even wanted, the trust question, asked gently, no commitment.
   let intent=''; try{ intent=localStorage.getItem('oira_intent')||''; }catch(e){}
   if(!intent && hist.length>=5){
     html+=`<div class="tiny" id="intentProbe" style="text-align:left;margin-top:12px;padding:10px 12px;background:rgba(231,166,192,.12);border-radius:12px">Someday, would you want to <b>privately</b> share your skin history with a skincare professional you choose?<div style="margin-top:8px;display:flex;gap:8px"><button class="btn ghost" style="padding:6px 12px;font-size:12px" onclick="skinIntent('maybe')">Maybe someday</button><button class="btn ghost" style="padding:6px 12px;font-size:12px" onclick="skinIntent('no')">Not for me</button></div></div>`;
   }
   body.innerHTML=html;
 }
-function skinIntent(v){ try{ localStorage.setItem('oira_intent', v); }catch(e){} const el=document.getElementById('intentProbe'); if(el) el.innerHTML = v==='maybe' ? 'Noted — and it would only ever happen with your explicit say-so, privately.' : 'Understood — this stays just for you.'; }
+function skinIntent(v){ try{ localStorage.setItem('oira_intent', v); }catch(e){} const el=document.getElementById('intentProbe'); if(el) el.innerHTML = v==='maybe' ? 'Noted, and it would only ever happen with your explicit say-so, privately.' : 'Understood, this stays just for you.'; }
 function setDepthSlider(m){ m=+m; reading.monk=m; reading.depth=Math.max(0,Math.min(5,Math.round((m-1)/9*5))); reading.season=seasonFor(reading.under,reading.depth); renderConfirm(); }
 function setUnderSlider(i){ reading.under=UORDER[+i]||'Cool'; reading.season=seasonFor(reading.under,reading.depth); renderConfirm(); }
 function setSeasonSlider(i){ const k=SKEYS(); reading.season=k[+i]||k[0]; renderConfirm(); }
@@ -978,13 +978,13 @@ function checkColour(hex,name){
   document.getElementById('cVerdict').classList.toggle('warn',!good);
   oiraRemember({ name:name||hex.toUpperCase(), hex, good, title });
 }
-// her private, on-device colour memory — colours she chose to check + the verdict she saw.
+// her private, on-device colour memory, colours she chose to check + the verdict she saw.
 // No raw traits; stays in localStorage on her phone. The concierge reads it to feel like hers.
 function oiraRemember(c){ try{ const arr=JSON.parse(localStorage.getItem('oira_checks')||'[]');
   arr.unshift({ n:c.name, h:c.hex, g:!!c.good, t:c.title, ts:Date.now() });
   localStorage.setItem('oira_checks', JSON.stringify(arr.slice(0,20))); }catch(e){} }
 // her private, on-device skin-condition history + optional product tag + optional calibration
-// feedback — same posture as oiraRemember above: bucketed words only, stays in localStorage on
+// feedback, same posture as oiraRemember above: bucketed words only, stays in localStorage on
 // her phone, nothing raw, nothing ever sent anywhere. This is the only path to real calibration
 // for the skin-condition heuristic (there is no public ground-truth standard for it the way there
 // is for depth/Monk), and it is what powers her personal trend view (renderSkinTrends()).
@@ -992,14 +992,14 @@ function oiraSkinLog(entry){ try{ const arr=JSON.parse(localStorage.getItem('oir
   arr.unshift(Object.assign({ ts:Date.now() }, entry));
   localStorage.setItem('oira_skinlog', JSON.stringify(arr.slice(0,120))); }catch(e){} }
 function oiraSkinHistory(){ try{ return JSON.parse(localStorage.getItem('oira_skinlog')||'[]'); }catch(e){ return []; } }
-// tag the MOST RECENT entry with her calibration feedback or a product she is using — both
+// tag the MOST RECENT entry with her calibration feedback or a product she is using, both
 // optional, both stay local, silently no-op if she has not logged a reading yet this session.
 function oiraSkinTagLatest(fields){ try{ const arr=JSON.parse(localStorage.getItem('oira_skinlog')||'[]');
   if(!arr.length) return; Object.assign(arr[0], fields); localStorage.setItem('oira_skinlog', JSON.stringify(arr)); }catch(e){} }
 
 /* ---- her agent home: real running state ---- */
 let agent={ earned:0, nubiaUsed:0, nights:0 };
-// her night rules — the agent policy that gates WHICH offers get answered while she sleeps.
+// her night rules, the agent policy that gates WHICH offers get answered while she sleeps.
 // minPayout is her floor; maxPerBrand mirrors the on-chain lifetime query cap; blocked is her denylist.
 let agentRules={ minPayout:0.10, maxPerBrand:3, blocked:[] };
 const brandCount={}; // brand pubkey -> offers answered this session (client mirror of the on-chain cap)
@@ -1035,7 +1035,7 @@ async function matchBoard(){
 }
 function renderAgent(){
   const m=document.getElementById('agMatches');
-  // brand-controlled text (label) must never reach innerHTML unescaped — it comes from the
+  // brand-controlled text (label) must never reach innerHTML unescaped, it comes from the
   // public, unauthenticated POST /api/brand/campaign, so this is a real injection surface.
   const aesc=(s)=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const rows=[];
@@ -1090,12 +1090,12 @@ function renderMarket(){
   loadBoard().then(paint);              // then always refresh from the live board
 }
 function renderDigest(){
-  // brand-controlled text (label) must never reach innerHTML unescaped — see renderAgent()
+  // brand-controlled text (label) must never reach innerHTML unescaped, see renderAgent()
   const desc=(s)=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   document.getElementById('digEarn').textContent=`+$${amt().toFixed(2)}`;
   document.getElementById('digMatch').textContent=`${depthWord(reading.depth)}-${reading.under.toLowerCase()} foundation · +$${amt().toFixed(2)}`;
   document.getElementById('paidChain').innerHTML=receipt(payData&&payData.explorer?payData.explorer:PROGRAM_EX,'View the receipt on Solana');
-  // real receipts only — no invented brand names or timestamps
+  // real receipts only, no invented brand names or timestamps
   const dr=document.getElementById('digReceipts'); if(dr){ const rows=[];
     if(payData&&payData.explorer) rows.push(`<a class="receipt" href="${desc(payData.explorer)}" target="_blank" rel="noopener">Private payout · +$${amt().toFixed(2)} · ✓</a>`);
     const cx=campData&&(campData.campaignExplorer||campData.explorer);
@@ -1180,9 +1180,9 @@ function closeMenu(){ document.getElementById('scrim').classList.remove('on'); d
 function menuGo(n){ closeMenu(); go(n); }
 function menuRecheck(){ closeMenu(); reading.measured=false; go(1); }
 function menuSettings(){ if(confirm('Reset this device? Your on-chain Palette stays; this clears the local key so you can re-enroll.')){ try{ window.OiraCustody&&window.OiraCustody.reset&&window.OiraCustody.reset(); window.OiraMWA&&window.OiraMWA.disconnect&&window.OiraMWA.disconnect(); localStorage.removeItem('oira_k'); localStorage.removeItem('oira_addr'); localStorage.removeItem('oira_palette'); localStorage.removeItem('oira.fbbackup'); }catch(e){} setSignMode(''); cachedAddr=''; sealData=null; deviceOwner=null; bootPromise=null; closeMenu(); go(0); } }
-// Optional, opt-in only — never touches deviceOwner or her passkey flow. Purely additive:
+// Optional, opt-in only, never touches deviceOwner or her passkey flow. Purely additive:
 // lets her connect an external wallet (desktop extensions via the Wallet Standard, MWA
-// wallets on Android — e.g. so a Genesis Token check can run), while sign-in stays
+// wallets on Android, e.g. so a Genesis Token check can run), while sign-in stays
 // passkey-first for everyone, always.
 
 // The one wallet-picker sheet, shared by the welcome button and the profile row: the
@@ -1207,7 +1207,7 @@ async function pickWallet(i){
 }
 // Shared entry: detect what can connect HERE, then either connect the single option,
 // offer a choice, or say honestly why nothing can (old code silently did nothing on
-// desktop/iOS — the button looked dead).
+// desktop/iOS, the button looked dead).
 async function connectAnyWallet(done){
   if(!window.OiraMWA){ alert('Wallet connect could not load in this browser. You can still continue with fingerprint.'); return; }
   const ws=window.OiraMWA.listWallets();
@@ -1220,12 +1220,12 @@ async function connectAnyWallet(done){
   chooseWallet(ws, done);
 }
 // Welcome-screen "Use a wallet instead": this IS her sign-in choice, an alternative to
-// fingerprint, not an addition on top of it — becomeWalletOwner() makes the connected wallet
+// fingerprint, not an addition on top of it, becomeWalletOwner() makes the connected wallet
 // deviceOwner for the rest of this session, exactly the way unlockDevice() makes the passkey
 // deviceOwner. Everything downstream (seal, etc.) already just checks deviceOwner.sign.
 async function connectWalletInstead(){
   await connectAnyWallet(async ({address,walletName})=>{
-    work('Connecting your wallet','One more signature sets up your seal — approve it in '+walletName+'.');
+    work('Connecting your wallet','One more signature sets up your seal, approve it in '+walletName+'.');
     try{ await becomeWalletOwner(address); }
     catch(e){ hideWork(); alert('Could not finish connecting: '+(e&&e.message?e.message:'unknown error')); return; }
     hideWork();
@@ -1244,7 +1244,7 @@ async function menuWallet(){
   closeMenu();
   await connectAnyWallet(async ({address})=>{
     renderProfile();
-    // Optional Genesis Token check — informational only for now (no reward mechanic
+    // Optional Genesis Token check, informational only for now (no reward mechanic
     // wired up yet on the product side); never blocks or affects her passkey identity.
     try{
       const chal = await fetch('/api/genesis/challenge',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pubkey:address})}).then(r=>r.json());
@@ -1255,7 +1255,7 @@ async function menuWallet(){
         : `Connected: ${shorten(address)}. No Seeker Genesis Token found on this wallet.`);
     }catch(e){
       // Genesis check failing (e.g. server not configured with HELIUS_API_KEY yet) must
-      // never break the connection itself — she's still connected either way.
+      // never break the connection itself, she's still connected either way.
       alert(`Connected: ${shorten(address)}. This is optional and separate from your passkey sign-in.`);
     }
   });
@@ -1277,7 +1277,7 @@ async function shareSeason(){
   }catch(e){}
 }
 
-/* ---- concierge: oiraBuildContext is the ONLY data boundary — whitelisted, coarse, no
+/* ---- concierge: oiraBuildContext is the ONLY data boundary, whitelisted, coarse, no
    secrets, no raw selfie/measurements/keys/wallet. The concierge module gets only this. ---- */
 function oiraBuildContext(){
   return {
@@ -1285,7 +1285,7 @@ function oiraBuildContext(){
     depthWord: depthWord(reading.depth), depthNum: reading.depth, monk: reading.monk||null,
     curl: (CURL[reading.curlIdx]||{}).code||null, curlFamily: CURLFAM[(CURL[reading.curlIdx]||{}).fam]||null,
     // bucketed skin-condition read (dryness/shine/blemish words only, never the raw roughness or
-    // shine numbers) — same coarse-only boundary as everything else the concierge sees.
+    // shine numbers), same coarse-only boundary as everything else the concierge sees.
     skinDryness: (reading.skin&&reading.skin.dryness)||null, skinShine: (reading.skin&&reading.skin.shine)||null, skinBlemish: !!(reading.skin&&reading.skin.blemish),
     earned: agent.earned, matched: !!(campData ? (campData.matched!==false) : payData),
     rules: { minPayout:agentRules.minPayout, maxPerBrand:agentRules.maxPerBrand, blocked:agentRules.blocked.slice() },
@@ -1320,7 +1320,7 @@ function closeSkinTrends(){ const s=document.getElementById('skinsheet'); if(s) 
   const sc=document.getElementById('scrim'); if(sc && !anyOtherSheetOpen()) sc.classList.remove('on'); }
 function openSkinTrends(){ closeMenu(); document.getElementById('scrim').classList.add('on'); document.getElementById('skinsheet').classList.add('on'); renderSkinTrends(); }
 
-// ---- notification prefs: local-only (no server push yet) — Notification API opt-in per toggle
+// ---- notification prefs: local-only (no server push yet), Notification API opt-in per toggle
 const NOTIF_DEFS=[
   {key:'offers', label:'New brand offers', hint:'When a brand posts something that fits your season.'},
   {key:'nightRecap', label:'While-you-slept recap', hint:'A morning summary of what your agent answered overnight.'},
@@ -1344,7 +1344,7 @@ function renderNotifBody(){
       <div class="nl"><b>${d.label}</b><small>${d.hint}</small></div>
       <div class="nswitch ${p[d.key]?'on':''}" onclick="toggleNotif('${d.key}')" role="switch" aria-checked="${!!p[d.key]}" aria-label="${d.label}"></div>
     </div>`).join('') +
-    `<div class="nnote">${perm==='denied'?'Notifications are blocked in your browser settings — turn them on there first.':'Local to this device only. Turning one on may ask your browser to allow notifications.'}</div>`;
+    `<div class="nnote">${perm==='denied'?'Notifications are blocked in your browser settings, turn them on there first.':'Local to this device only. Turning one on may ask your browser to allow notifications.'}</div>`;
 }
 async function toggleNotif(key){
   const p=notifPrefs();
@@ -1353,7 +1353,7 @@ async function toggleNotif(key){
     try{ await Notification.requestPermission(); }catch(e){}
   }
   if(turningOn && typeof Notification!=='undefined' && Notification.permission!=='granted'){
-    renderNotifBody(); return; // blocked/denied — don't silently flip the switch on
+    renderNotifBody(); return; // blocked/denied, don't silently flip the switch on
   }
   p[key]=turningOn; saveNotifPrefs(p); renderNotifBody(); renderNotifSummary();
 }
@@ -1407,7 +1407,7 @@ function buildPaletteProof(b64, addr){
     holds:true, explorer:`https://explorer.solana.com/address/${addr}?cluster=devnet` };
 }
 // trustless read #1: her palette account by its known address (from the seal receipt).
-// getAccountInfo's JSON-RPC result is { context, value } — the account lives under .value
+// getAccountInfo's JSON-RPC result is { context, value }, the account lives under .value
 // (reading .data off the result directly, as this used to, always came back empty).
 async function clientPrivacyProof(addr){
   const res=await oiraRpc('getAccountInfo',[addr,{encoding:'base64'}]);
@@ -1417,7 +1417,7 @@ async function clientPrivacyProof(addr){
 }
 // trustless read #2: find her palette by owner (no stored address needed). A SEALED palette is
 // DELEGATED into the enclave, so on the base layer it is owned by MagicBlock's delegation
-// program, not ours — a getProgramAccounts against OIRA_PROGRAM can never find it (this was
+// program, not ours, a getProgramAccounts against OIRA_PROGRAM can never find it (this was
 // why the sheet showed "no palette sealed" for a sealed palette). Search the delegation
 // program first (the steady state), then ours (a not-yet/no-longer-delegated edge), matching
 // the PaletteVault account discriminator at offset 0 + her owner pubkey at offset 8.
@@ -1439,7 +1439,7 @@ async function openPrivacy(){
   document.getElementById('pbody').innerHTML='<div class="ploader">Reading the Solana ledger, live…</div>';
   // Her owner address: the in-memory key if unlocked, else the seal receipt, else the address
   // REMEMBERED from her last unlock (oira_addr). The last one is what makes this page work on
-  // a fresh reload: in passkey mode boot never unlocks silently, so deviceOwner is null here —
+  // a fresh reload: in passkey mode boot never unlocks silently, so deviceOwner is null here,
   // before this fallback the sheet had nothing to look up and showed "no palette sealed yet"
   // to someone who sealed weeks ago.
   const owner=(deviceOwner&&deviceOwner.address)||(sealData&&sealData.her)||cachedAddr||'';
@@ -1608,7 +1608,7 @@ function analyzeSkinRaw(v){
   const cx=W*0.5, cy=H*0.46, rx=W*0.30, ry=H*0.36; // the face oval
   // Grey-world reference is sampled from the BACKGROUND only (outside the oval), never the face
   // itself: skin, at any depth, reads warmer than neutral, so folding it into the "assume this
-  // averages to gray" reference systematically attenuates red / boosts blue in the correction —
+  // averages to gray" reference systematically attenuates red / boosts blue in the correction,
   // i.e. reads her tone darker and cooler than she actually is, worse the more of the frame her
   // face fills. Falls back to the whole frame only if the background sample is too small to trust
   // (an extreme close-up), rather than silently reintroducing that bias.
@@ -1630,17 +1630,17 @@ function analyzeSkinRaw(v){
   const {L,a,b}=rgb2lab(sr,sg,sb);
   return { ita:Math.atan2(L-50,b)*180/Math.PI, hab:Math.atan2(b,a)*180/Math.PI, L, n };
 }
-// Skin-condition scanner (texture/dryness, T-zone shine, a soft blemish flag) — real on-device
+// Skin-condition scanner (texture/dryness, T-zone shine, a soft blemish flag), real on-device
 // computer-vision heuristics, not a diagnosis. No medical claims anywhere downstream: language
 // stays soft and optional, and every signal can come back "not enough light to judge" rather than
 // force a guess. Higher resolution than analyzeSkinRaw's colour-averaging pass (420x540 default,
-// vs its 140x180) because texture needs pixels colour-averaging deliberately throws away — and
+// vs its 140x180) because texture needs pixels colour-averaging deliberately throws away, and
 // `source` can be a higher-res still (see captureCloseupStill below) for an even better read, not
 // just the live <video> element. Thresholds below are a reasoned starting point, not a calibrated
-// ground truth the way bucketize()'s Monk mapping is — there is no public reference standard for
+// ground truth the way bucketize()'s Monk mapping is, there is no public reference standard for
 // "how rough is dry skin" the way there is for depth. That's what the calibration feedback control
 // (skinFeedback()) is for: real usage over time is the only path to real ground truth here.
-// W,H default to exactly 1.5x analyzeSkinRaw's 140x180, same 0.778 target ratio — deliberately
+// W,H default to exactly 1.5x analyzeSkinRaw's 140x180, same 0.778 target ratio, deliberately
 // NOT aspect-preserving, matching analyzeSkinRaw's own squish-to-a-fixed-ratio approach exactly,
 // so the two functions' "same oval" stays geometrically identical regardless of resolution. The
 // close-up capture path (captureCloseupStill) passes a larger W/H at the SAME ratio for its
@@ -1690,11 +1690,11 @@ function analyzeSkinCondition(source, W=420, H=540){
   const shineDelta = (tzN?tzSpec/tzN:0) - (restN?restSpec/restN:0);
 
   // soft blemish flag: a small patch noticeably redder than the rest, via a coarse grid and a
-  // robust (median + MAD) outlier check rather than a raw threshold. Deliberately conservative —
+  // robust (median + MAD) outlier check rather than a raw threshold. Deliberately conservative,
   // a miss costs nothing, a false "you have a blemish" on a freckle or birthmark costs real trust,
   // and redness-based signals are exactly the kind of thing that historically under-serves deeper
   // skin tones on cheap sensors (the same failure this product's own privacy pitch criticizes in
-  // others) — this stays silent rather than guess when the signal is not clearly unambiguous.
+  // others), this stays silent rather than guess when the signal is not clearly unambiguous.
   const GX=6, GY=7, cellA=[];
   for(let gy=0; gy<GY; gy++) for(let gx=0; gx<GX; gx++){
     if(gy>=GY*0.6 && gx>GX*0.3 && gx<GX*0.7) continue; // skip mouth/chin-shadow territory
@@ -1720,10 +1720,10 @@ function bucketSkinCondition(roughness, shineDelta, blemish){
 }
 // A dedicated, one-time high-res still for the closest a phone gets to pore-level texture:
 // ImageCapture.takePhoto() (Chrome/Android/Seeker) reads the sensor's real still-photo path, not
-// the compressed live video stream — video codecs specifically discard the fine high-frequency
+// the compressed live video stream, video codecs specifically discard the fine high-frequency
 // detail texture analysis needs. Safari/iOS has NO ImageCapture support as of Safari 26 stable
 // (Apple mandates WebKit for every iOS browser, so there is no "use Chrome on iPhone" workaround)
-// — falls back there, and anywhere takePhoto() fails, to drawing the live video frame at a larger
+//, falls back there, and anywhere takePhoto() fails, to drawing the live video frame at a larger
 // size than the automatic scan uses. Still a real improvement even on the fallback path, just
 // without the stream-compression bypass a real still gets on supported browsers.
 async function captureCloseupStill(v){
@@ -1772,7 +1772,7 @@ function ovalEl(){ return document.querySelector('#camWrap .oval'); }
 // Overlay the dashed guide EXACTLY on the region the scanner samples. oira-face and analyzeSkinRaw
 // both read the frame-normalized ellipse (cx .5, cy .46, rx .30, ry .36); the <video> is
 // object-fit:cover, which crops that frame differently in the boxed browser tab vs the full-screen
-// installed app — so a static %-of-box oval drifted small and off in standalone. Recompute from the
+// installed app, so a static %-of-box oval drifted small and off in standalone. Recompute from the
 // cover mapping so the ring she lines up to is where her skin is actually measured, on every device.
 function positionOval(){
   const box=document.getElementById('camWrap'), v=document.getElementById('cam'), ov=ovalEl();
@@ -1793,7 +1793,7 @@ function positionOval(){
   ov.style.left=(camW/2-w/2)+'px'; ov.style.top=(cy-h/2)+'px';
   ov.classList.add('fit');
 }
-// real face detection (BlazeFace, on-device) gates the ring/shutter BEFORE the lighting check —
+// real face detection (BlazeFace, on-device) gates the ring/shutter BEFORE the lighting check,
 // fixes the "gold ring lights up with no face in frame" bug, where a fixed-region skin-colour
 // blob test alone could pass on a hand, neck, or wall. Graceful fallback to the old
 // lighting-only heuristic while the model is still loading (or unavailable) so scanning never
@@ -1809,7 +1809,7 @@ async function frameTick(){
     else if(face && face.present && !face.ok){
       msg = face.tooClose ? 'A little too close, ease back a touch' : face.tooFar ? 'Come a little closer' : 'Center your face in the oval';
     } else {
-      // a real face is confirmed centered, or OiraFace has no answer yet this tick — either way,
+      // a real face is confirmed centered, or OiraFace has no answer yet this tick, either way,
       // the lighting-quality check (unchanged) still decides whether the ring goes gold.
       let m=null; try{ m=analyzeSkinRaw(v); }catch(e){}
       if(!m) msg='Center your face in the oval';
@@ -1829,7 +1829,7 @@ async function frameTick(){
 // the challenge window, a materially higher bar than frame-to-frame lightness variance alone.
 // Direction-agnostic on purpose: it doesn't matter which way she turns, or how the preview mirrors
 // it on screen, only that a real turn-and-return happened. If the model can't produce yaw data at
-// all (still loading, unsupported device), this reports 'unavailable' rather than failing her —
+// all (still loading, unsupported device), this reports 'unavailable' rather than failing her,
 // scanColour() falls back to the passive variance check in that case, same graceful-degradation
 // pattern as the rest of this screen.
 const YAW_TURN_THRESHOLD=0.09, YAW_CENTER_TOLERANCE=0.06;
@@ -1837,10 +1837,10 @@ async function livenessChallenge(){
   const v=document.getElementById('cam');
   if(!window.OiraFace || !(await OiraFace.available())) return {verified:false, method:'unavailable'};
   setHint('Slowly turn your head to one side…');
-  // 4.5s, not 2.2s: she has to READ the prompt, turn, and come back — the old window ran down
+  // 4.5s, not 2.2s: she has to READ the prompt, turn, and come back, the old window ran down
   // mid-gesture and failed a real face. baseline = median of the first few forward samples (one
   // noisy frame no longer skews it); peak = furthest she turned. Success needs a real turn AND a
-  // return back toward centre — not a pixel-perfect return, she's moving a live head.
+  // return back toward centre, not a pixel-perfect return, she's moving a live head.
   const T0=Date.now(), DUR=4500;
   let base=[], baseline=null, lastYaw=null, peak=0, samples=0, turned=false, prompted=false;
   while(Date.now()-T0 < DUR){
@@ -1887,7 +1887,7 @@ async function scanColour(){
         if(f!=null){ faceChecks++; if(f.present && f.ok) faceHits++; faceOk = !!(f.present && f.ok); } }
     }catch(e){}
     // only a frame with a real, centered face (when detection is active) counts toward her colour
-    // read — a false skin-colour blob elsewhere in the shot can no longer sneak into the sample.
+    // read, a false skin-colour blob elsewhere in the shot can no longer sneak into the sample.
     if(faceOk){ let m=null; try{ m=analyzeSkinRaw(v); }catch(e){} if(m){ itas.push(m.ita); habs.push(m.hab); Ls.push(m.L); } }
     const p=document.getElementById('scanProg'); if(p) p.style.width=Math.round((Date.now()-T0)/DUR*100)+'%';
     await new Promise(r=>setTimeout(r,120));
@@ -1930,7 +1930,7 @@ async function scanColour(){
 }
 /* ---- on-device encryption: traits are AES-256-GCM sealed BEFORE they ever leave the phone.
    The key lives on the device only (localStorage here; Keystore/Seed Vault + biometrics in prod).
-   The server/relay only ever sees ciphertext — the on-chain blob is opaque. ---- */
+   The server/relay only ever sees ciphertext, the on-chain blob is opaque. ---- */
 async function deviceKey(){
   let raw=localStorage.getItem('oira_k');
   if(!raw){ const k=crypto.getRandomValues(new Uint8Array(32)); raw=btoa(String.fromCharCode(...k)); localStorage.setItem('oira_k',raw); }
@@ -1945,11 +1945,11 @@ async function encryptTraits(obj){
 }
 async function seal(){
   // Already sealed on this device? init_palette is a ONE-TIME PDA create (program/src/lib.rs uses
-  // `init`, not init_if_needed), so re-running it throws "account already in use" — exactly the error
+  // `init`, not init_if_needed), so re-running it throws "account already in use", exactly the error
   // a returning woman hit when she re-scanned via "Recheck your colours". A recheck is not a re-seal:
   // just refresh what her agent shows from the fresh scan and return, leaving her sealed Palette (her
   // identity) untouched. (Writing the new buckets on-chain would go through set_traits, not a re-seal;
-  // tracked as a follow-up — for now the recheck updates her displayed colours without erroring.)
+  // tracked as a follow-up, for now the recheck updates her displayed colours without erroring.)
   if(palettePubkey()){ go(4); return; }
   // Hard gate: reading.live is only ever set by scanColour() (the sole path to this screen), so
   // this can't strand a legitimate flow, it can only stop a Palette from sealing when neither the
@@ -1967,7 +1967,7 @@ async function seal(){
     // and they are what she confirmed. The enclave binds them to a commitment root and seals them.
     const traits={ undertone:Math.max(0,UNDER.indexOf(reading.under)), depth:Math.max(1,Math.min(10,reading.monk||6)), season:Math.max(0,Math.min(11,Object.keys(SEASONS).indexOf(reading.season))) };
     // ensure we hold a real signer (boot may have deferred an enrolled passkey until sign-time,
-    // or — wallet mode — bootIdentity() deliberately never reconnects one without a gesture).
+    // or, wallet mode, bootIdentity() deliberately never reconnects one without a gesture).
     if(!deviceOwner || !deviceOwner.sign){
       if(signMode()==='wallet' && window.OiraMWA){
         try{ await connectAnyWallet(async ({address})=>{ await becomeWalletOwner(address); }); }
@@ -1979,14 +1979,14 @@ async function seal(){
     }
     if(!(deviceOwner && deviceOwner.sign)){
       // No device signer => STOP. The old fallback here (POST /api/seal) had the server mint
-      // a fresh random owner per call — a different wallet/Palette every time it silently ran
+      // a fresh random owner per call, a different wallet/Palette every time it silently ran
       // (the address-changed-between-sessions bug). Her identity only ever comes from her
       // device key, so a failed unlock must surface and retry, never substitute.
       hideWork();
-      alert('Your device key wasn’t available to sign, so nothing was sealed. Tap “This is me — seal it” to try again.');
+      alert('Your device key wasn’t available to sign, so nothing was sealed. Tap “This is me, seal it” to try again.');
       return;
     }
-    // Fallback path (no PRF / no Face-Touch-ID) has NO automatic recovery — the device-local seed
+    // Fallback path (no PRF / no Face-Touch-ID) has NO automatic recovery, the device-local seed
     // IS her only key. Don't seal her into a Palette she could be permanently locked out of: make
     // her save the recovery key and prove it FIRST. Passkey owners skip this (they recover via
     // platform passkey sync); wallet owners skip it (their wallet holds recovery).
@@ -1995,18 +1995,18 @@ async function seal(){
     work('Sealing your Palette','Signing on your device. Your key never leaves it.');
     sealData=await window.OiraCustody.sealViaDevice(deviceOwner,{traits,encBlob});
   }catch(e){
-    // loud failure (bridge unreachable, tx error, timeout): nothing was stored, she retries —
+    // loud failure (bridge unreachable, tx error, timeout): nothing was stored, she retries,
     // never advance to the "Sealed." screen on a failed seal.
     console.warn('oira: seal failed', e);
     sealData=null; hideWork();
-    alert('Sealing didn’t complete ('+((e&&e.message)||'connection failed')+'). Nothing was stored — tap “This is me — seal it” to try again.');
+    alert('Sealing didn’t complete ('+((e&&e.message)||'connection failed')+'). Nothing was stored, tap “This is me, seal it” to try again.');
     return;
   }
   try{ if(sealData&&sealData.explorer){ const m=sealData.explorer.match(/address\/([^?\/]+)/); if(m) localStorage.setItem('oira_palette',m[1]); } }catch(e){}
   hideWork(); go(3);
 }
 // Fallback recovery-key backup GATE (called by seal() before a fallback owner seals). The fallback
-// seed has no platform sync — it is the only key — so she must save it and prove it before we seal,
+// seed has no platform sync, it is the only key, so she must save it and prove it before we seal,
 // not just be shown an optional note afterwards. The marker is a short prefix of the seed so a
 // re-generated seed (device reset or storage eviction) automatically re-gates; it exposes nothing
 // beyond what LS_FALLBACK already stores locally on this same device.
@@ -2017,26 +2017,26 @@ async function ensureFallbackBackup(){
   const key=window.OiraCustody&&window.OiraCustody.exportFallbackSeed&&window.OiraCustody.exportFallbackSeed();
   if(!key) return true; // no fallback seed to protect (shouldn't happen for a fallback owner)
   try{ await navigator.clipboard.writeText(key); }catch(e){}
-  alert('This device has no Face/Touch ID, so Oira can’t recover your Palette for you.\n\nYour recovery key (copied to your clipboard):\n\n'+key+'\n\nSave it in a password manager or notes app now — it is the ONLY way back in if you lose this device. Treat it like a password: anyone with it can open your Palette.');
+  alert('This device has no Face/Touch ID, so Oira can’t recover your Palette for you.\n\nYour recovery key (copied to your clipboard):\n\n'+key+'\n\nSave it in a password manager or notes app now, it is the ONLY way back in if you lose this device. Treat it like a password: anyone with it can open your Palette.');
   const back=prompt('To confirm you’ve saved it, paste your recovery key back here:');
   if(back && back.trim()===String(key).trim()){ try{ localStorage.setItem('oira.fbbackup',fbMark(key)); }catch(e){} return true; }
-  alert('That didn’t match, so nothing was sealed — we don’t want you locked out. Save your recovery key, then tap “This is me — seal it” again.');
+  alert('That didn’t match, so nothing was sealed, we don’t want you locked out. Save your recovery key, then tap “This is me, seal it” again.');
   return false;
 }
 // Honest, assurance-specific recovery disclosure, shown once right when it matters (just after
 // she seals) rather than left silent. 'passkey' recovers for free via her platform's own passkey
-// sync (iCloud Keychain / Google Password Manager) — nothing more to do, but she should know that
+// sync (iCloud Keychain / Google Password Manager), nothing more to do, but she should know that
 // IS what recovers her. 'fallback' has no sync backing it at all, so losing this device without
-// saving the key first is unrecoverable, no support flow can bring it back — this is the one
+// saving the key first is unrecoverable, no support flow can bring it back, this is the one
 // case that gets an explicit save-it-now action, not just a note.
 function renderRecoveryNote(){
   const el=document.getElementById('recoveryNote'); if(!el || !deviceOwner) return;
   if(deviceOwner.assurance==='fallback'){
-    el.innerHTML='This device has no Face/Touch ID, so your recovery key is the only way back in — you saved it before sealing, keep that copy safe. <span style="text-decoration:underline;cursor:pointer;color:var(--mauve-deep)" onclick="showRecoveryKey()">Show it again</span>';
+    el.innerHTML='This device has no Face/Touch ID, so your recovery key is the only way back in, you saved it before sealing, keep that copy safe. <span style="text-decoration:underline;cursor:pointer;color:var(--mauve-deep)" onclick="showRecoveryKey()">Show it again</span>';
   } else if(deviceOwner.assurance==='passkey'){
     el.textContent='Recovers automatically with Face/Touch ID on any device signed into the same Apple or Google account. Losing this device without that signed in means losing this Palette.';
   } else if(deviceOwner.assurance==='wallet'){
-    el.textContent='This Palette follows your connected wallet. Its recovery is whatever your wallet app already uses (e.g. a seed phrase) — Oira does not hold a separate copy.';
+    el.textContent='This Palette follows your connected wallet. Its recovery is whatever your wallet app already uses (e.g. a seed phrase), Oira does not hold a separate copy.';
   } else { el.textContent=''; }
 }
 function showRecoveryKey(){
@@ -2093,7 +2093,7 @@ async function goodnight(){
 bootIdentity(); // establish her stable device identity on load, before any screen needs the address
 maybeDailyNudge();
 const _q=new URLSearchParams(location.search);
-// She already sealed on this device (oira_palette persists from a prior seal() success) — go
+// She already sealed on this device (oira_palette persists from a prior seal() success), go
 // straight to her agent, not back through capture/confirm/seal. Only "Reset this device" in
 // Settings clears this, so it stays true across reloads until she explicitly re-enrolls.
 if(_q.has('s')) go(+_q.get('s')); // ?s=6 jumps to a screen (explicit override, e.g. demos)

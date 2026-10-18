@@ -236,7 +236,7 @@
     setLang(l){ if(T[l]){ LANG=l; localStorage.setItem('oira_lang',l); } },
     ui(){ return (T[LANG]||T.en).ui; },
     greet(){ return (T[LANG]||T.en).greet(); },
-    // the fully-static lines (no colour/season/amount slots) for the current language — used to
+    // the fully-static lines (no colour/season/amount slots) for the current language, used to
     // pre-warm the TTS cache so the most common spoken replies are free at runtime.
     staticLines(){ const t=T[LANG]||T.en; const ctx=(window.oiraBuildContext&&window.oiraBuildContext())||{};
       return [t.greet(), t.privacy(ctx), t.offers(ctx), t.recheck(ctx), t.help(ctx)]; },
@@ -263,7 +263,7 @@
       //  1) on-device Gemma 3n (nothing leaves the phone) when weights are present;
       //  2) the governed server concierge (/api/concierge, coarse palette only) for real reasoning
       //     on devices without local weights;
-      //  3) the deterministic grounded draft — always-on floor.
+      //  3) the deterministic grounded draft, always-on floor.
       try{
         const LLM=(typeof window!=='undefined')&&window.OiraLLM;
         if(LLM && await LLM.available()){

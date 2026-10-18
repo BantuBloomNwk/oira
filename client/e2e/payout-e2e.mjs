@@ -1,4 +1,4 @@
-// Oira payout spike — a PRIVATE USDC payment (brand → her) inside the same TEE enclave.
+// Oira payout spike, a PRIVATE USDC payment (brand → her) inside the same TEE enclave.
 // Mirrors MagicBlock's private-payments-demo flow, adapted to ephemeral-rollups-sdk 0.15.1:
 //   base: init vault + ephemeral ATAs (eATAs) for brand & her, deposit brand USDC into the
 //   vault (credits brand's eATA), delegate both eATAs (+permissions) into the private ER ->
@@ -120,4 +120,4 @@ await new Promise((r) => setTimeout(r, 3000));
 console.log('\n────────── RESULT ──────────');
 const herAfter = await bal(her.publicKey);
 console.log('her oUSDC after:', herAfter);
-console.log(herAfter >= AMOUNT ? `PASS ✓ — ${AMOUNT} oUSDC paid to her privately (the brand→her link never hit public base).` : 'CHECK — her balance did not reflect the private payout.');
+console.log(herAfter >= AMOUNT ? `PASS ✓, ${AMOUNT} oUSDC paid to her privately (the brand→her link never hit public base).` : 'CHECK: her balance did not reflect the private payout.');

@@ -18,7 +18,7 @@ const load = (p) => fs.readFileSync(ROOT + p, 'utf8');
 const store = {};
 const window = { nacl };
 const localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } };
-// crypto is intentionally NOT shimmed — custody.js's bare `crypto.subtle` calls resolve to
+// crypto is intentionally NOT shimmed, custody.js's bare `crypto.subtle` calls resolve to
 // Node's own global `crypto` (real WebCrypto), which is the whole point of this test.
 new Function('window', 'localStorage', load('/app/custody.js'))(window, localStorage);
 

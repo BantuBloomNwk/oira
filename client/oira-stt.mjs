@@ -1,4 +1,4 @@
-// Oira STT proxy — forwards her audio to the self-hosted Whisper endpoint, key held server-side.
+// Oira STT proxy, forwards her audio to the self-hosted Whisper endpoint, key held server-side.
 // See docs/VOICE-STACK.md. Two backends, chosen by OIRA_STT_URL:
 //   RunPod Serverless:  https://api.runpod.ai/v2/<endpoint-id>/runsync   (Bearer OIRA_STT_KEY)
 //   Contabo FastAPI:    https://<host>/stt                                (multipart, no key)

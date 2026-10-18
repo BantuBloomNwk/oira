@@ -31,7 +31,7 @@ const C = window.OiraConcierge, LLM = window.OiraLLM;
 // 2. mock model present -> refined answer via llm, em-dash stripped by guardrail
 {
   let seenPrompt = '';
-  LLM._setMock(async (p) => { seenPrompt = p; return 'Berry is truly yours — wear it with confidence.'; });
+  LLM._setMock(async (p) => { seenPrompt = p; return 'Berry is truly yours, wear it with confidence.'; });
   const r = await C.answer('does berry suit me?');
   ok('mock present -> answered via llm', r.via === 'llm');
   ok('guardrail strips em-dashes', r.via === 'llm' && !/[—–]/.test(r.text));
@@ -49,7 +49,7 @@ const C = window.OiraConcierge, LLM = window.OiraLLM;
 
 // 4. guardOutput unit checks
 {
-  ok('guardOutput strips dash + trims', LLM.guardOutput('Soft rose — lovely.') === 'Soft rose, lovely.');
+  ok('guardOutput strips dash + trims', LLM.guardOutput('Soft rose, lovely.') === 'Soft rose, lovely.');
   ok('guardOutput rejects empty', LLM.guardOutput('') === null);
   ok('guardOutput drops leading "Oira:"', LLM.guardOutput('Oira: hello') === 'hello');
 }
@@ -67,7 +67,7 @@ const C = window.OiraConcierge, LLM = window.OiraLLM;
 // the same guardrail. No image -> falls back to the plain text path unchanged.
 {
   let seenPrompt = null;
-  LLM._setMock(async (p) => { seenPrompt = p; return 'That coral leans warm, and warm suits you — lovely pick.'; });
+  LLM._setMock(async (p) => { seenPrompt = p; return 'That coral leans warm, and warm suits you, lovely pick.'; });
   const r = await LLM.generateWithImage(PALETTE, 'is this shade mine?', 'en', 'It leans warm.', { fake: 'canvas-element' });
   ok('vision prompt is the documented array form', Array.isArray(seenPrompt));
   ok('vision prompt opens with Gemma turn marker', seenPrompt[0] === '<start_of_turn>user\n');

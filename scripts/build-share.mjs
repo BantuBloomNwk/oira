@@ -1,5 +1,5 @@
 // Generates the palette share kit: one card PNG + one share page (with baked OpenGraph/Twitter
-// meta) per season. Social crawlers do not run JS, so the meta must be static per season — hence
+// meta) per season. Social crawlers do not run JS, so the meta must be static per season, hence
 // pre-generated pages rather than one JS page. Card PNGs are rendered with headless Chromium for
 // font + gradient fidelity. Run: node scripts/build-share.mjs
 import fs from 'fs';
@@ -8,12 +8,12 @@ import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
-// BASE drives the actual fetchable/clickable URLs (og:image, og:url, the CTA link) — stays
+// BASE drives the actual fetchable/clickable URLs (og:image, og:url, the CTA link), stays
 // on the working Netlify domain until myoira.com's DNS has actually propagated (can take up
 // to a day per Netlify's own docs), so shared links don't 404 during that window. Override
 // with OIRA_BASE=https://myoira.com once DNS is confirmed live, and re-run this script.
 const BASE = process.env.OIRA_BASE || 'https://oira-palette.netlify.app';
-// BRAND_DOMAIN is the domain shown as brand text on the card image/page — purely visual,
+// BRAND_DOMAIN is the domain shown as brand text on the card image/page, purely visual,
 // safe to set to the real domain immediately regardless of DNS propagation status.
 const BRAND_DOMAIN = 'myoira.com';
 const OUT_IMG = path.join(ROOT, 'app/share');

@@ -39,7 +39,7 @@ export const Palette = z.object({
 }).strict();
 
 // tools an agent is permitted to call (advisory, read-only). No seal/match/settle/payout tool
-// exists here by design — money-moving stays deterministic and OUTSIDE MCP.
+// exists here by design, money-moving stays deterministic and OUTSIDE MCP.
 const ALLOW = new Set(['check_colour', 'ask_oira']);
 
 // field names that must never appear anywhere in a call, even nested (defence in depth)

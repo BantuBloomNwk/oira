@@ -1,4 +1,4 @@
-# Offer_board — brand-side marketplace VERIFIED (devnet)
+# Offer_board: brand-side marketplace VERIFIED (devnet)
 
 The public, stake-gated money rail that sits under the private enclave match. A brand
 funds a campaign (escrows oUSDC up front); every answered offer consumes a query stake
@@ -6,7 +6,7 @@ funds a campaign (escrows oUSDC up front); every answered offer consumes a query
 from escrow; close returns the unspent remainder to the brand.
 
 Program `oira-palette` `CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP` (devnet). Upgrade
-deployed 2026-07-05 (had to `solana program extend … 110000` first — the escrow code
+deployed 2026-07-05 (had to `solana program extend … 110000` first, the escrow code
 grew the `.so` to 427,368 B). Instructions added: `create_campaign`, `settle_offer`,
 `close_campaign` + `Campaign` account + per-campaign escrow token account (PDA authority).
 
@@ -38,5 +38,5 @@ cd client && node e2e/campaign-e2e.mjs
 ## Security
 
 semgrep 0 findings on `lib.rs` + `campaign-e2e.mjs`; cargo-audit / npm-audit only the
-known MagicBlock-SDK transitive warnings (do NOT autofix — downgrades the SDK / web3.js
+known MagicBlock-SDK transitive warnings (do NOT autofix, downgrades the SDK / web3.js
 and breaks the PER path).

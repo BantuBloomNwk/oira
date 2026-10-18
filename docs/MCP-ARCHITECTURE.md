@@ -1,4 +1,4 @@
-# Agent + MCP architecture (Oira) — 2026-07-07
+# Agent + MCP architecture (Oira): 2026-07-07
 
 How our reasoning agents get tools, safely. One rule governs everything here.
 
@@ -30,14 +30,14 @@ LLM ───▶│  MCP server │ ─────▶ │ policy + guardrails  
   only whitelisted, coarse data. Raw traits, keys, wallet, and PII never cross it.
 
 ## Guardrails (enforced at the tool boundary, server-side)
-1. **Allowlist** — an agent may only call the tools its role grants.
-2. **Schemas in/out** — every tool validates input and output; the model cannot smuggle arbitrary
+1. **Allowlist**: an agent may only call the tools its role grants.
+2. **Schemas in/out**: every tool validates input and output; the model cannot smuggle arbitrary
    data through, and outputs are shape-checked before returning.
-3. **Redaction filter** — a deny-list of fields (raw selfie, ITA°/measurements, secret keys,
+3. **Redaction filter**: a deny-list of fields (raw selfie, ITA°/measurements, secret keys,
    wallet, private verdicts, PII) that can never appear in any tool result.
-4. **Rate + budget limits** — per tool, per session, per IP.
-5. **Full audit log** — every tool call (who, what, args hash, result hash, allow/deny) is logged.
-6. **No side-effects without a deterministic gate** — any tool that would change state or spend is
+4. **Rate + budget limits**: per tool, per session, per IP.
+5. **Full audit log**: every tool call (who, what, args hash, result hash, allow/deny) is logged.
+6. **No side-effects without a deterministic gate**: any tool that would change state or spend is
    split: the LLM tool only *proposes*; a separate non-LLM verifier applies it under fixed rules.
 
 ## Tool inventory (first cut)

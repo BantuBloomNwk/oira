@@ -1,21 +1,21 @@
-// Oira Palette — MagicBlock Private ER (PER / TEE) program.
+// Oira Palette, MagicBlock Private ER (PER / TEE) program.
 //
 // Her beauty "Palette" is matched against brand offers WITHOUT her traits ever appearing
 // in plaintext on the public base layer. The load-bearing design (Phase 1 rework):
-//   • Her BUCKETED traits (undertone / Monk depth / season — categories, never raw values)
+//   • Her BUCKETED traits (undertone / Monk depth / season, categories, never raw values)
 //     live in a TraitsSession account that is delegated into the Private ER (Intel TDX),
 //     marked private (whitelists only her agent as reader), and never committed to base.
 //   • `set_traits` runs INSIDE the enclave and cryptographically BINDS the sealed traits to
 //     a commitment root the phone published at init (keccak(salt‖traits)), so the agent can
 //     never substitute traits.
 //   • `match_query` runs INSIDE the enclave, signed by the offline agent, READS her traits
-//     and computes the real bucket-distance verdict itself — the client no longer supplies
+//     and computes the real bucket-distance verdict itself, the client no longer supplies
 //     the answer. Only a HASHED receipt (keccak(offer_hash‖verdict‖nonce)) reaches base, so
 //     public receipts do not reveal her palette.
 //   • A hard on-chain query budget provides anti-abuse rate limiting.
 //
 // Spikes A/B (docs/SPIKE-A-*, SPIKE-B-*) verified: the whitelist genuinely gates ER reads,
-// and the operator may periodically commit ER state — hence traits are BUCKETED so any
+// and the operator may periodically commit ER state, hence traits are BUCKETED so any
 // commit leaks categories, not a biometric vector.
 //
 // Build with the solana 3.1.10 toolchain (platform-tools v1.52). See docs/PER-SPIKE.md.
@@ -88,7 +88,7 @@ pub mod oira_palette {
         Ok(())
     }
 
-    /// Create the (empty) TraitsSession account on base. It holds NO traits yet — traits are
+    /// Create the (empty) TraitsSession account on base. It holds NO traits yet, traits are
     /// written only later, inside the enclave, by `set_traits`, so plaintext buckets never
     /// exist on public base even for one slot.
     pub fn init_traits(ctx: Context<InitTraits>) -> Result<()> {
@@ -127,7 +127,7 @@ pub mod oira_palette {
     }
 
     /// Delegate the TraitsSession into the ER. This account is marked private and NEVER
-    /// undelegated — her bucketed traits live only inside the enclave.
+    /// undelegated, her bucketed traits live only inside the enclave.
     pub fn delegate_traits(ctx: Context<DelegateTraits>) -> Result<()> {
         let owner = ctx.accounts.owner.key();
         ctx.accounts.delegate_traits(
@@ -141,7 +141,7 @@ pub mod oira_palette {
     /// Mark the delegated Palette private inside the TEE, whitelisting exactly one reader.
     /// IDEMPOTENT/RE-BINDABLE: the permission group is CREATED on her first seal and UPDATED on
     /// any later one. Create is create-only in the permission program (re-running it on an
-    /// existing group dies with InvalidAccountData — the bug that broke every monthly re-seal),
+    /// existing group dies with InvalidAccountData, the bug that broke every monthly re-seal),
     /// so when the permission account already exists we issue the update CPI instead, with the
     /// palette PDA (the group's authority, established at create) signing via its seeds. This
     /// also REPAIRS palettes sealed before the deterministic-agent fix: their group is bound to
@@ -213,7 +213,7 @@ pub mod oira_palette {
         Ok(())
     }
 
-    /// Write her bucketed traits INTO the private TraitsSession — runs inside the enclave,
+    /// Write her bucketed traits INTO the private TraitsSession, runs inside the enclave,
     /// owner-signed. BINDS them to the commitment root: recomputes keccak(salt‖traits) and
     /// requires it to equal the root the phone published at init. Traits that don't match
     /// what she confirmed are rejected, so no one (agent or server) can substitute them.
@@ -233,35 +233,35 @@ pub mod oira_palette {
     }
 
     /// THE match. Runs INSIDE the TEE, signed by the agent session key (owner offline). READS
-    /// her sealed traits and computes the verdict itself — the client supplies only the offer,
+    /// her sealed traits and computes the verdict itself, the client supplies only the offer,
     /// never the answer. Enforces the query budget and her night rules on-chain. Commits only
     /// a HASHED receipt so the public base never learns which offer matched.
     pub fn match_query(ctx: Context<MatchQuery>, target_undertone: u8, target_depth: u8, target_season: u8, depth_tol: u8, offer_salt: [u8; 16]) -> Result<()> {
         require!(ctx.accounts.palette.is_private, OiraError::NotPrivate);
         require!(ctx.accounts.traits.is_sealed, OiraError::TraitsNotSealed);
-        // ONLY her whitelisted agent may spend her (never-resetting) query budget — otherwise an
+        // ONLY her whitelisted agent may spend her (never-resetting) query budget, otherwise an
         // attacker could exhaust her lifetime allowance with throwaway campaigns and grief her matchability.
         require!(ctx.accounts.agent.key() == ctx.accounts.palette.agent, OiraError::UnauthorizedAgent);
         require!(ctx.accounts.campaign.active, OiraError::CampaignClosed);
 
-        // L1 — idempotency: a repeat query of an already-answered offer is a FREE no-op, so her
+        // L1, idempotency: a repeat query of an already-answered offer is a FREE no-op, so her
         // query meter counts DISTINCT escrowed campaigns (= distinct targets), not re-checks.
         if ctx.accounts.campaign.answered { return Ok(()); }
 
-        // The brand's COMMITTED offer. L2: the agent supplies NO target of its own — it opens the
+        // The brand's COMMITTED offer. L2: the agent supplies NO target of its own, it opens the
         // campaign's on-chain COMMITMENT, so a stolen agent key can only ask "does she match THIS
         // escrowed campaign?", never sweep her space. The plaintext shade lives ONLY in this in-enclave
-        // tx (whitelisted ER), never on base — base stores nothing but target_hash, so settled matches
+        // tx (whitelisted ER), never on base, base stores nothing but target_hash, so settled matches
         // no longer reconstruct her attribute space.
         let (c_target_hash, c_cat, c_payout, c_pqc, c_escrowed, c_queries, c_brand) = {
             let c = &ctx.accounts.campaign;
             (c.target_hash, c.category, c.per_accept_payout, c.per_query_cost, c.escrowed, c.queries, c.brand)
         };
-        // Bind the supplied shade to the campaign's committed hash — a compromised agent cannot feed a
+        // Bind the supplied shade to the campaign's committed hash, a compromised agent cannot feed a
         // fabricated target to probe a different shade than the brand escrowed for.
         let opening = hashv(&[&offer_salt[..], &[target_undertone, target_depth, target_season, depth_tol][..]]).to_bytes();
         require!(opening == c_target_hash, OiraError::OfferMismatch);
-        // L3 — escrow prices queries: a campaign may be asked at most escrowed/per_query_cost times.
+        // L3, escrow prices queries: a campaign may be asked at most escrowed/per_query_cost times.
         require!(c_pqc > 0, OiraError::EscrowTooSmall);
         require!((c_queries as u64) < c_escrowed / c_pqc, OiraError::QueryBudgetExceeded);
 
@@ -269,11 +269,11 @@ pub mod oira_palette {
         let matched = trait_match(&ctx.accounts.traits, target_undertone, target_depth, target_season, depth_tol);
         let salt = ctx.accounts.traits.salt;
 
-        // Epoch is derived IN-ENCLAVE from the trusted ER clock, never from a caller arg — otherwise the
+        // Epoch is derived IN-ENCLAVE from the trusted ER clock, never from a caller arg, otherwise the
         // agent could hand a fresh epoch number on every call and reset the per-epoch meter at will.
         let epoch = (Clock::get()?.unix_timestamp / EPOCH_SECS) as u32;
         let p = &mut ctx.accounts.palette;
-        // L4 — her-set budgets (0 => protocol defaults). A new (clock) epoch resets the per-epoch meter.
+        // L4, her-set budgets (0 => protocol defaults). A new (clock) epoch resets the per-epoch meter.
         let epoch_cap = if p.epoch_cap == 0 { QUERY_CAP_PER_EPOCH } else { p.epoch_cap };
         let lifetime_cap = if p.lifetime_cap == 0 { LIFETIME_QUERY_CAP } else { p.lifetime_cap };
         if epoch > p.epoch { p.epoch = epoch; p.query_count = 0; }
@@ -282,7 +282,7 @@ pub mod oira_palette {
         require!(p.lifetime_queries < lifetime_cap, OiraError::LifetimeBudgetExceeded);
         // Bounded per-brand distinct-offer cap (Sybil tightening): each brand may query at most
         // `max_q_per_brand` distinct offers. 8-slot table; on a full table a NEW brand evicts the
-        // smallest-count slot — this never bypasses the hard `lifetime_cap` ceiling, it only
+        // smallest-count slot, this never bypasses the hard `lifetime_cap` ceiling, it only
         // approximates per-brand once >8 brands are active. (0 => disabled.)
         if p.max_q_per_brand > 0 {
             let cap = p.max_q_per_brand as u16;
@@ -306,7 +306,7 @@ pub mod oira_palette {
         p.query_count = p.query_count.saturating_add(1);
         p.lifetime_queries = p.lifetime_queries.saturating_add(1);
 
-        // Nonce derived in-enclave from her private traits — unknown to the brand, so the
+        // Nonce derived in-enclave from her private traits, unknown to the brand, so the
         // committed receipt hash does NOT reveal the verdict (L5). Kept PRIVATE in her Palette (which
         // never leaves the enclave); the agent reads it in-ER and discloses it ONLY on an accept.
         let lq = p.lifetime_queries.to_le_bytes();
@@ -318,7 +318,7 @@ pub mod oira_palette {
         p.updated_at = Clock::get()?.unix_timestamp;
         let owner = p.owner;
 
-        // Commit the match state onto the CAMPAIGN — this is what undelegates to base for settle.
+        // Commit the match state onto the CAMPAIGN, this is what undelegates to base for settle.
         let c = &mut ctx.accounts.campaign;
         c.answered = true;
         c.receipt = hashv(&[&c_target_hash[..], &[verdict][..], &nonce[..]]).to_bytes();
@@ -381,7 +381,7 @@ pub mod oira_palette {
         c.per_query_cost = per_query_cost;
         c.per_accept_payout = per_accept_payout;
         // ONLY the commitment lands on base. The opening (shade + salt) is disclosed to her agent
-        // in-enclave at match time and verified against this hash — base never stores the plaintext shade.
+        // in-enclave at match time and verified against this hash, base never stores the plaintext shade.
         c.target_hash = target_hash;
         c.escrowed = escrow_amount;
         c.spent = 0;
@@ -396,7 +396,7 @@ pub mod oira_palette {
         Ok(())
     }
 
-    /// Settle an accepted offer — the payout is now AUTHORIZED BY THE REAL ON-CHAIN MATCH,
+    /// Settle an accepted offer, the payout is now AUTHORIZED BY THE REAL ON-CHAIN MATCH,
     /// not a brand-supplied boolean. The brand presents (offer_hash, verdict, nonce); the
     /// program requires the offer to be this campaign's target, the verdict to be MATCH, and
     /// sha256(offer_hash‖verdict‖nonce) to equal the committed match receipt on her Palette.
@@ -404,7 +404,7 @@ pub mod oira_palette {
     pub fn settle_offer(ctx: Context<SettleOffer>, offer_hash: [u8; 32], verdict: u8, nonce: [u8; 16]) -> Result<()> {
         // The verdict + receipt were computed IN-ENCLAVE and committed onto the campaign; the brand
         // can only settle by presenting the (verdict, nonce) her agent DISCLOSED on an accept. The
-        // Palette never reaches base — the campaign carries the payee her enclave stamped on a match.
+        // Palette never reaches base, the campaign carries the payee her enclave stamped on a match.
         require!(offer_hash == ctx.accounts.campaign.target_hash, OiraError::OfferMismatch);
         require!(verdict == 1, OiraError::NotAMatch);
         require!(ctx.accounts.campaign.answered, OiraError::NotAnswered);
@@ -521,11 +521,11 @@ pub struct PaletteVault {
     pub enc_traits: Vec<u8>,       // encrypted recovery blob (base); never the match input
     pub commitment_root: [u8; 32], // sha256(salt‖traits) the phone published; binds set_traits
     pub query_count: u32,
-    pub lifetime_queries: u32,     // never resets — lifetime query counter
+    pub lifetime_queries: u32,     // never resets, lifetime query counter
     pub epoch: u32,
     pub is_private: bool,
-    pub last_verdict: u8,          // 0 no-match, 1 match, 2 declined — in-ER scratch ONLY; wiped to 0 before the palette commits to base
-    pub last_nonce: [u8; 16],      // per-query secret nonce (derived in-enclave from her traits); agent reads it in-ER to disclose on an accept, then it is wiped before commit — never reaches base
+    pub last_verdict: u8,          // 0 no-match, 1 match, 2 declined, in-ER scratch ONLY; wiped to 0 before the palette commits to base
+    pub last_nonce: [u8; 16],      // per-query secret nonce (derived in-enclave from her traits); agent reads it in-ER to disclose on an accept, then it is wiped before commit, never reaches base
     pub updated_at: i64,
     pub min_payout: u64,
     pub max_q_per_brand: u8,
@@ -533,7 +533,7 @@ pub struct PaletteVault {
     pub rules_active: bool,
     pub lifetime_cap: u32,         // her-set lifetime distinct-campaign budget (0 => default LIFETIME_QUERY_CAP)
     pub epoch_cap: u32,            // her-set per-epoch budget (0 => default QUERY_CAP_PER_EPOCH)
-    pub agent: Pubkey,             // the ONLY key allowed to run match_query — set at privacy seal; stops budget-exhaustion grief
+    pub agent: Pubkey,             // the ONLY key allowed to run match_query, set at privacy seal; stops budget-exhaustion grief
     pub brands: [BrandCount; BRAND_SLOTS], // per-brand distinct-offer counts (kept last so client decoders are unaffected)
 }
 impl PaletteVault {
@@ -547,7 +547,7 @@ pub struct TraitsSession {
     pub depth: u8,     // Monk 1-10
     pub season: u8,    // 0-11
     pub is_sealed: bool,
-    pub salt: [u8; 32], // her 256-bit commitment salt — PRIVATE (never leaves the enclave); high-entropy source for the receipt nonce
+    pub salt: [u8; 32], // her 256-bit commitment salt, PRIVATE (never leaves the enclave); high-entropy source for the receipt nonce
 }
 impl TraitsSession {
     pub const SPACE: usize = 8 + 32 + 1 + 1 + 1 + 1 + 32;
@@ -577,7 +577,7 @@ pub struct DelegatePalette<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
     // SECURITY FIX: was UncheckedAccount, used only as a PDA seed with no signature
-    // requirement — anyone could delegate HER palette into a validator of their own
+    // requirement, anyone could delegate HER palette into a validator of their own
     // choosing. Must be her signature, not just her public key.
     pub owner: Signer<'info>,
     /// CHECK: delegated PDA, validated by the SDK macro
@@ -590,7 +590,7 @@ pub struct DelegatePalette<'info> {
 pub struct DelegateTraits<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
-    // SECURITY FIX: see DelegatePalette — must be her signature, not an unchecked pubkey.
+    // SECURITY FIX: see DelegatePalette, must be her signature, not an unchecked pubkey.
     pub owner: Signer<'info>,
     /// CHECK: delegated PDA, validated by the SDK macro
     #[account(mut, del)]
@@ -602,7 +602,7 @@ pub struct DelegateTraits<'info> {
 pub struct DelegateCampaign<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
-    // SECURITY FIX: was UncheckedAccount — same class of bug as DelegatePalette. A brand
+    // SECURITY FIX: was UncheckedAccount, same class of bug as DelegatePalette. A brand
     // delegating its own campaign must sign for it; otherwise anyone could delegate another
     // brand's campaign into a validator of their choosing.
     pub brand: Signer<'info>,
@@ -631,7 +631,7 @@ pub struct CommitCampaign<'info> {
 pub struct SetPalettePrivacy<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
-    // SECURITY FIX: was UncheckedAccount — anyone could call set_palette_privacy against
+    // SECURITY FIX: was UncheckedAccount, anyone could call set_palette_privacy against
     // her PDA and install THEMSELVES as the sole whitelisted TEE reader (palette.agent),
     // then read her private state. Must be her signature.
     pub owner: Signer<'info>,
@@ -655,7 +655,7 @@ pub struct SetPalettePrivacy<'info> {
 pub struct SetTraitsPrivacy<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
-    // SECURITY FIX: see SetPalettePrivacy — must be her signature, not an unchecked pubkey.
+    // SECURITY FIX: see SetPalettePrivacy, must be her signature, not an unchecked pubkey.
     pub owner: Signer<'info>,
     #[account(mut, seeds = [TRAITS_SEED, owner.key().as_ref()], bump, has_one = owner)]
     pub traits: Account<'info, TraitsSession>,
@@ -684,7 +684,7 @@ pub struct SetTraits<'info> {
 
 #[derive(Accounts)]
 pub struct MatchQuery<'info> {
-    /// The agent SESSION KEY — least privilege, only this instruction. Owner may be offline.
+    /// The agent SESSION KEY, least privilege, only this instruction. Owner may be offline.
     pub agent: Signer<'info>,
     #[account(mut, seeds = [PALETTE_SEED, palette.owner.as_ref()], bump)]
     pub palette: Account<'info, PaletteVault>,
@@ -693,7 +693,7 @@ pub struct MatchQuery<'info> {
     /// CHECK: her owner pubkey, tying traits + palette to the same owner
     #[account(address = palette.owner)]
     pub owner: UncheckedAccount<'info>,
-    /// The brand's campaign, co-delegated into this ER — the ONLY offer the agent can query her
+    /// The brand's campaign, co-delegated into this ER, the ONLY offer the agent can query her
     /// against (L2). Mutated in-enclave (answered/receipt/payee/queries), then undelegated to base.
     #[account(mut, seeds = [CAMPAIGN_SEED, campaign.brand.as_ref(), &campaign.offer_id.to_le_bytes()], bump = campaign.bump)]
     pub campaign: Account<'info, Campaign>,
@@ -731,7 +731,7 @@ pub struct Campaign {
     pub category: u8,
     pub per_query_cost: u64,
     pub per_accept_payout: u64,
-    // The brand's COMMITMENT to its target shade — the ONLY thing the agent can query her against (L2).
+    // The brand's COMMITMENT to its target shade, the ONLY thing the agent can query her against (L2).
     // The plaintext shade + salt are NEVER stored on base; they are opened to her agent in-enclave and
     // verified against this hash. So even a SETTLED match reveals only an opaque hash, not the shade, and
     // the set of her matched shades can no longer be reconstructed from base.
@@ -745,8 +745,8 @@ pub struct Campaign {
     pub bump: u8,
     // Match state written IN-ENCLAVE and committed to base on undelegate.
     pub answered: bool,            // idempotency (L1): a repeat query of this offer is a free no-op
-    pub receipt: [u8; 32],         // sha256(target_hash‖verdict‖nonce) — opaque; the verdict is NOT recoverable without the private nonce (L5)
-    pub payee_commit: [u8; 32],    // H(her wallet‖nonce) — set ONLY on a match (zeros otherwise). Her wallet is unlinkable until she settles (L5)
+    pub receipt: [u8; 32],         // sha256(target_hash‖verdict‖nonce), opaque; the verdict is NOT recoverable without the private nonce (L5)
+    pub payee_commit: [u8; 32],    // H(her wallet‖nonce), set ONLY on a match (zeros otherwise). Her wallet is unlinkable until she settles (L5)
 }
 impl Campaign {
     pub const SPACE: usize = 8 + 32 + 32 + 8 + 1 + 8 + 8 + 32 + 8 + 8 + 8 + 4 + 4 + 1 + 1 + 1 + 32 + 32;

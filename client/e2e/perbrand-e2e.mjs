@@ -1,4 +1,4 @@
-// Residual #2 — bounded per-brand distinct-offer cap, proven on devnet.
+// Residual #2, bounded per-brand distinct-offer cap, proven on devnet.
 //   Her Palette carries an 8-slot (brand -> distinct-offer count) table. With max_q_per_brand = 1,
 //   ONE brand can query at most one distinct offer; a second distinct offer from the SAME brand is
 //   rejected in-enclave, while a DIFFERENT brand is still allowed. Tightens the Sybil barrier beyond
@@ -127,20 +127,20 @@ async function offerFrom(brandKp) {
 const brandA = Keypair.generate(), brandB = Keypair.generate();
 await fund(brandA, 220_000_000); await fund(brandB, 220_000_000);
 
-console.log('\n[1] brand A, offer #1 — her first bit to this brand:');
+console.log('\n[1] brand A, offer #1, her first bit to this brand:');
 check('matched (brand A count 1/1)', (await offerFrom(brandA)) === 1);
 
 await sleep(4000);
-console.log('\n[2] brand A, offer #2 — a DISTINCT offer from the SAME brand is rejected in-enclave:');
+console.log('\n[2] brand A, offer #2, a DISTINCT offer from the SAME brand is rejected in-enclave:');
 try { await offerFrom(brandA); check('2nd offer from brand A rejected', false); }
 catch (e) { check('2nd offer from brand A rejected (PerBrandCapExceeded)', /failed|custom program error|ER tx failed/i.test(String(e.message))); }
 
 await sleep(4000);
-console.log('\n[3] brand B, offer #1 — a DIFFERENT brand is still allowed:');
+console.log('\n[3] brand B, offer #1, a DIFFERENT brand is still allowed:');
 check('matched (brand B has its own slot)', (await offerFrom(brandB)) === 1);
 
 console.log('\n────────── RESULT ──────────');
 console.log(pass
-  ? 'PASS ✓ — the bounded per-brand table holds: one brand learns at most max_q_per_brand distinct bits, a second distinct offer from that brand is rejected in-enclave, and a different brand still gets its own slot. Sybil collection is now tightened per identity on top of her global lifetime cap.'
-  : 'CHECK — a sub-assertion failed; inspect above.');
+  ? 'PASS ✓, the bounded per-brand table holds: one brand learns at most max_q_per_brand distinct bits, a second distinct offer from that brand is rejected in-enclave, and a different brand still gets its own slot. Sybil collection is now tightened per identity on top of her global lifetime cap.'
+  : 'CHECK: a sub-assertion failed; inspect above.');
 process.exit(pass ? 0 : 1);

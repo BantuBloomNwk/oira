@@ -1,4 +1,4 @@
-// Fast unit test (no network, no secret) for the self-seal Sybil gate — VERIFICATION.md row 13.
+// Fast unit test (no network, no secret) for the self-seal Sybil gate, VERIFICATION.md row 13.
 // sealPalette()'s no-setup demo path can mint a fresh, unauthenticated Palette; runOffer()/
 // matchCampaign() fall back to it when no owner is supplied. That must be OFF by default so it can't
 // be abused in production to Sybil-mint Palettes, and only re-enabled with an explicit opt-in. This
@@ -7,7 +7,7 @@
 // Run from client/:  node e2e/test-self-seal-gate.mjs
 import { Keypair } from '@solana/web3.js';
 
-// Seed a throwaway deployer key so importing the bridge module needs no real secret — the gate we
+// Seed a throwaway deployer key so importing the bridge module needs no real secret, the gate we
 // test throws before the deployer is ever used, so this keeps the check in the fast, offline tier.
 process.env.OIRA_DEPLOYER_KEY = JSON.stringify([...Keypair.generate().secretKey]);
 delete process.env.OIRA_ALLOW_SELF_SEAL;
@@ -32,12 +32,12 @@ delete process.env.OIRA_ALLOW_SELF_SEAL;
 let msg = ''; try { assertSelfSealAllowed('runOffer'); } catch (e) { msg = String(e.message || e); }
 check('names the caller + the exact env var to flip', /runOffer/.test(msg) && /OIRA_ALLOW_SELF_SEAL/.test(msg));
 
-console.log('\ncall-site wiring (the gate actually guards runOffer, offline — it throws before any RPC):');
+console.log('\ncall-site wiring (the gate actually guards runOffer, offline, it throws before any RPC):');
 delete process.env.OIRA_ALLOW_SELF_SEAL;
 check('runOffer({}) with no owner is BLOCKED by the gate', await asyncBlocks(() => runOffer({})));
 
 console.log('\n────────── RESULT ──────────');
 console.log(pass
-  ? 'PASS ✓ — the self-seal fallback is OFF by default, only OIRA_ALLOW_SELF_SEAL=1 enables it, the error is actionable, and runOffer is genuinely gated (no unauthenticated Sybil-mint in production).'
-  : 'CHECK — a sub-assertion failed; inspect above.');
+  ? 'PASS ✓, the self-seal fallback is OFF by default, only OIRA_ALLOW_SELF_SEAL=1 enables it, the error is actionable, and runOffer is genuinely gated (no unauthenticated Sybil-mint in production).'
+  : 'CHECK: a sub-assertion failed; inspect above.');
 process.exit(pass ? 0 : 1);

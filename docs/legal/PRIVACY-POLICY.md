@@ -14,14 +14,14 @@ Oira is built for women everywhere, with particular attention to the Global Sout
 it, we apply the same commitment to keeping your information yours.
 
 [Counsel to confirm: BantuBloom Network is not yet incorporated, so the contracting party and data
-controller of record must be settled — likely Aurora K and/or the founders personally until BantuBloom
+controller of record must be settled, likely Aurora K and/or the founders personally until BantuBloom
 Network is registered. Name that entity here and identify any EU/UK controller and representative if
 required.]
 
 ## 2. The idea behind this policy
 
 Oira was designed so that we hold as little of your information as possible. Most of what you do in
-Oira stays on your own phone, and the one thing people worry about most — your face — never leaves it.
+Oira stays on your own phone, and the one thing people worry about most, your face, never leaves it.
 The sections below set out precisely what we mean.
 
 ## 3. Information that never leaves your device
@@ -41,7 +41,7 @@ receive it, and we keep no copy:
     the optional prompt asking whether you might one day wish to share your skin history with a
     professional;
 
-(e) the material used to sign you in — a reference to your passkey (the passkey itself is held by your
+(e) the material used to sign you in, a reference to your passkey (the passkey itself is held by your
     operating system, such as iCloud Keychain or Google Password Manager, not by us), or, on a device
     without a passkey, a local recovery key; and
 
@@ -56,7 +56,7 @@ Only the following leaves your device, and only to provide the feature you are u
 
 (a) your coarse palette values (undertone, depth and season). These are transmitted to a hardware-based
     secure enclave (a Trusted Execution Environment) that seals them. What is recorded on the public
-    blockchain is an encrypted record together with cryptographic commitments and hashes — not your
+    blockchain is an encrypted record together with cryptographic commitments and hashes, not your
     readable traits;
 
 (b) your public wallet address and the blockchain transactions you carry out. By the nature of a public
@@ -120,9 +120,9 @@ Because most of your information never leaves your device, you control it direct
 the app, and you can delete it through Settings, by clearing storage, or by uninstalling. You can keep
 voice audio on your device by leaving the server voice option off.
 
-Depending on where you live, you may also have statutory rights over your personal data — for example,
+Depending on where you live, you may also have statutory rights over your personal data, for example,
 under the EU and UK General Data Protection Regulation, and under the data-protection laws of the
-countries in which we operate — including rights of access, correction, deletion, objection and
+countries in which we operate, including rights of access, correction, deletion, objection and
 portability, and the right to complain to your data-protection authority. To exercise any of these,
 write to us at info@myoira.com. Please note that records on a public blockchain cannot be deleted, as
 explained in section 8.
@@ -151,8 +151,8 @@ consult a licensed practitioner.
 
 ## 13. Changes to this policy
 
-We will update this policy as Oira develops — for example, when it moves from the test network to the
-main network, or introduces paid features — and we will record the new date above.
+We will update this policy as Oira develops, for example, when it moves from the test network to the
+main network, or introduces paid features, and we will record the new date above.
 
 ## 14. Contact
 

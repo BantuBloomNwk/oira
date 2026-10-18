@@ -1,8 +1,8 @@
-/* Oira — optional external-wallet connect (browser/PWA, no native wrapper required).
+/* Oira, optional external-wallet connect (browser/PWA, no native wrapper required).
  *
  * This is a SEPARATE, OPTIONAL identity path alongside her passkey (window.OiraCustody),
  * which stays the default everywhere. She only touches this if she explicitly taps
- * "Use a wallet instead" / the Wallet row — nothing here runs automatically, and nothing
+ * "Use a wallet instead" / the Wallet row: nothing here runs automatically, and nothing
  * here replaces deviceOwner or her passkey-derived key.
  *
  * TWO genuinely different connection mechanisms, both via the Wallet Standard registry:
@@ -18,11 +18,11 @@
  *     so the entry exists before any connect UI renders.
  *   • iOS Safari/Chrome: MWA is Android-only (Solana Mobile docs: iOS suspends the
  *     background sockets MWA needs). No registry entry will exist unless she is inside
- *     a wallet app's own browser or has a Safari-extension wallet — unavailableMessage()
+ *     a wallet app's own browser or has a Safari-extension wallet, unavailableMessage()
  *     tells her that honestly instead of no-oping.
  *   • Jupiter Mobile is NOT a standard MWA responder for third-party web dapps; its
  *     official dapp path is @jup-ag/jup-mobile-adapter (Reown/WalletConnect QR pairing,
- *     React-oriented, needs a Reown project id) — deliberately not pulled in here. Her
+ *     React-oriented, needs a Reown project id): deliberately not pulled in here. Her
  *     Jupiter path today is Jupiter Mobile's built-in dapp browser, which injects a
  *     Wallet Standard wallet this code picks up like any other.
  *
@@ -74,7 +74,7 @@
     }
   }
 
-  // Every Wallet Standard wallet in the page that can actually connect on Solana —
+  // Every Wallet Standard wallet in the page that can actually connect on Solana,
   // desktop extensions, in-app-browser injections, and (on Android) the MWA entry.
   function solanaWallets() {
     const L = lib();
@@ -99,15 +99,15 @@
     return listWallets().length > 0;
   }
 
-  // Honest, platform-specific copy for when no connect path exists — shown by the UI
+  // Honest, platform-specific copy for when no connect path exists, shown by the UI
   // instead of the old silent no-op.
   function unavailableMessage() {
-    if (!window.__oiraMwaLib) return 'Wallet connect could not load in this browser. You can still continue with fingerprint — nothing else is affected.';
-    if (isIOS()) return 'iPhone and iPad browsers cannot open a wallet app directly (Apple does not allow the background link Android uses). To connect a wallet here, open this page inside your wallet app’s own browser — Phantom, Solflare, or Jupiter Mobile all have one. Or just continue with fingerprint; a wallet is never required.';
-    return 'No Solana wallet was found in this browser. Install the Phantom, Solflare, or Backpack extension and reload — or just continue with fingerprint; a wallet is never required.';
+    if (!window.__oiraMwaLib) return 'Wallet connect could not load in this browser. You can still continue with fingerprint, nothing else is affected.';
+    if (isIOS()) return 'iPhone and iPad browsers cannot open a wallet app directly (Apple does not allow the background link Android uses). To connect a wallet here, open this page inside your wallet app’s own browser, Phantom, Solflare, or Jupiter Mobile all have one. Or just continue with fingerprint; a wallet is never required.';
+    return 'No Solana wallet was found in this browser. Install the Phantom, Solflare, or Backpack extension and reload, or just continue with fingerprint; a wallet is never required.';
   }
 
-  // b58 kept local/minimal (mirrors custody.js's own tiny encoder — no shared dep needed)
+  // b58 kept local/minimal (mirrors custody.js's own tiny encoder, no shared dep needed)
   const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
   function base58(bytes) {
     const d = [0];
@@ -122,7 +122,7 @@
     return s;
   }
 
-  // Connect a specific wallet by name (from listWallets), or — with no name — the only
+  // Connect a specific wallet by name (from listWallets), or, with no name, the only
   // wallet present. No-arg on Android keeps the old behaviour of preferring MWA.
   async function connect(walletName) {
     ensureRegistered();
@@ -133,7 +133,7 @@
     else if (wallets.length === 1) wallet = wallets[0];
     else if (isAndroid()) { const L = lib(); wallet = wallets.find((w) => w.name === L.SolanaMobileWalletAdapterWalletName) || wallets[0]; }
     else wallet = wallets[0];
-    if (!wallet) throw new Error('That wallet is no longer available — please pick again.');
+    if (!wallet) throw new Error('That wallet is no longer available, please pick again.');
     const result = await wallet.features['standard:connect'].connect();
     const account = result.accounts && result.accounts[0];
     if (!account) throw new Error('Wallet connected but returned no account.');
@@ -146,7 +146,7 @@
   // Signs arbitrary raw bytes with the connected wallet's key via the Wallet Standard
   // solana:signMessage feature, returning the raw signature bytes. This is the low-level
   // primitive both signMessage() (below) and the relayed-seal signer (index.html's
-  // deviceOwner.sign, in the WALLET sign-in path) are built on — the seal protocol needs
+  // deviceOwner.sign, in the WALLET sign-in path) are built on, the seal protocol needs
   // binary Solana tx-message bytes signed, not UTF-8 text.
   async function signBytes(bytes) {
     if (!cachedWallet) throw new Error('Not connected.');
@@ -157,7 +157,7 @@
   }
 
   // Signs an arbitrary UTF-8 message with the connected wallet's key, for server-side
-  // ownership verification (the Genesis Token check's step 2) — connect() proves
+  // ownership verification (the Genesis Token check's step 2), connect() proves
   // control to the WALLET app, not to our server, so this explicit sign step is required,
   // it is not redundant with connect().
   async function signMessage(message) {
@@ -170,7 +170,7 @@
   // A stable, device-free commitment salt for a WALLET-signed identity, mirroring what the
   // passkey path gets for free from its PRF secret (custody.js's hkdf32/SALT_INFO). A wallet
   // has no such secret to derive from, but standard Ed25519 signing (RFC 8032) is itself
-  // deterministic — the SAME message signed by the SAME key always yields the SAME signature —
+  // deterministic, the SAME message signed by the SAME key always yields the SAME signature,
   // so HKDF-ing the signature over a fixed, domain-separated message gives a salt that is
   // stable across every future seal for her, without the wallet ever exposing a raw secret.
   // Needed once at connect: her commitment_root is bound to this salt forever at her first

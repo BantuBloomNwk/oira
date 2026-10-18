@@ -1,4 +1,4 @@
-// Oira chain bridge — the proven seal + private-payout flows as callable functions.
+// Oira chain bridge, the proven seal + private-payout flows as callable functions.
 // Reuses exactly what client/e2e/per-palette-e2e.mjs and client/e2e/payout-e2e.mjs proved on devnet.
 import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction, SystemProgram, sendAndConfirmTransaction } from '@solana/web3.js';
 import {
@@ -37,15 +37,15 @@ const bBytes = (b) => { const l = Buffer.alloc(4); l.writeUInt32LE(b.length, 0);
 const base = new Connection(BASE_RPC, 'confirmed');
 const opts = { commitment: 'confirmed', maxRetries: 5 };
 // The public devnet RPC rate-limits hard, and web3.js leaks a 429 from its detached background
-// rebroadcast loop as an UNHANDLED rejection — not catchable by any await — which otherwise crashes
+// rebroadcast loop as an UNHANDLED rejection, not catchable by any await, which otherwise crashes
 // the whole process, i.e. the bridge mid-seal (a woman's seal dying on a transient RPC hiccup). This
 // module runs both the long-lived bridge server and the one-shot e2e scripts, so: swallow transient
 // ones and stay up; log anything else without exiting. A private endpoint via OIRA_BASE_RPC removes
-// the 429s at the source — this is the code-level safety net for when it isn't set.
+// the 429s at the source, this is the code-level safety net for when it isn't set.
 const isTransient = (err) => /429|Too Many Requests|Timed out|fetch failed|ETIMEDOUT|ECONNRESET|502|503|Blockhash not found/i.test(String(err && (err.message || err)));
 process.on('unhandledRejection', (err) => { if (isTransient(err)) return; console.error('oira-chain unhandledRejection:', err && (err.message || err)); });
 
-// Bridge health snapshot for /api/health — deployer SOL balance + whether base RPC and the TEE
+// Bridge health snapshot for /api/health, deployer SOL balance + whether base RPC and the TEE
 // are reachable. Cached and refreshed in the BACKGROUND so a slow/throttled RPC can never hang the
 // health endpoint (uptime probes must stay instant). Returns the last known values immediately.
 let _status = { at: 0, deployerSol: null, rpcOk: null, teeOk: null }, _refreshing = false;
@@ -64,7 +64,7 @@ _refreshStatus(); // warm the cache at startup
 // sealPalette() mints a fresh, fully valid, on-chain Palette from a server-generated random
 // keypair, no passkey, no liveness, no client proof of humanity. It exists as the "Model A"
 // no-setup demo path. runOffer() and matchCampaign() below both fall back to it silently when
-// no real (passkey-sealed) identity is on the session, "so the demo always resolves" — and
+// no real (passkey-sealed) identity is on the session, "so the demo always resolves", and
 // matchCampaign's fallback seals with traits set to EXACTLY the campaign's own target, i.e. an
 // unauthenticated caller can fabricate a perfect-match identity and drain that campaign's escrow
 // in one request. Gate the fallback behind an explicit opt-in so it can't happen by default in
@@ -102,7 +102,7 @@ function decodePalette(buf) { let o = 8; o += 32; const n = buf.readUInt32LE(o);
   o += 4 + 4; const agent = new PublicKey(buf.subarray(o, o + 32));
   return { lifetime, is_private, last_verdict, last_nonce, agent, min_payout, max_q_per_brand, blocked_cats, rules_active }; }
 
-// PROOF OF PRIVACY — a live, human-legible chain read so ANYONE (crypto or not) can confirm her
+// PROOF OF PRIVACY, a live, human-legible chain read so ANYONE (crypto or not) can confirm her
 // palette is sealed. Returns the plain-language summary + the raw facts + the public explorer link
 // so a normal person trusts the words and a skeptic clicks through to the ledger itself.
 export async function privacyProof({ ownerPubkey } = {}) {
@@ -140,11 +140,11 @@ export async function privacyProof({ ownerPubkey } = {}) {
 }
 
 // ---- MODEL B OFFER: a brand commits its target shade + escrow, co-delegates the campaign into
-// her ER, the AGENT matches it in-enclave (owner offline), and — only on a real match — settles
+// her ER, the AGENT matches it in-enclave (owner offline), and, only on a real match, settles
 // her payout from escrow against the private receipt. Ports client/e2e/model-b-e2e.mjs. ----
 export async function runOffer({ ownerSecret, ownerPubkey, agentSecret, salt, traits, payout = 5, category = 0, target: targetArg } = {}) {
   // Runs against HER real palette from her owner PUBKEY + the bounded agent key + her confirmed
-  // traits. Her owner SECRET is never needed here — the agent matches in-enclave and settle pays
+  // traits. Her owner SECRET is never needed here, the agent matches in-enclave and settle pays
   // her ATA. Self-seals a fresh palette only if she has not sealed on this bridge.
   if ((!ownerPubkey && !ownerSecret) || !agentSecret || !traits) { assertSelfSealAllowed('runOffer'); const s = await sealPalette({ traits }); ownerSecret = s.owner; agentSecret = s.agent; salt = s.salt; traits = s.traits; ownerPubkey = null; }
   const ownerPk = ownerPubkey ? new PublicKey(ownerPubkey) : Keypair.fromSecretKey(Uint8Array.from(ownerSecret)).publicKey;
@@ -189,7 +189,7 @@ export async function runOffer({ ownerSecret, ownerPubkey, agentSecret, salt, tr
     { pubkey: DELEGATION_PROGRAM_ID, isSigner: false, isWritable: false }, { pubkey: SYS, isSigner: false, isWritable: false }, { pubkey: TEE_VALIDATOR, isSigner: false, isWritable: false }], data: Buffer.concat([disc('delegate_campaign'), bU64(Number(offerId))]) });
   await sendAndConfirmTransaction(base, new Transaction().add(delCampIx), [brand], opts);
   // The agent is the bridge's server-held session key. In the RELAYED seal path (sealPaletteRelay)
-  // it is never funded — only the owner signs the seal's ER txs — so its base wallet arrives here
+  // it is never funded, only the owner signs the seal's ER txs, so its base wallet arrives here
   // near-empty and the escrow top-up below dies with "insufficient lamports". Ensure it can cover
   // the top-up (+ the escrow's own rent the FIRST time this offer creates it, + a leftover margin
   // above the rent floor). topUpOwnerTo funds only the shortfall, so a reused, still-funded agent
@@ -265,7 +265,7 @@ export async function sealPalette({ traits = { undertone: 2, depth: 8, season: 3
 }
 
 // ---- MODEL B SEAL, RELAYED: her owner key lives ONLY on her device ----
-// Identical Model B seal to sealPalette, but the owner SECRET is never constructed here —
+// Identical Model B seal to sealPalette, but the owner SECRET is never constructed here,
 // every owner signature comes from `sign(msgBytes)` (her passkey-derived key, on-device).
 // The agent stays a bounded, server-held session key by design. Proven headlessly by
 // client/e2e/relay-seal-e2e.mjs (a local keypair stands in for the device); the browser passes
@@ -273,16 +273,16 @@ export async function sealPalette({ traits = { undertone: 2, depth: 8, season: 3
 //
 // SPONSORED FEE PAYER: the relay (deployer), not her, pays the network's per-signature fee.
 // She still signs as the required authority over her own instructions (Anchor's owner/Signer
-// checks don't change — this only changes who is billed the ~5000-lamport tx fee). `sponsor`
+// checks don't change, this only changes who is billed the ~5000-lamport tx fee). `sponsor`
 // defaults to the deployer and co-signs via partialSign after her signature is attached; the
 // message bytes she signs already have the sponsor as feePayer (set before serializeMessage),
-// so this is fully compatible with the existing WS sign() round trip — she is just never asked
+// so this is fully compatible with the existing WS sign() round trip, she is just never asked
 // to hold SOL for it. NOTE: this only covers BASE-layer txs. sendOnErRelayed (below) deliberately
-// keeps her as fee payer on the Ephemeral Rollup — the ER's fee escrow is keyed to whichever
+// keeps her as fee payer on the Ephemeral Rollup, the ER's fee escrow is keyed to whichever
 // pubkey is the tx's fee payer (escrowPdaFromEscrowAuthority(ownerPk,...)), and there is no
 // documented way to have a third party's escrow cover another pubkey's ER tx without risking the
 // ER simply rejecting the tx outright. That fee is already paid for out of her own pre-funded
-// escrow either way, so sponsoring it would not remove any idle balance — only real protocol risk.
+// escrow either way, so sponsoring it would not remove any idle balance, only real protocol risk.
 async function sendRelayedBase(tx, ownerSigner, sponsor = deployer) {
   tx.feePayer = sponsor.publicKey;
   const { blockhash, lastValidBlockHeight } = await base.getLatestBlockhash();
@@ -313,7 +313,7 @@ async function freshTeeRelayed(ownerSigner) {
 
 // Deterministic per-owner agent key (same construction as brandKeyFor below): the on-chain
 // reader whitelisted by set_palette_privacy/set_traits_privacy is bound via a CREATE-only CPI
-// (ephemeral-rollups-sdk's CreateEphemeralPermissionCpi — there is no "recreate with a new
+// (ephemeral-rollups-sdk's CreateEphemeralPermissionCpi, there is no "recreate with a new
 // reader" affordance), so a re-seal MUST present the same agent as her first seal or the CPI
 // dies with InvalidAccountData on the already-created permission account. A fresh random agent
 // every call (the old behaviour) made every re-seal fail this way; deriving it from her owner
@@ -323,26 +323,26 @@ function agentKeyFor(ownerPk) {
   return Keypair.fromSeed(Uint8Array.from(seed));
 }
 
-// She should never hold idle spendable SOL — only exactly what her OWN instructions are about
+// She should never hold idle spendable SOL, only exactly what her OWN instructions are about
 // to debit (Anchor's `payer = owner` on init_palette/init_traits, and the explicit
 // `fromPubkey: ownerPk` transfers below draw straight from her wallet regardless of who pays the
-// network tx fee — sponsoring the fee payer, above, does not touch these). Computed live off the
+// network tx fee, sponsoring the fee payer, above, does not touch these). Computed live off the
 // real account sizes instead of a padded flat guess: PaletteVault (952B) + TraitsSession (76B)
 // rent, the two 10M "rent-float" transfers into those PDAs, the two delegation record+metadata
 // pairs (~96-100B each, one pair per delegated account), and her ER fee-escrow prepayment.
-const RENT_FLOAT = 10_000_000; // per account (palette, traits) — pre-ER-delegation balance buffer
+const RENT_FLOAT = 10_000_000; // per account (palette, traits), pre-ER-delegation balance buffer
 const ESCROW_TOPUP = 40_000_000; // her ER fee-escrow prepayment (spendable, not rent)
 // createTopUpEscrowInstruction debits the payer for the requested `amount` PLUS the escrow
 // account's own rent-exemption SEPARATELY when the escrow doesn't exist yet (confirmed live: a
-// 40,000,000 topup on a fresh escrow actually costs 40,890,880 — verified by underfunding the
+// 40,000,000 topup on a fresh escrow actually costs 40,890,880, verified by underfunding the
 // agent by exactly this much on a real devnet run and watching it fail with "insufficient
 // lamports 39114120, need 40000000"). Only matters the FIRST time each escrow is created.
-const ESCROW_RENT = 890_880; // getMinimumBalanceForRentExemption(0) — a 0-data System account
+const ESCROW_RENT = 890_880; // getMinimumBalanceForRentExemption(0), a 0-data System account
 // Solana requires every account a transaction TOUCHES to end at exactly 0 or >= its rent-exempt
-// minimum — never a dust amount in between ("insufficient funds for rent"). A wallet is itself a
+// minimum, never a dust amount in between ("insufficient funds for rent"). A wallet is itself a
 // 0-byte System account, so ANY leftover after a "top up to exactly what's about to be spent" is
 // itself subject to that floor (890,880). Found live: funding the agent to the exact spend + a
-// 10,000-lamport fee margin left it holding 5,000 lamports after the topup tx — a real devnet
+// 10,000-lamport fee margin left it holding 5,000 lamports after the topup tx, a real devnet
 // SendTransactionError, not a theoretical concern. Every margin below is sized above ESCROW_RENT
 // so any leftover safely clears the floor; it is never left in the forbidden dust zone.
 const TOPUP_MARGIN = 2_000_000;
@@ -361,15 +361,15 @@ async function estimateOwnerFirstSealCost() {
   ]);
   return palette + traits + RENT_FLOAT * 2 + DELEGATION_RENT_PER_ACCOUNT * 2 + ESCROW_TOPUP + ESCROW_RENT + OWNER_MARGIN;
 }
-// Top up ownerPk's BASE wallet to exactly `need` lamports — tops up only the shortfall against
+// Top up ownerPk's BASE wallet to exactly `need` lamports, tops up only the shortfall against
 // her CURRENT balance (never a flat lump), so a re-seal that needs a small top-up (e.g. to finish
 // an interrupted delegation, or refill her ER escrow) funds only that, not another full amount.
 async function topUpOwnerTo(ownerPk, need) {
   const bal = await base.getBalance(ownerPk);
   if (bal < need) await fund({ publicKey: ownerPk }, need - bal);
 }
-// SPONSORSHIP GATE. A passkey/device-key sign-in has NO other way to get SOL — her key was just
-// derived on-device — so the app sponsors her exact shortfall (topUpOwnerTo, unchanged behaviour).
+// SPONSORSHIP GATE. A passkey/device-key sign-in has NO other way to get SOL, her key was just
+// derived on-device, so the app sponsors her exact shortfall (topUpOwnerTo, unchanged behaviour).
 // A connected WALLET already has its own funds and its own faucet access, so the deployer never
 // transfers into it: if her wallet can't cover what her own instructions are about to debit, fail
 // LOUDLY with an amount + address she can act on, instead of either silently gifting her SOL or
@@ -387,20 +387,20 @@ async function ensureOwnerFunds(ownerPk, need, selfFunded, beforeSponsor) {
   const bal = await base.getBalance(ownerPk);
   if (bal < need) throw new Error(
     `Your connected wallet needs about ${fmtSol(need)} SOL (devnet) for this step, but it holds ${fmtSol(bal)}. ` +
-    `Oira only sponsors device-key sign-ins — please add at least ${fmtSol(need - bal)} SOL to ${ownerPk.toBase58()} and try again.`);
+    `Oira only sponsors device-key sign-ins, please add at least ${fmtSol(need - bal)} SOL to ${ownerPk.toBase58()} and try again.`);
 }
 
 export async function sealPaletteRelay({ ownerPubkey, traits = { undertone: 2, depth: 8, season: 3 }, encBlob, lifetimeCap = 0, salt: saltArg, sign, assurance, beforeSponsor } = {}) {
   if (!ownerPubkey || typeof sign !== 'function') throw new Error('sealPaletteRelay needs ownerPubkey + sign()');
   // 'wallet' = she signed in with her own external wallet => she funds herself (see the gate
-  // above). Anything else ('passkey', 'fallback', or absent — the headless e2e harnesses and any
+  // above). Anything else ('passkey', 'fallback', or absent, the headless e2e harnesses and any
   // older client that doesn't send the field) keeps the sponsored device-key behaviour.
   const selfFunded = assurance === 'wallet';
   const ownerPk = new PublicKey(ownerPubkey);
   const ownerSigner = { publicKey: ownerPk, sign: async (m) => Uint8Array.from(await sign(m)) };
   const agent = agentKeyFor(ownerPk); // bounded server-derived session key (safe by design)
   const enc = encBlob && encBlob.length ? Buffer.from(encBlob) : randomBytes(96);
-  // Her salt is device-derived (from her passkey) and passed in — the server never originates
+  // Her salt is device-derived (from her passkey) and passed in, the server never originates
   // it. Fall back to random only for the headless harnesses that don't supply one.
   const salt = saltArg && saltArg.length ? Buffer.from(saltArg) : randomBytes(32);
   const commitmentRoot = sha(salt, Buffer.from([traits.undertone, traits.depth, traits.season]));
@@ -415,7 +415,7 @@ export async function sealPaletteRelay({ ownerPubkey, traits = { undertone: 2, d
     { pubkey: pda, isSigner: false, isWritable: true }, { pubkey: PROGRAM, isSigner: false, isWritable: false },
     { pubkey: DELEGATION_PROGRAM_ID, isSigner: false, isWritable: false }, { pubkey: SYS, isSigner: false, isWritable: false }, { pubkey: TEE_VALIDATOR, isSigner: false, isWritable: false }], data: disc(name) });
   // Her PDAs are deterministic per owner, so a SECOND seal from the same device lands on the
-  // SAME Palette account — re-running init_palette dies with "already in use" (0x0). Probe once:
+  // SAME Palette account, re-running init_palette dies with "already in use" (0x0). Probe once:
   // init_palette+init_traits go in ONE atomic tx below, so palette existing ⇒ traits exists too.
   // On a re-seal both accounts normally already live delegated in the ER (nothing in the seal
   // flow undelegates them; traits NEVER undelegates by design), so the update is just the ER
@@ -426,7 +426,7 @@ export async function sealPaletteRelay({ ownerPubkey, traits = { undertone: 2, d
   let initSig = null, delegateSig = null;
   if (!paletteInfo) {
     // Fund her wallet with EXACTLY what her own instructions below are about to debit (rent for
-    // the two PDAs, the rent-float, her delegation record/metadata pairs, her ER escrow) — not a
+    // the two PDAs, the rent-float, her delegation record/metadata pairs, her ER escrow), not a
     // padded flat guess. The tx-fee sponsorship in sendRelayedBase means she doesn't need slack
     // for network fees either; the only real requirement left is the money her Signer role
     // literally transfers (Anchor's payer=owner, and the explicit fromPubkey:ownerPk transfers).
@@ -443,10 +443,10 @@ export async function sealPaletteRelay({ ownerPubkey, traits = { undertone: 2, d
     await sendRelayedBase(new Transaction().add(createTopUpEscrowInstruction(escrowPdaFromEscrowAuthority(ownerPk, 255), ownerPk, ownerPk, ESCROW_TOPUP, 255)), ownerSigner);
   } else {
     // RE-SEAL. Delegation ran as two separate txs on the first seal, so a seal interrupted
-    // mid-flow can leave either account still program-owned on base — finish delegating just
+    // mid-flow can leave either account still program-owned on base, finish delegating just
     // that one (its rent-float transfer included; already-delegated accounts keep theirs). Both
     // this and the escrow refill below top her up ONLY the exact shortfall for the step that is
-    // actually about to run — the steady-state re-seal (nothing incomplete, escrow still funded)
+    // actually about to run, the steady-state re-seal (nothing incomplete, escrow still funded)
     // spends nothing from her wallet and funds her nothing at all.
     for (const [pda, info, name] of [[palettePda, paletteInfo, 'delegate_palette'], [traitsPda, traitsInfo, 'delegate_traits']]) {
       if (info && info.owner.equals(PROGRAM)) {
@@ -459,24 +459,24 @@ export async function sealPaletteRelay({ ownerPubkey, traits = { undertone: 2, d
     // her ER fee escrow was topped on the first seal; refill only if it ran dry
     if ((await base.getBalance(escrowPdaFromEscrowAuthority(ownerPk, 255))) < 20_000_000) {
       // her escrow already exists by this point in every real case, so this is really just
-      // ESCROW_TOPUP + fee — but fund for a from-scratch creation too so a wiped-clean edge case
+      // ESCROW_TOPUP + fee, but fund for a from-scratch creation too so a wiped-clean edge case
       // (e.g. a test harness resetting only the escrow) never underfunds like the agent bug above.
       await ensureOwnerFunds(ownerPk, ESCROW_TOPUP + ESCROW_RENT + TOPUP_MARGIN, selfFunded, beforeSponsor);
       await sendRelayedBase(new Transaction().add(createTopUpEscrowInstruction(escrowPdaFromEscrowAuthority(ownerPk, 255), ownerPk, ownerPk, ESCROW_TOPUP, 255)), ownerSigner);
     }
   }
-  // AGENT: guarded exactly like her escrow above — fund + top up ONLY when its own ER fee escrow
+  // AGENT: guarded exactly like her escrow above, fund + top up ONLY when its own ER fee escrow
   // is actually low. First seal included: the escrow starts at zero there, so this guard fires
   // naturally without a separate first-seal-only code path. Previously this ran UNCONDITIONALLY
   // on every single seal AND re-seal (fund(agent, 120_000_000) plus a 40,000,000 escrow top-up,
-  // every call, no check) — measured over this debugging session's repeated re-seals, the escrow
+  // every call, no check), measured over this debugging session's repeated re-seals, the escrow
   // balance kept accumulating far faster than anything ever drew it down (four straight top-ups
   // left it sitting at ~4x a single top-up's worth). The agent's wallet has no other spend in this
-  // flow — the one topup tx below is the only thing it ever signs — so it needs no standing balance.
+  // flow, the one topup tx below is the only thing it ever signs, so it needs no standing balance.
   const agentEscrow = escrowPdaFromEscrowAuthority(agent.publicKey, 255);
   if ((await base.getBalance(agentEscrow)) < 20_000_000) {
     // First creation of this escrow costs amount + its own rent (see ESCROW_RENT above); a later
-    // refill (escrow already exists, just below the threshold) only costs the amount + fee — fund
+    // refill (escrow already exists, just below the threshold) only costs the amount + fee, fund
     // for the worst case (fresh creation) so this never underfunds, the harmless case being a few
     // hundred thousand idle lamports on the rare refill-not-create path.
     await fund(agent, ESCROW_TOPUP + ESCROW_RENT + TOPUP_MARGIN);
@@ -497,10 +497,10 @@ export async function sealPaletteRelay({ ownerPubkey, traits = { undertone: 2, d
   // The probe below is only a fast-path: when the ER's live palette already shows our agent as
   // the bound reader, the two privacy txs are pure no-ops and can be skipped. It reads via the
   // AGENT's ER session because a private account can only be read back by a whitelisted member
-  // — the owner's own tee connection above is for SENDING owner-signed txs and is correctly
+  //, the owner's own tee connection above is for SENDING owner-signed txs and is correctly
   // refused a read, same as any other non-member. On a legacy palette (old random agent) this
   // read is refused too, which is FINE now: we fall through and the update CPI rebinds it.
-  // The probe must never fail the seal — any error just means "run the privacy txs".
+  // The probe must never fail the seal, any error just means "run the privacy txs".
   let alreadyPrivate = false;
   if (paletteInfo) {
     try {
@@ -515,13 +515,13 @@ export async function sealPaletteRelay({ ownerPubkey, traits = { undertone: 2, d
       await sendOnErRelayed(tee, [privIx(traitsPda, permT, 'set_traits_privacy')], ownerSigner);
     } catch (e) {
       // Belt-and-suspenders for a RE-seal racing an ER that still runs the pre-update program:
-      // InvalidAccountData from these two instructions has exactly one meaning — the permission
+      // InvalidAccountData from these two instructions has exactly one meaning, the permission
       // group already exists (the create CPI hit an existing account), i.e. the account is
       // already private from her first seal. Sealing must not die on that; the palette is in
       // the state the instruction was trying to reach. Anything else, and any failure on a
       // FIRST seal, is a real error and still propagates.
       if (!(paletteInfo && /InvalidAccountData/.test(String(e && e.message)))) throw e;
-      console.warn('oira: privacy already set on-chain (create-only wall) — continuing re-seal');
+      console.warn('oira: privacy already set on-chain (create-only wall), continuing re-seal');
     }
   }
   const sealSig = await sendOnErRelayed(tee, [setTraitsIx], ownerSigner);
@@ -562,7 +562,7 @@ export async function privatePayout(herSecret, amountUi = 5) {
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Deterministic per-campaign brand key from the offerId, so we never store a secret: the same
-// key is regenerated at settle time. (Demo custody — real brands sign with their own wallet.)
+// key is regenerated at settle time. (Demo custody, real brands sign with their own wallet.)
 function brandKeyFor(offerId) {
   const seed = sha(Buffer.from(deployer.secretKey.slice(0, 32)), Buffer.from('oira-brand-v1'), bU64(Number(offerId))).slice(0, 32);
   return Keypair.fromSeed(Uint8Array.from(seed));

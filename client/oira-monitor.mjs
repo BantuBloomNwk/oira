@@ -1,4 +1,4 @@
-// Lightweight bridge monitoring — server-side only, privacy-respecting by design: it records the
+// Lightweight bridge monitoring, server-side only, privacy-respecting by design: it records the
 // bridge's OWN errors and uptime, NEVER user data, and everything it logs or sends is scrubbed of
 // anything key- or blob-shaped first. If OIRA_ALERT_WEBHOOK and/or OIRA_TG_TOKEN+OIRA_TG_CHAT are
 // set, critical problems are pushed to that webhook / Telegram chat; otherwise it just logs.
@@ -6,7 +6,7 @@
 
 const startedAt = Date.now();
 const RING = 25;
-const recent = [];          // last few {t, scope, msg} — no user data
+const recent = [];          // last few {t, scope, msg}, no user data
 let errorCount = 0;
 let lastAlertAt = 0;
 
@@ -15,7 +15,7 @@ const TG_TOKEN = process.env.OIRA_TG_TOKEN || '';           // Telegram bot toke
 const TG_CHAT = process.env.OIRA_TG_CHAT || '';             // Telegram chat id
 
 // Redact anything that looks like a secret key, pubkey, signature or byte array before it can reach
-// a log line or an alert — a monitor must never become the thing that leaks the data it protects.
+// a log line or an alert, a monitor must never become the thing that leaks the data it protects.
 function scrub(s) {
   return String(s == null ? '' : (s.message || s))
     .replace(/\[(?:\s*\d{1,3}\s*,){20,}\s*\d{1,3}\s*\]/g, '‹bytes›')   // JSON secret-key arrays
@@ -42,7 +42,7 @@ export async function alertBridge(level, msg) {
 }
 
 // Record a bridge error. { alert: true } also pushes it to the alert channel (use for the paths that
-// actually matter — a failed seal, a crash — not every transient 429).
+// actually matter, a failed seal, a crash, not every transient 429).
 export function recordError(scope, err, opts = {}) {
   errorCount++;
   const msg = scrub(err);

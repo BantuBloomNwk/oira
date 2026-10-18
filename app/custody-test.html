@@ -25,7 +25,7 @@
 </head>
 <body>
   <h1>Device custody test</h1>
-  <p class="sub">Proves her owner key is created and held on <b>this device</b> by her passkey — no seed phrase, nothing on a server. Derivation is already parity-proven; this checks the biometric leg on real hardware.</p>
+  <p class="sub">Proves her owner key is created and held on <b>this device</b> by her passkey, no seed phrase, nothing on a server. Derivation is already parity-proven; this checks the biometric leg on real hardware.</p>
 
   <div class="card">
     <div class="row"><b>1 · Environment</b><span id="envTag" class="tag warn">checking…</span></div>
@@ -48,7 +48,7 @@
 
   <div class="card">
     <b>4 · Recovery proof</b>
-    <p class="sub" style="margin:6px 0 10px">Unlock again — the SAME address must reappear (this is how a new phone recovers her key with no backup).</p>
+    <p class="sub" style="margin:6px 0 10px">Unlock again, the SAME address must reappear (this is how a new phone recovers her key with no backup).</p>
     <button id="unlock2" class="ghost">Unlock again &amp; compare</button>
     <div id="addr2"></div>
   </div>
@@ -83,8 +83,8 @@
     try { log('enrolling passkey…'); const r = await window.OiraCustody.enroll('oira-device-test');
       log('enrolled ✓  credentialId=' + r.credentialId.slice(0, 16) + '…');
       log(r.prfEnabled
-        ? 'PRF available on this authenticator ✓ — derive will use your biometric key'
-        : 'PRF NOT available on this authenticator ✗ — this browser/device (often desktop Windows Hello) will use the reduced-assurance device key. Try an iOS/Android passkey or a Seed Vault for full custody.');
+        ? 'PRF available on this authenticator ✓, derive will use your biometric key'
+        : 'PRF NOT available on this authenticator ✗, this browser/device (often desktop Windows Hello) will use the reduced-assurance device key. Try an iOS/Android passkey or a Seed Vault for full custody.');
       showEnv(); }
     catch (e) { log('enroll ERROR: ' + e.message); }
   };
@@ -99,7 +99,7 @@
   $('reset').onclick = () => {
     window.OiraCustody.reset(); firstAddr = null; ownerHandle = null;
     $('addr1').innerHTML = ''; $('addr2').innerHTML = ''; $('sigout').innerHTML = '';
-    log('device reset — old passkey/keys cleared. Enroll again for a clean run.'); showEnv();
+    log('device reset, old passkey/keys cleared. Enroll again for a clean run.'); showEnv();
   };
 
   $('unlock').onclick = async () => {
@@ -111,7 +111,7 @@
   $('unlock2').onclick = async () => {
     try { log('re-deriving…'); const o = await doUnlock($('addr2'));
       const same = firstAddr && o.address === firstAddr;
-      $('addr2').innerHTML += `<div style="margin-top:8px"><span class="tag ${same?'ok':'bad'}">${same?'MATCH — recovery works':'MISMATCH'}</span></div>`;
+      $('addr2').innerHTML += `<div style="margin-top:8px"><span class="tag ${same?'ok':'bad'}">${same?'MATCH: recovery works':'MISMATCH'}</span></div>`;
       log(same ? 'recovery MATCH ✓ same key regenerated' : 'MISMATCH ✗'); o.wipe(); }
     catch (e) { log('unlock2 ERROR: ' + e.message); }
   };

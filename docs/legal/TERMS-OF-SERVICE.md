@@ -34,7 +34,7 @@ test tokens are not securities or an investment of any kind.
 
 ## 3. Your account and your keys
 
-3.1  Oira is self-custodial. Your sign-in key is created and held on your own device — through your
+3.1  Oira is self-custodial. Your sign-in key is created and held on your own device, through your
 passkey and biometrics, or, on a device without a passkey, through a local recovery key. We never hold
 your secret key and cannot sign or act on your behalf.
 
@@ -102,7 +102,7 @@ end your access if you breach these Terms or if we discontinue the Service.
 
 ## 11. Governing law and disputes
 
-These Terms are governed by the laws of **[governing law — to be set with counsel; likely the home
+These Terms are governed by the laws of **[governing law, to be set with counsel; likely the home
 jurisdiction of the contracting entity]**, and the courts of **[venue]** have jurisdiction, except
 where the mandatory consumer-protection law of your country of residence gives you rights that cannot
 be waived. [Counsel to finalise governing law, venue, and any arbitration or regional wording for each

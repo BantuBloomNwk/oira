@@ -1,4 +1,4 @@
-// Campaign store — persists posted brand campaigns so her overnight can match them later.
+// Campaign store, persists posted brand campaigns so her overnight can match them later.
 // Holds the commitment opening (target + offer_salt) the agent needs at match time. No secrets:
 // the per-campaign brand key is derived from the offer_id on demand (see brandKeyFor in oira-chain).
 // File-backed JSON for a single-box deploy; swap for a real DB when the bridge goes HA.

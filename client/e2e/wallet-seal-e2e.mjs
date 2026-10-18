@@ -1,9 +1,9 @@
-// Headless proof of the CONNECTED-WALLET relayed seal (assurance='wallet') — VERIFICATION.md row 2.
+// Headless proof of the CONNECTED-WALLET relayed seal (assurance='wallet'), VERIFICATION.md row 2.
 // A connected external wallet is SELF-FUNDED: unlike a device-key sign-in, Oira does NOT sponsor her
 // shortfall (sealPaletteRelay's selfFunded branch). Two cases:
-//   A) a FUNDED wallet self-funds and seals — she pays her own rent/escrow, the palette lands
+//   A) a FUNDED wallet self-funds and seals, she pays her own rent/escrow, the palette lands
 //      delegated into the enclave, her == her wallet, and her balance actually drops (not sponsored).
-//   B) an UNDERFUNDED wallet is REJECTED loudly BEFORE anything is sealed — ensureOwnerFunds throws an
+//   B) an UNDERFUNDED wallet is REJECTED loudly BEFORE anything is sealed, ensureOwnerFunds throws an
 //      actionable error naming the shortfall SOL + her address, and no palette exists on base (no
 //      silent sponsor, no half-seal). This is the regression this test exists to catch.
 // Run from client/:  node e2e/wallet-seal-e2e.mjs
@@ -38,13 +38,13 @@ console.log('=== A) a FUNDED connected wallet self-funds and seals ===');
   check('seal completed (sealSig set)', !!r.sealSig);
   check('palette exists + delegated into the enclave', !!info && info.owner.toBase58().startsWith('DELeG'));
   check('her == her wallet', r.her === w.publicKey.toBase58());
-  check('she SELF-FUNDED — her balance dropped (NOT sponsored)', after < before - 50_000_000);
+  check('she SELF-FUNDED: her balance dropped (NOT sponsored)', after < before - 50_000_000);
   console.log('   spent from her own wallet:', ((before - after) / SOL).toFixed(4), 'SOL');
 }
 
 console.log('\n=== B) an UNDERFUNDED connected wallet is rejected loudly (nothing sealed) ===');
 {
-  const w = Keypair.generate(); // 0 balance — cannot cover the seal
+  const w = Keypair.generate(); // 0 balance, cannot cover the seal
   const pda = palettePda(w.publicKey.toBase58());
   let threw = null;
   try { await sealPaletteRelay({ ownerPubkey: w.publicKey.toBase58(), traits: { undertone: 2, depth: 8, season: 3 }, assurance: 'wallet', sign: walletSign(w) }); }
@@ -54,12 +54,12 @@ console.log('\n=== B) an UNDERFUNDED connected wallet is rejected loudly (nothin
   check('error names the connected-wallet shortfall', /connected wallet needs|add at least/i.test(msg));
   check('error names SOL + her exact address', /SOL/.test(msg) && msg.includes(w.publicKey.toBase58()));
   const info = await base.getAccountInfo(pda);
-  check('NOTHING was sealed — no palette account on base', info === null);
+  check('NOTHING was sealed, no palette account on base', info === null);
   if (threw) console.log('   error was:', msg.slice(0, 150));
 }
 
 console.log('\n────────── RESULT ──────────');
 console.log(pass
-  ? 'PASS ✓ — the connected-wallet seal SELF-FUNDS when she can pay (palette delegated, her balance spent, no sponsor), and FAILS LOUDLY with an actionable shortfall + her address when she cannot (no silent sponsor, no partial seal).'
-  : 'CHECK — a sub-assertion failed; inspect above.');
+  ? 'PASS ✓, the connected-wallet seal SELF-FUNDS when she can pay (palette delegated, her balance spent, no sponsor), and FAILS LOUDLY with an actionable shortfall + her address when she cannot (no silent sponsor, no partial seal).'
+  : 'CHECK: a sub-assertion failed; inspect above.');
 process.exit(pass ? 0 : 1);

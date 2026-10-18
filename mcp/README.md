@@ -4,18 +4,18 @@ A governed MCP tool layer over the Oira concierge. See `docs/MCP-ARCHITECTURE.md
 and THE RULE (MCP is for advisory agents only; seal/match/settle stays deterministic and outside).
 
 ## What it exposes (advisory, read-only)
-- `check_colour(hex, palette)` — does this shade suit her? (the real concierge judgement)
-- `ask_oira(question, palette)` — season, offers, privacy, history, recommendations.
+- `check_colour(hex, palette)`: does this shade suit her? (the real concierge judgement)
+- `ask_oira(question, palette)`: season, offers, privacy, history, recommendations.
 
 There is deliberately **no** seal/match/settle/payout tool. Money movement never touches an LLM.
 
 ## Guardrails (enforced on every call)
-- **Allowlist** — only the two tools above may run.
-- **Redaction by schema** — `palette` is `.strict()`; any unknown key (a raw selfie, ITA°, key,
+- **Allowlist**: only the two tools above may run.
+- **Redaction by schema**: `palette` is `.strict()`; any unknown key (a raw selfie, ITA°, key,
   wallet, nonce, verdict...) is rejected. A deny-list scan is a second line of defence.
-- **Input validation** — hex format, question length.
-- **Rate limit** — per process (`OIRA_MCP_MAX`, default 120/min).
-- **Audit log** — every call (tool, arg hash, result hash, allow/deny) to `OIRA_MCP_AUDIT`
+- **Input validation**: hex format, question length.
+- **Rate limit**: per process (`OIRA_MCP_MAX`, default 120/min).
+- **Audit log**: every call (tool, arg hash, result hash, allow/deny) to `OIRA_MCP_AUDIT`
   (default `/tmp/oira-mcp-audit.log`) and stderr.
 
 The tools reuse the **real** `app/concierge.js` (single source of truth), so they never drift from

@@ -1,4 +1,4 @@
-// Oira TTS proxy — ElevenLabs, key held server-side only. See docs/VOICE-STACK.md.
+// Oira TTS proxy, ElevenLabs, key held server-side only. See docs/VOICE-STACK.md.
 // Cost control: (1) on-disk cache keyed by exact text+voice+model, so any repeated line is served
 // free; (2) Flash model by default (half the credits); (3) a hard monthly character cap enforced
 // here in addition to the cap set on the ElevenLabs key itself. The proxy only ever receives the

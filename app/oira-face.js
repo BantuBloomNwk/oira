@@ -1,9 +1,9 @@
-/* Oira — real on-device face detection for the scan screen (the "no face detected but the ring
+/* Oira, real on-device face detection for the scan screen (the "no face detected but the ring
  * lit up anyway" fix). BlazeFace via TF.js, entirely self-hosted (vendor/tfjs + vendor/blazeface)
  * and entirely local: the model never calls out to a server, and neither does the frame it looks
  * at. Same offline-first, nothing-leaves-the-phone invariant as everything else on this screen.
  *
- * Runtime choice: the TF.js WASM backend (not WebGL, not the general MediaPipe Tasks runtime) —
+ * Runtime choice: the TF.js WASM backend (not WebGL, not the general MediaPipe Tasks runtime),
  * a lean CPU-only kernel with no GPU-driver variance across cheap Android devices, and roughly a
  * quarter the download of the generic multi-task MediaPipe WASM runtime for the same underlying
  * BlazeFace model.
@@ -44,7 +44,7 @@
         await loadScript(VENDOR + 'tfjs/tf-backend-wasm.min.js');
       }
       if (!window.blazeface) await loadScript(VENDOR + 'blazeface.min.js');
-      // Point the WASM backend at our own vendored binaries — never a CDN fetch at runtime.
+      // Point the WASM backend at our own vendored binaries, never a CDN fetch at runtime.
       window.tf.wasm.setWasmPaths(VENDOR + 'tfjs/');
       await window.tf.setBackend('wasm');
       await window.tf.ready();
@@ -69,13 +69,13 @@
   }
 
   // Detect a face in the live video frame and report it against the SAME normalized oval region
-  // analyzeSkinRaw() samples (cx=0.5, cy=0.46, rx=0.30, ry=0.36 of the frame) — one definition of
+  // analyzeSkinRaw() samples (cx=0.5, cy=0.46, rx=0.30, ry=0.36 of the frame), one definition of
   // "the oval" shared by both the gating check and the colour sample, so they can never disagree.
   var OVAL = { cx: 0.5, cy: 0.46, rx: 0.30, ry: 0.36 };
   async function detectFace(videoEl) {
     if (!model || !videoEl || !videoEl.videoWidth) return null;
     let faces;
-    // annotateBoxes=true (the 4th arg) — was false, which is why no landmarks were ever
+    // annotateBoxes=true (the 4th arg), was false, which is why no landmarks were ever
     // available for a real liveness challenge. BlazeFace's 6 keypoints, in library order, are
     // [rightEye, leftEye, nose, mouth, rightEar, leftEar]; yaw() below turns those into a head-
     // turn signal for the challenge in index.html. The face-presence/centering check below is

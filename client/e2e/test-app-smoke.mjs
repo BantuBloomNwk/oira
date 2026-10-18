@@ -1,13 +1,13 @@
-// Headless smoke test for the Oira PWA (VERIFICATION.md row 16 — the browser UI had zero automated
+// Headless smoke test for the Oira PWA (VERIFICATION.md row 16, the browser UI had zero automated
 // coverage). Serves app/ statically, loads it in a real headless Chromium with a FAKE camera, and
 // drives the actual screens the way the app does. It is a SMOKE test: it proves the page loads with
 // no uncaught JS, the core screens render, the camera/reading screen initialises, and the on-screen
 // oval positions itself over the sampled region (positionOval). It does NOT prove seal/settle (those
-// need a passkey + the bridge) or pixel-perfect layout (needs a real device) — it catches the class
+// need a passkey + the bridge) or pixel-perfect layout (needs a real device), it catches the class
 // of breakage a bad deploy ships: a JS error on load, a screen that fails to render, a broken hook.
 //
 // Needs a Chromium/Chrome binary. Uses $CHROME_PATH, else common system paths. If none is found it
-// SKIPS cleanly (exit 0) rather than failing — same graceful-gating pattern as the devnet tier.
+// SKIPS cleanly (exit 0) rather than failing, same graceful-gating pattern as the devnet tier.
 // Run from client/:  node e2e/test-app-smoke.mjs
 import puppeteer from 'puppeteer-core';
 import http from 'http';
@@ -23,7 +23,7 @@ const CHROME_CANDIDATES = [
   '/Applications/Chromium.app/Contents/MacOS/Chromium',
 ].filter(Boolean);
 const chrome = CHROME_CANDIDATES.find((p) => { try { return fs.statSync(p).isFile(); } catch { return false; } });
-if (!chrome) { console.log('SKIP — no Chromium/Chrome found (set CHROME_PATH). Not a failure.'); process.exit(0); }
+if (!chrome) { console.log('SKIP: no Chromium/Chrome found (set CHROME_PATH). Not a failure.'); process.exit(0); }
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
@@ -43,7 +43,7 @@ const server = http.createServer((req, res) => {
 
 let pass = true; const check = (label, ok) => { pass = pass && ok; console.log(`   ${ok ? '✓' : '✗'} ${label}`); };
 // noise we don't fail on: the bridge (/api/*) isn't running, and the BlazeFace model CDN may be
-// blocked in a sandbox — the app degrades gracefully for both, by design.
+// blocked in a sandbox, the app degrades gracefully for both, by design.
 const isNoise = (t) => /\/api\/|favicon|tensorflow|tfhub|jsdelivr|unpkg|storage\.googleapis|net::ERR|Failed to load resource|ERR_/i.test(String(t || ''));
 
 const port = await new Promise((r) => server.listen(0, '127.0.0.1', () => r(server.address().port)));
@@ -67,7 +67,7 @@ try {
   console.log('\n[1] app loads + core screens render (no uncaught JS):');
   const title = await page.title();
   check('title is Oira', /oira/i.test(title));
-  // drive a few screens the way the app does — a syntax/ref error in any render throws pageerror
+  // drive a few screens the way the app does, a syntax/ref error in any render throws pageerror
   for (const n of [0, 2, 8, 5, 1]) { await page.evaluate((s) => window.go(s), n); await new Promise((r) => setTimeout(r, 120)); }
   check('screen 1 (reading) is active', await page.evaluate(() => !!document.querySelector('.scr.on[data-s="1"]')));
 
@@ -105,7 +105,7 @@ try {
   check('skin journal renders (privacy + sustained-pattern nudge + intent probe) + quickSkinCheck runs', skinOk === 'ok');
   if (skinOk !== 'ok') console.log('   skin drive:', skinOk);
 
-  console.log('\n[5] scanner classifiers produce valid output (row 17 — colour, condition, curl):');
+  console.log('\n[5] scanner classifiers produce valid output (row 17, colour, condition, curl):');
   const scanOk = await page.evaluate(() => {
     try {
       const o = {};
@@ -113,7 +113,7 @@ try {
       if (typeof bucketize === 'function') { const b = bucketize(28, 15); o.palette = !!(b && typeof b.depth !== 'undefined' && b.monk >= 1 && b.monk <= 10 && b.under); }
       // skin-condition classifier: roughness/shine/blemish → dryness/shine words.
       if (typeof bucketSkinCondition === 'function') { const s = bucketSkinCondition(0.3, 0.2, false); o.condition = !!(s && s.dryness && s.shine); }
-      // curl is set by hand (headwrap/hijab-inclusive), not camera-scanned — verify the setter.
+      // curl is set by hand (headwrap/hijab-inclusive), not camera-scanned, verify the setter.
       if (typeof setCurlSlider === 'function' && typeof reading !== 'undefined') { setCurlSlider(4); o.curl = reading.curlIdx === 4; }
       return o;
     } catch (e) { return { threw: e && e.message }; }
@@ -142,6 +142,6 @@ try {
 }
 
 console.log('\n────────── RESULT ──────────');
-console.log(pass ? 'PASS ✓ — the PWA loads, the core screens render, the reading camera initialises, and the oval positions itself over the sampled region, with no uncaught JS.'
-                 : 'CHECK — a smoke assertion failed; inspect above.');
+console.log(pass ? 'PASS ✓, the PWA loads, the core screens render, the reading camera initialises, and the oval positions itself over the sampled region, with no uncaught JS.'
+                 : 'CHECK: a smoke assertion failed; inspect above.');
 process.exit(pass ? 0 : 1);

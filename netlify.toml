@@ -1,4 +1,4 @@
-# Oira — Netlify deploy config.
+# Oira: Netlify deploy config.
 # LIVE: static app in app/ (deployed via a combined app+brand dir); /api/* is proxied to
 # the persistent bridge on the Contabo VPS (Docker + Caddy sslip.io). The bridge is the
 # only API; there are no Netlify Functions. See docs/NETLIFY-DEPLOY.md.
@@ -15,7 +15,7 @@
   force = true
 
 # Static-only headers hardening (aligns with docs/OIRA-STRATEGY.md landing spec).
-# CSP is deliberately more permissive than the landing site's — this app has real inline
+# CSP is deliberately more permissive than the landing site's: this app has real inline
 # script/style (no bundler), a direct WebSocket to the VPS bridge, devnet/MagicBlock RPC
 # calls, and the Supabase RPC proxy. Tightened as far as verified-working without breaking
 # the live flows; script-src/style-src keep 'unsafe-inline' until those get extracted to

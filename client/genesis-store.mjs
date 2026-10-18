@@ -1,4 +1,4 @@
-// Genesis Token redemption store — tracks which Seeker Genesis Token mint addresses have
+// Genesis Token redemption store, tracks which Seeker Genesis Token mint addresses have
 // already been used to claim the "Seeker holder" boosted-terms reward, so a single SGT
 // (transferable between a user's own Seed Vault accounts, mint address constant across
 // that transfer) can't unlock it twice from different accounts/devices.

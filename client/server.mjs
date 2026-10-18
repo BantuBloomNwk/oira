@@ -1,4 +1,4 @@
-// Oira bridge server — serves the app UI + runs the PROVEN devnet flows on demand.
+// Oira bridge server, serves the app UI + runs the PROVEN devnet flows on demand.
 import express from 'express';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
@@ -16,14 +16,14 @@ import { ttsConfigured, synthesize } from './oira-tts.mjs';
 import { sttConfigured, transcribe } from './oira-stt.mjs';
 
 // A devnet RPC 429 (public endpoint rate-limit) must never take the whole demo server
-// down — log it and keep serving. Live /api flows degrade to their in-app fallbacks.
-// A transient devnet 429 must never take the server down — record it, don't alert. An uncaught
-// exception is a real problem — record AND alert (the process keeps serving, as before).
+// down, log it and keep serving. Live /api flows degrade to their in-app fallbacks.
+// A transient devnet 429 must never take the server down, record it, don't alert. An uncaught
+// exception is a real problem, record AND alert (the process keeps serving, as before).
 process.on('unhandledRejection', (e) => recordError('unhandledRejection', e));
 process.on('uncaughtException', (e) => recordError('uncaughtException', e, { alert: true, level: 'critical' }));
 
 const app = express();
-app.set('trust proxy', 1); // behind Caddy — derive the client IP from X-Forwarded-For
+app.set('trust proxy', 1); // behind Caddy, derive the client IP from X-Forwarded-For
 app.use(express.json());
 
 // Web traffic reaches us through Netlify's /api proxy, so the address Caddy hands on is a Netlify
@@ -54,7 +54,7 @@ function brandAllowed(req) {
   return BRAND_KEY.length > 0 && k.length === want.length && timingSafeEqual(k, want);
 }
 
-// CORS — when the bridge is hosted separately from the static app (e.g. VPS bridge behind
+// CORS, when the bridge is hosted separately from the static app (e.g. VPS bridge behind
 // Caddy, app on Netlify), the browser calls it cross-origin. Allow the configured origin
 // (comma-separated list ok) and answer preflight. Harmless when same-origin/proxied.
 const ALLOW = (process.env.OIRA_ALLOW_ORIGIN || 'https://oira-palette.netlify.app,https://app.myoira.com,https://myoira.com,https://www.myoira.com').split(',').map((s) => s.trim());
@@ -69,7 +69,7 @@ app.use((req, res, next) => {
 });
 
 // Real health for the reverse proxy / uptime probes: process up (ok), whether it's degraded
-// (RPC or TEE unreachable, or the deployer running low), uptime, and a scrubbed error summary —
+// (RPC or TEE unreachable, or the deployer running low), uptime, and a scrubbed error summary,
 // no user data. `bridgeStatus()` is cached + refreshed in the background, so this never blocks.
 app.get('/api/health', (req, res) => {
   const s = bridgeStatus(), m = monitorStats();
@@ -80,7 +80,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Per-IP rate limit on the EXPENSIVE devnet flows (each seal/offer/payout spends deployer
-// SOL). Crude in-memory fixed window — enough to stop a script draining the wallet. Shared
+// SOL). Crude in-memory fixed window, enough to stop a script draining the wallet. Shared
 // by the HTTP routes and the WS seal below.
 const RL_WINDOW_MS = 10 * 60 * 1000;
 const RL_MAX = process.env.OIRA_RL_MAX != null ? Number(process.env.OIRA_RL_MAX) : 12;
@@ -98,18 +98,18 @@ const clientIp = (req) => (viaNetlify(req) && String(req.headers['x-nf-client-co
 
 // Sealing a NEW Palette specifically (not the general expensive-flow burst limit above, which is
 // tuned loose enough to not block a real multi-person dev/demo session behind one NAT). A real
-// woman seals close to once ever — nothing legitimate calls this 12 times in 10 minutes, and the
+// woman seals close to once ever, nothing legitimate calls this 12 times in 10 minutes, and the
 // short burst window lets a script just wait out each reset. This is a separate, longer-window,
 // much lower ceiling aimed at "one machine, many fake identities" farming. Still IP-based, so
-// VPNs/IP rotation defeat it on their own — paired with the liveness challenge at scan time and
+// VPNs/IP rotation defeat it on their own, paired with the liveness challenge at scan time and
 // the closed self-seal fallback above, it raises the cost of automated farming without adding
 // friction or cost for a genuine one-time sealer.
 const SEAL_WINDOW_MS = 24 * 60 * 60 * 1000;
 const SEAL_MAX = process.env.OIRA_SEAL_MAX != null ? Number(process.env.OIRA_SEAL_MAX) : 3;
 const sealHits = new Map();
 // PEEK. Deliberately does not increment. The old version counted every attempt, so a seal
-// that failed for a reason that was nothing to do with her — an RPC 429, a dropped socket,
-// a cancelled biometric — still burned quota, and three unlucky retries locked her out of
+// that failed for a reason that was nothing to do with her, an RPC 429, a dropped socket,
+// a cancelled biometric, still burned quota, and three unlucky retries locked her out of
 // her own Palette for 24 hours. The Sybil control we actually want is on Palettes created,
 // so only a completed seal should count. See recordSeal below.
 function sealOverLimit(ip) {
@@ -171,7 +171,7 @@ app.post(['/api/brand/campaign', '/api/brand/match'], (req, res, next) => {
   res.status(401).json({ error: 'brand key required' });
 });
 // Serve the app UI locally, but NOT on a hosted API-only bridge (set OIRA_SERVE_STATIC=0
-// there — the app is served by Netlify, and serving from the code dir would leak source).
+// there, the app is served by Netlify, and serving from the code dir would leak source).
 if (process.env.OIRA_SERVE_STATIC !== '0') {
   app.use(express.static(fileURLToPath(new URL('../app', import.meta.url))));
   app.use('/brand', express.static(fileURLToPath(new URL('../brand', import.meta.url)))); // official Oira brand assets
@@ -182,7 +182,7 @@ const session = {}; // one demo session: her sealed Palette
 
 app.post('/api/seal', async (req, res) => {
   // Model A (self-seal): the SERVER generates the owner keypair (sealPalette -> Keypair.generate())
-  // and funds it from the deployer wallet — no passkey, no liveness challenge, no client proof of
+  // and funds it from the deployer wallet, no passkey, no liveness challenge, no client proof of
   // humanity at all. The app hasn't called this since the passkey/Model-B path (sealViaDevice ->
   // the WS route below) shipped, but the route itself was still open: a bare POST loop could mint
   // unlimited free, fully valid, on-chain Palettes at the deployer's expense. Closed by default;
@@ -195,7 +195,7 @@ app.post('/api/seal', async (req, res) => {
   if (sealOverLimit(clientIp(req))) return res.status(429).json({ error: `Already sealed ${SEAL_MAX} Palettes from this connection today.` });
   try {
     // the device sends CIPHERTEXT (AES-256-GCM recovery blob) + her CONFIRMED bucketed traits
-    // (undertone/depth/season) — the raw selfie never leaves the phone; these 3 buckets are what
+    // (undertone/depth/season), the raw selfie never leaves the phone; these 3 buckets are what
     // she confirmed. Model B binds them to a commitment root and seals them private in the TEE.
     const { encBlob, traits } = req.body || {};
     const blob = encBlob ? Buffer.from(encBlob, 'base64') : undefined;
@@ -283,8 +283,8 @@ app.post('/api/stt', express.raw({ type: ['audio/*', 'application/octet-stream']
 app.post('/api/campaign', async (req, res) => {
   try {
     // MODEL B overnight offer: a brand commits its target shade + escrow, co-delegates the
-    // campaign into her enclave, the agent matches it in-enclave (she is offline), and — only on
-    // a real match — settles her payout from escrow against the private receipt. runOffer self-seals
+    // campaign into her enclave, the agent matches it in-enclave (she is offline), and, only on
+    // a real match, settles her payout from escrow against the private receipt. runOffer self-seals
     // a fresh matching palette if she has not sealed yet, so the demo always resolves.
     const payout = Number(req.body && req.body.payout) || 5;
     // Prefer her real sealed palette (device-seal leaves her pubkey + agent + traits in
@@ -295,7 +295,7 @@ app.post('/api/campaign', async (req, res) => {
   } catch (e) { recordError('offer', e, { alert: true }); res.status(500).json({ error: String(e.message || e) }); }
 });
 
-// ── SEEKER GENESIS TOKEN (optional, opt-in — only reached if she connected a Seeker
+// ── SEEKER GENESIS TOKEN (optional, opt-in, only reached if she connected a Seeker
 // wallet via MWA; never touches her passkey identity or Palette) ───────────────────
 // Two-step so we never trust a bare pubkey string over HTTP: (1) issue a nonce for her
 // to sign with the MWA-connected wallet, (2) verify that signature + the on-chain SGT
@@ -319,7 +319,7 @@ app.post('/api/genesis/verify', async (req, res) => {
 // ── BRAND MARKETPLACE ──────────────────────────────────────────────────────
 // A brand posts a campaign (commit a target shade + escrow, co-delegate into the ER), which
 // persists so her overnight can match it later. Responses NEVER include the commitment opening
-// (target shade + salt) — that stays server-side, exactly as the on-chain commitment intends.
+// (target shade + salt), that stays server-side, exactly as the on-chain commitment intends.
 const EX_ADDR = (a) => `https://explorer.solana.com/address/${a}?cluster=devnet`;
 // ── BRAND BRIEFS ───────────────────────────────────────────────────────────
 // A brand describes the shade it made, what one yes pays, and how many women to ask. Running it
@@ -464,7 +464,7 @@ wss.on('connection', (ws, req) => {
       const traits = (m.traits && Number.isInteger(m.traits.undertone) && Number.isInteger(m.traits.depth) && Number.isInteger(m.traits.season)) ? m.traits : undefined;
       const encBlob = m.encBlob ? Buffer.from(m.encBlob, 'base64') : undefined;
       const salt = m.salt ? Buffer.from(m.salt, 'base64') : undefined; // her passkey-derived salt: used to build the seal, never stored
-      // assurance travels straight from her client ('wallet' vs 'passkey'/'fallback'/absent) —
+      // assurance travels straight from her client ('wallet' vs 'passkey'/'fallback'/absent),
       // it decides whether sealPaletteRelay sponsors her shortfall or requires her own funds.
       const assurance = m.assurance === 'wallet' ? 'wallet' : m.assurance;
       let charged = false;
@@ -490,11 +490,11 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => pending.clear());
 });
 
-// Proactive degradation alerts — catch a low deployer balance or an unreachable RPC/TEE before it
+// Proactive degradation alerts, catch a low deployer balance or an unreachable RPC/TEE before it
 // breaks a real seal, not after. Every 5 min; alertBridge rate-limits so this can't spam.
 setInterval(() => {
   const s = bridgeStatus();
-  if (s.deployerSol != null && s.deployerSol < 1) alertBridge('warn', `deployer balance low: ${s.deployerSol} SOL — top up`);
+  if (s.deployerSol != null && s.deployerSol < 1) alertBridge('warn', `deployer balance low: ${s.deployerSol} SOL: top up`);
   if (s.rpcOk === false) alertBridge('warn', 'base devnet RPC unreachable');
   if (s.teeOk === false) alertBridge('warn', 'MagicBlock TEE unreachable');
 }, 5 * 60_000).unref();

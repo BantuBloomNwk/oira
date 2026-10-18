@@ -99,7 +99,7 @@ const matchIx = (k, signer = agent) => new TransactionInstruction({ programId: P
   { pubkey: signer.publicKey, isSigner: true, isWritable: false }, { pubkey: palettePda, isSigner: false, isWritable: true },
   { pubkey: traitsPda, isSigner: false, isWritable: false }, { pubkey: owner.publicKey, isSigner: false, isWritable: false },
   { pubkey: k.c, isSigner: false, isWritable: true }],
-  // NEW ABI: match_query(target_undertone, target_depth, target_season, depth_tol, offer_salt[16]); no epoch (clock-derived), no nonce (enclave-derived) — the enclave opens the commitment and computes the verdict itself.
+  // NEW ABI: match_query(target_undertone, target_depth, target_season, depth_tol, offer_salt[16]); no epoch (clock-derived), no nonce (enclave-derived), the enclave opens the commitment and computes the verdict itself.
   data: Buffer.concat([disc('match_query'), Buffer.from(k.shade), Buffer.from(k.offerSalt)]) });
 const undelegateCampaignIx = (k) => new TransactionInstruction({ programId: PROGRAM, keys: [
   { pubkey: agent.publicKey, isSigner: true, isWritable: true }, { pubkey: k.c, isSigner: false, isWritable: true },

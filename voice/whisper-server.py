@@ -1,4 +1,4 @@
-# Oira STT endpoint — self-hosted Whisper (privacy-first). See docs/VOICE-STACK.md.
+# Oira STT endpoint: self-hosted Whisper (privacy-first). See docs/VOICE-STACK.md.
 # Her audio is transcribed in memory and DISCARDED immediately: never written to disk, never
 # logged. Strictly better than the browser default (which routes audio to Google). Voice is only
 # ever used to ask the concierge a question; her biometric traits are never involved.
@@ -12,7 +12,7 @@
 # Env:
 #   WHISPER_MODEL (default 'small'), WHISPER_DEVICE ('cpu'), WHISPER_COMPUTE ('int8')
 #   OIRA_STT_ALLOW_ORIGIN (comma list, default the Netlify app)
-#   OIRA_STT_MAX_MB (default 8) — reject oversized uploads
+#   OIRA_STT_MAX_MB (default 8): reject oversized uploads
 
 import os, io
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Request

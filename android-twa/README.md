@@ -5,7 +5,7 @@ own: it loads `https://app.myoira.com`, so **every web deploy is picked up autom
 almost never needs rebuilding. The one time it does is if the target URL or signing key changes.
 
 `twa-manifest.json` here is the reproducible build config (package `app.oira.twa`, host `app.myoira.com`).
-It is the only build input kept in git. The generated Gradle project, the APK/AAB, and — above all — the
+It is the only build input kept in git. The generated Gradle project, the APK/AAB, and, above all, the
 **signing keystore are deliberately NOT in git** (see `.gitignore`).
 
 ## Signing key (do not lose this)

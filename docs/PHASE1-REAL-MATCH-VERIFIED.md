@@ -1,4 +1,4 @@
-# Phase 1 — real in-enclave match VERIFIED (devnet)
+# Phase 1: real in-enclave match VERIFIED (devnet)
 
 The load-bearing gap is closed: the enclave now COMPUTES the match from her sealed,
 commitment-bound traits. The client no longer supplies `matched`.
@@ -6,11 +6,11 @@ commitment-bound traits. The client no longer supplies `matched`.
 ## What changed (program)
 - New **TraitsSession** account: bucketed traits (undertone 0-3, Monk depth 1-10, season 0-11),
   delegated into the Private ER, whitelisted to the agent, NEVER committed to base.
-- **`set_traits`** runs in-enclave and BINDS the sealed traits to `sha256(salt‖traits)` — the
+- **`set_traits`** runs in-enclave and BINDS the sealed traits to `sha256(salt‖traits)`: the
   commitment root the phone published at `init_palette`. Substituted traits are rejected.
 - **`match_query`** reads TraitsSession in-enclave and computes the verdict (bucket distance +
   her night rules); removed the `matched: bool` client input.
-- Base receipts are HASHED: `last_receipt = sha256(offer_hash‖verdict‖nonce)` — public base
+- Base receipts are HASHED: `last_receipt = sha256(offer_hash‖verdict‖nonce)`: public base
   cannot reconstruct her palette from receipts (fixes Fable Attack 2).
 
 ## Live proof (`client/e2e/match-real-e2e.mjs`, PASS)

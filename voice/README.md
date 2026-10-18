@@ -1,4 +1,4 @@
-# Oira voice — deploy runbook (flip on AFTER top-up)
+# Oira voice: deploy runbook (flip on AFTER top-up)
 
 Everything is built and tested. The app ships with the server-voice path **off** (browser voice is
 used), so nothing spends until we deliberately flip it. Do these steps once RunPod + ElevenLabs are
@@ -18,7 +18,7 @@ topped up. See docs/VOICE-STACK.md for the design.
    on the Contabo VPS with `WHISPER_MODEL=small WHISPER_DEVICE=cpu WHISPER_COMPUTE=int8`, and point
    `OIRA_STT_URL` at `https://<host>/stt`.)
 
-## 2. Set the bridge secrets (Contabo, env only — never in git)
+## 2. Set the bridge secrets (Contabo, env only: never in git)
 On the bridge container/host set:
 ```
 OIRA_STT_URL=https://api.runpod.ai/v2/<id>/runsync

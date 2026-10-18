@@ -1,17 +1,17 @@
-// Seeker Genesis Token (SGT) verification — the full 3-part check per Solana Mobile's own
+// Seeker Genesis Token (SGT) verification, the full 3-part check per Solana Mobile's own
 // guidance (docs/SEEKER-SEED-VAULT-AND-GENESIS.md §3), not just "does some wallet hold an
 // NFT called Genesis":
 //   1. the connected wallet owns a real SGT (3-property mint check: mint authority,
-//      metadata pointer, token group member — all forgeable individually, not together)
+//      metadata pointer, token group member, all forgeable individually, not together)
 //   2. she proves ownership of that wallet by signing a server-issued nonce (NOT just
-//      trusting a bare pubkey string sent over HTTP — MWA's authorize() proves control to
+//      trusting a bare pubkey string sent over HTTP, MWA's authorize() proves control to
 //      the WALLET app, not to us; we still need our own signature check)
 //   3. that SGT's mint address has not already been used to claim this reward (anti-replay
-//      — an SGT can move between a user's own Seed Vault accounts, mint stays constant)
+//, an SGT can move between a user's own Seed Vault accounts, mint stays constant)
 //
 // HONEST STATUS: written against Solana Mobile's documented Genesis Token addresses and
 // @solana/spl-token's actual (checked, not guessed) Token-2022 extension API. Requires
-// HELIUS_API_KEY to be configured (same pattern as BASE_RPC/TEE_RPC in oira-chain.mjs) —
+// HELIUS_API_KEY to be configured (same pattern as BASE_RPC/TEE_RPC in oira-chain.mjs),
 // without it, verify() fails closed with a clear config error rather than silently passing.
 // Not yet exercised against a real SGT on mainnet (no key configured in this environment).
 import { Connection, PublicKey } from '@solana/web3.js';
@@ -24,10 +24,10 @@ const SGT_METADATA_ADDRESS = 'GT22s89nU4iWFkNXj1Bw6uYhJJWDRPpShHt4Bk8f99Te';
 const SGT_GROUP_MINT_ADDRESS = 'GT22s89nU4iWFkNXj1Bw6uYhJJWDRPpShHt4Bk8f99Te';
 
 // SGTs are minted on Solana MAINNET (Seeker is real hardware), unlike the rest of Oira's
-// current devnet-only deployment — this is intentionally the one mainnet-reading path.
+// current devnet-only deployment, this is intentionally the one mainnet-reading path.
 function heliusRpc() {
   const key = process.env.HELIUS_API_KEY;
-  if (!key) throw new Error('HELIUS_API_KEY not configured — Genesis Token check cannot run.');
+  if (!key) throw new Error('HELIUS_API_KEY not configured, Genesis Token check cannot run.');
   return `https://mainnet.helius-rpc.com/?api-key=${key}`;
 }
 

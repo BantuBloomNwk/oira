@@ -1,4 +1,4 @@
-// Oira PER spike — the offline-agent match inside a MagicBlock Private ER (TEE), current commitment ABI.
+// Oira PER spike, the offline-agent match inside a MagicBlock Private ER (TEE), current commitment ABI.
 //   attest TEE -> init_palette(root)+init_traits (base) -> set_night_rules(epoch_cap=CAP) ->
 //   delegate palette+traits to the TEE validator -> seal both private (whitelist agent) ->
 //   verify EphemeralPermission(is_private) -> the AGENT answers CAP escrowed, committed offers
@@ -138,7 +138,7 @@ console.log('palette :', palettePda.toBase58());
 
 console.log('\n[1] attest TEE…');
 try { await verifyTeeRpcIntegrity(TEE_RPC); console.log('   ✓ enclave attested (TDX quote verified)'); }
-catch (e) { console.warn('   ⚠ attestation fetch failed (sandbox egress):', (e?.cause?.code || e.message) + ' — continuing with auth token'); }
+catch (e) { console.warn('   ⚠ attestation fetch failed (sandbox egress):', (e?.cause?.code || e.message) + ', continuing with auth token'); }
 console.log('   TEE ER core:', (await (await freshTee(agent)).getVersion())['solana-core']);
 
 console.log('\n[2] fund owner/agent/brand; mint the brand $100 oUSDC…');
@@ -177,16 +177,16 @@ console.log(`\n[8] per-epoch budget: the ${CAP + 1}th match must be REJECTED on-
 let rejected = false;
 try { await answerOffer(); }
 catch (e) { rejected = true; console.log('   ✓ rejected:', (e.message || '').split('\n')[0].slice(0, 80)); }
-if (!rejected) console.log(`   ✗ the ${CAP + 1}th was NOT rejected — budget not enforced`);
+if (!rejected) console.log(`   ✗ the ${CAP + 1}th was NOT rejected, budget not enforced`);
 
 console.log('\n[9] base is still frozen (the matches never touched the base layer)…');
 const baseCount = readQueryCount((await base.getAccountInfo(palettePda))?.data);
-console.log('   base query_count:', baseCount, '(should be 0 — matches happened in-enclave)');
+console.log('   base query_count:', baseCount, '(should be 0, matches happened in-enclave)');
 
 console.log('\n────────── RESULT ──────────');
 const pass = rejected && baseCount === 0;
 console.log(pass
-  ? `PASS ✓ — the offline agent answered ${CAP} committed offers inside the TEE; the owner never signed a match; the (${CAP + 1})th was rejected by the on-chain per-epoch budget; base only ever saw an encrypted blob (query_count still 0, matches live in-enclave).`
-  : 'CHECK — an assertion did not hold; inspect above.');
+  ? `PASS ✓, the offline agent answered ${CAP} committed offers inside the TEE; the owner never signed a match; the (${CAP + 1})th was rejected by the on-chain per-epoch budget; base only ever saw an encrypted blob (query_count still 0, matches live in-enclave).`
+  : 'CHECK: an assertion did not hold; inspect above.');
 console.log('palette:', EX('address', palettePda.toBase58()));
 process.exit(pass ? 0 : 1);

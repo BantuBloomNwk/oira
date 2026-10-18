@@ -1,4 +1,4 @@
-# Oira STT — RunPod SERVERLESS Whisper handler. See docs/VOICE-STACK.md.
+# Oira STT: RunPod SERVERLESS Whisper handler. See docs/VOICE-STACK.md.
 # Serverless = scales to zero and bills only per second of actual transcription, so an idle
 # endpoint costs $0 (a persistent GPU pod would drain the balance). Her audio is transcribed in
 # memory and never persisted or logged. Voice is only for asking the concierge a question; her

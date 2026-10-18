@@ -1,8 +1,8 @@
-// Phase-0 Spike A — ER private-read semantics.
+// Phase-0 Spike A, ER private-read semantics.
 // Question (Fable Attack 1): once a Palette is sealed private (EphemeralPermission
 // whitelists ONE reader = the agent), can a NON-whitelisted key still RPC-read the
 // account's plaintext from the TEE? If yes, the agent server (and anyone with a token)
-// can dump traits — the query budget bounds brands, not the key holder. If no, the
+// can dump traits, the query budget bounds brands, not the key holder. If no, the
 // whitelist genuinely gates reads and the plaintext-in-ER design is sound as-is.
 //
 // Method: seal a fresh Palette private (whitelist AGENT), then getAccountInfo(palette)
@@ -98,7 +98,7 @@ console.log('\n────────── SPIKE A VERDICT ──────
 const agentR = results[0], outR = results[1];
 const agentSees = agentR.result === 'DATA RETURNED' && agentR.decoded && agentR.decoded.is_private !== undefined;
 const outsiderSees = outR.result === 'DATA RETURNED' && outR.decoded && outR.decoded.encLen === 96;
-if (agentSees && !outsiderSees) console.log('GATED ✓ — whitelisted agent reads plaintext; the outsider is blocked. Plaintext-in-ER is genuinely gated by the whitelist. The agent key is the only residual reader (custody matters); design as planned + bucket traits.');
-else if (outsiderSees) console.log('NOT GATED ✗ — an outsider RPC-read the sealed plaintext. Anyone with a token can dump traits. MUST store traits BUCKETED (categories, not raw) and/or keep the agent key on-device; disclose the trusted-read surface. Private receipts still required.');
-else console.log('INCONCLUSIVE — inspect the raw results above (agentSees=' + agentSees + ', outsiderSees=' + outsiderSees + ').');
+if (agentSees && !outsiderSees) console.log('GATED ✓, whitelisted agent reads plaintext; the outsider is blocked. Plaintext-in-ER is genuinely gated by the whitelist. The agent key is the only residual reader (custody matters); design as planned + bucket traits.');
+else if (outsiderSees) console.log('NOT GATED ✗, an outsider RPC-read the sealed plaintext. Anyone with a token can dump traits. MUST store traits BUCKETED (categories, not raw) and/or keep the agent key on-device; disclose the trusted-read surface. Private receipts still required.');
+else console.log('INCONCLUSIVE: inspect the raw results above (agentSees=' + agentSees + ', outsiderSees=' + outsiderSees + ').');
 console.log('palette:', `https://explorer.solana.com/address/${palettePda.toBase58()}?cluster=devnet`);

@@ -1,4 +1,4 @@
-// Oira concierge — governed server reasoning path (the middle layer between on-device Gemma and
+// Oira concierge, governed server reasoning path (the middle layer between on-device Gemma and
 // the deterministic floor). When on-device weights are absent (most phones today), this is what
 // gives her REAL reasoning instead of templates.
 //
@@ -26,7 +26,7 @@
   }
 
   // ctx is the coarse palette from oiraBuildContext(); lang is her chosen language. hex is an
-  // optional colour she photographed (e.g. a shopping-companion check) — when present the server
+  // optional colour she photographed (e.g. a shopping-companion check), when present the server
   // grounds its draft with the same on-device judgeHex() logic instead of parsing `question` for a
   // known colour name, so a raw sampled hex still gets a real, grounded judgement. Returns the
   // reasoned text, or null to let the caller keep the on-device deterministic answer.

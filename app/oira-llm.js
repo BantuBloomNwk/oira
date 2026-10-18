@@ -29,7 +29,7 @@
       var genai = await import(/* self-hosted, CSP-safe */ cfg('lib'));
       var fileset = await genai.FilesetResolver.forGenAiTasks(cfg('wasm', new URL('.', cfg('lib')).href));
       // maxNumImages > 0 is what turns on vision support at all (per Google's LLM Inference for
-      // Web guide) — 0/absent keeps this identical to the original text-only engine. A multimodal
+      // Web guide), 0/absent keeps this identical to the original text-only engine. A multimodal
       // Gemma 3n build (E2B/E4B, .litertlm) is required either way; this does not change what
       // model file is needed, only whether the loaded model's own image capability is exposed.
       var maxImgs = +cfg('maxNumImages', 0);
@@ -98,15 +98,15 @@
   }
 
   // true only once BOTH a model is configured AND it was loaded with maxNumImages > 0 (see load()
-  // above) — vision needs a multimodal Gemma 3n build either way, this just confirms the engine
+  // above), vision needs a multimodal Gemma 3n build either way, this just confirms the engine
   // was actually asked to expose that capability, not silently ignore an image it can't use.
   function visionConfigured() { return configured() && +cfg('maxNumImages', 0) > 0; }
 
   // Same persona/grounding as buildPrompt, but the ARRAY form generateResponse() needs for
   // multimodal input: a mix of plain strings and {imageSource} objects, wrapped in Gemma's own
-  // turn markers (per Google's LLM Inference for Web guide — generateResponse(['<start_of_turn>
+  // turn markers (per Google's LLM Inference for Web guide, generateResponse(['<start_of_turn>
   // user\n', text, {imageSource}, '<end_of_turn>\n<start_of_turn>model\n'])). The image is NEVER
-  // part of the whitelisted ctx boundary above — it is a photo she is actively sharing for this
+  // part of the whitelisted ctx boundary above, it is a photo she is actively sharing for this
   // one question (e.g. "is this shade mine?"), passed in separately by the caller, not something
   // read back out of her sealed Palette.
   function buildVisionPrompt(ctx, question, lang, draft, imageSource) {

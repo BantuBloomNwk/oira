@@ -1,4 +1,4 @@
-// Phase-1 proof — the REAL in-enclave match on the current commitment ABI (the client never supplies
+// Phase-1 proof, the REAL in-enclave match on the current commitment ABI (the client never supplies
 // the answer). Each offer is a committed, escrowed campaign co-delegated into her ER; the AGENT (owner
 // offline) runs match_query and the program READS her sealed traits and computes the verdict itself.
 //   Asserts:
@@ -154,13 +154,13 @@ for (const kp of [owner, agent, brand]) await sendAndConfirmTransaction(base, ne
 console.log('[2] seal both private (whitelist agent)…');
 { const tee = await teeConn(owner); await sendOnEr(tee, [privacyIx('palette', agent.publicKey)], [owner], owner); await sendOnEr(tee, [privacyIx('traits', agent.publicKey)], [owner], owner); }
 
-console.log('\n[3] commitment BINDING — a wrong-traits set_traits must be rejected in-enclave:');
+console.log('\n[3] commitment BINDING: a wrong-traits set_traits must be rejected in-enclave:');
 try { const tee = await teeConn(owner); await sendOnEr(tee, [setTraitsIx(1, HER.depth, HER.season, salt)], [owner], owner); check('wrong traits rejected', false); }
 catch (e) { check('wrong traits rejected (BindingMismatch)', /failed/.test(String(e.message))); }
 console.log('   sealing the REAL traits (bound to the published root)…');
 { const tee = await teeConn(owner); await sendOnEr(tee, [setTraitsIx(HER.undertone, HER.depth, HER.season, salt)], [owner], owner); }
 
-console.log('\n[4] READ GATING — outsider cannot read the sealed traits:');
+console.log('\n[4] READ GATING: outsider cannot read the sealed traits:');
 { const rd = await (await teeConn(outsider)).getAccountInfo(traitsPda); check('outsider read of traits is null', rd === null); }
 
 console.log('\n[5] REAL match, computed in-enclave by the AGENT (owner offline, client passes NO answer):');
@@ -175,7 +175,7 @@ check('mismatched-undertone campaign -> verdict no-match(0)', n.pv.last_verdict 
 
 console.log('\n────────── RESULT ──────────');
 console.log(pass
-  ? 'PASS ✓ — the enclave COMPUTES the match from her sealed, commitment-bound traits (the client never supplies it); wrong traits are rejected at seal; outsiders cannot read the traits; a matching committed offer verdicts MATCH and a mismatched one no-match; only a hashed receipt reaches the campaign.'
-  : 'CHECK — a sub-assertion failed; inspect above.');
+  ? 'PASS ✓, the enclave COMPUTES the match from her sealed, commitment-bound traits (the client never supplies it); wrong traits are rejected at seal; outsiders cannot read the traits; a matching committed offer verdicts MATCH and a mismatched one no-match; only a hashed receipt reaches the campaign.'
+  : 'CHECK: a sub-assertion failed; inspect above.');
 console.log('palette:', `https://explorer.solana.com/address/${palettePda.toBase58()}?cluster=devnet`);
 process.exit(pass ? 0 : 1);

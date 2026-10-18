@@ -54,7 +54,7 @@ if (firstTime) {
   console.log('first seal   ✓ (already sealed on a previous run)');
 }
 
-const r2 = await sealPaletteRelay(args); // the re-seal — used to throw InvalidAccountData
+const r2 = await sealPaletteRelay(args); // the re-seal, used to throw InvalidAccountData
 console.log('re-seal      ✓', r2.sealSig);
 
 // Verify the rebind from the ER itself: only the whitelisted reader can read a private
@@ -73,11 +73,11 @@ if (live) {
   privateUnderCurrentAgent = isPrivate && boundAgent.equals(agent.publicKey);
   console.log('ER read as current agent ✓ is_private:', isPrivate, '| bound agent matches:', boundAgent.equals(agent.publicKey));
 } else {
-  console.log('ER read as current agent ✗ (refused — permission group NOT bound to the current agent;');
+  console.log('ER read as current agent ✗ (refused, permission group NOT bound to the current agent;');
   console.log('  expected only for a legacy palette until the create-or-update program is deployed)');
 }
 
 const pass = !!r2.sealSig && privateUnderCurrentAgent;
-console.log(pass ? '\nALL GREEN — re-seal is idempotent and the agent is correctly (re)bound'
+console.log(pass ? '\nALL GREEN: re-seal is idempotent and the agent is correctly (re)bound'
                  : '\nRE-SEAL OK, AGENT REBIND PENDING (needs the create-or-update program deploy)');
 process.exit(r2.sealSig ? 0 : 1);

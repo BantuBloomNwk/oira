@@ -1,4 +1,4 @@
-# Oira / Hue whitepaper — design system (preserve exactly)
+# Oira / Hue whitepaper: design system (preserve exactly)
 
 Captured from `Hue_Whitepaper_v0.1.pdf`. There is no editable source; if we regenerate the whitepaper (e.g. rename to Oira, edits), reproduce this look faithfully.
 

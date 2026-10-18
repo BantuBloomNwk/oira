@@ -1,4 +1,4 @@
-// Model B — PRODUCTION privacy hardening, proven end-to-end on devnet.
+// Model B, PRODUCTION privacy hardening, proven end-to-end on devnet.
 //
 //   Her Palette + Traits are delegated into the Private ER ONCE and NEVER leave the enclave.
 //   Each brand campaign COMMITS its target shade publicly + escrows, then co-delegates into her
@@ -6,12 +6,12 @@
 //   escrowed offer?"). The verdict + a trait-derived nonce stay PRIVATE in her Palette; only an
 //   opaque receipt + (on a match) her payee are committed onto the campaign and undelegated to
 //   base for settle. Asserts the full defense stack:
-//     L1  idempotency  — re-querying the same offer is a FREE no-op (her meter counts DISTINCT offers)
-//     L2  bound query   — the agent cannot probe arbitrary targets; a mismatched campaign → no-match
-//     L4  her-set cap    — she caps her own lifetime distinct-offer budget; the (cap+1)th is rejected
-//     L5  hidden no-match — a no-match commits payee=0 (no wallet link) and an opaque receipt (no verdict)
-//     settle bound to match — a real receipt pays her; a forged nonce / wrong offer are rejected
-//     Palette stays in the enclave — it is still delegation-owned on base at the end
+//     L1  idempotency, re-querying the same offer is a FREE no-op (her meter counts DISTINCT offers)
+//     L2  bound query, the agent cannot probe arbitrary targets; a mismatched campaign → no-match
+//     L4  her-set cap, she caps her own lifetime distinct-offer budget; the (cap+1)th is rejected
+//     L5  hidden no-match, a no-match commits payee=0 (no wallet link) and an opaque receipt (no verdict)
+//     settle bound to match, a real receipt pays her; a forged nonce / wrong offer are rejected
+//     Palette stays in the enclave, it is still delegation-owned on base at the end
 // Run from client/:  node e2e/model-b-e2e.mjs
 import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction, sendAndConfirmTransaction, SystemProgram } from '@solana/web3.js';
 import {
@@ -112,7 +112,7 @@ const matchIx = (k, signer = agent) => new TransactionInstruction({ programId: P
   { pubkey: signer.publicKey, isSigner: true, isWritable: false }, { pubkey: palettePda, isSigner: false, isWritable: true },
   { pubkey: traitsPda, isSigner: false, isWritable: false }, { pubkey: owner.publicKey, isSigner: false, isWritable: false },
   { pubkey: k.c, isSigner: false, isWritable: true }],
-  // NEW ABI: match_query(target_undertone, target_depth, target_season, depth_tol, offer_salt[16]); no epoch (clock-derived), no nonce (enclave-derived) — the enclave opens the commitment and computes the verdict itself.
+  // NEW ABI: match_query(target_undertone, target_depth, target_season, depth_tol, offer_salt[16]); no epoch (clock-derived), no nonce (enclave-derived), the enclave opens the commitment and computes the verdict itself.
   data: Buffer.concat([disc('match_query'), Buffer.from(k.shade), Buffer.from(k.offerSalt)]) });
 const undelegateCampaignIx = (k) => new TransactionInstruction({ programId: PROGRAM, keys: [
   { pubkey: agent.publicKey, isSigner: true, isWritable: true }, { pubkey: k.c, isSigner: false, isWritable: true },
@@ -193,16 +193,16 @@ async function offer(tag, tu, td, ts, tol) {
   return { k, tag, verdict: pv.last_verdict, nonce: pv.last_nonce, lifetime: pv.lifetime_queries };
 }
 
-console.log('\n[1] MATCH — brand commits her shade (cool/Monk8), agent asks in-enclave with NO target:');
+console.log('\n[1] MATCH: brand commits her shade (cool/Monk8), agent asks in-enclave with NO target:');
 const m = await offer('match', 2, 8, 3, 1);
 check('agent-read verdict == MATCH(1)', m.verdict === 1);
 check('her lifetime meter == 1 (one distinct offer)', m.lifetime === 1);
 
-console.log('\n[grief] BUDGET GUARD — an outsider (not her agent) cannot spend her never-resetting budget:');
+console.log('\n[grief] BUDGET GUARD: an outsider (not her agent) cannot spend her never-resetting budget:');
 try { const tee = await teeConn(outsider); await sendOnEr(tee, [matchIx(m.k, outsider)], [outsider], outsider); check('outsider match_query rejected', false); }
 catch (e) { check('outsider match_query rejected (UnauthorizedAgent)', /failed|custom program error/i.test(String(e.message))); }
 
-console.log('\n[L1] IDEMPOTENCY — re-query the SAME offer: a free no-op, meter unchanged:');
+console.log('\n[L1] IDEMPOTENCY: re-query the SAME offer: a free no-op, meter unchanged:');
 { const tee = await teeConn(agent); await sendOnEr(tee, [matchIx(m.k)], [agent], agent);
   const pv = decodePalette((await tee.getAccountInfo(palettePda)).data);
   const cv = decodeCampaign((await tee.getAccountInfo(m.k.c)).data);
@@ -212,18 +212,18 @@ console.log('\n[L1] IDEMPOTENCY — re-query the SAME offer: a free no-op, meter
 const mBase = decodeCampaign((await waitCampaignUndelegated(m.k)).data);
 check('base: matched campaign payee_commit == sha256(her‖nonce)', mBase.payee_commit.equals(sha(owner.publicKey.toBuffer(), m.nonce)));
 
-console.log('\n[L2] BOUND QUERY — a campaign committing a DIFFERENT shade (warm) → no-match; agent cannot probe her space:');
+console.log('\n[L2] BOUND QUERY: a campaign committing a DIFFERENT shade (warm) → no-match; agent cannot probe her space:');
 const n = await offer('nomatch', 0, 8, 3, 1);
 check('agent-read verdict == NO-MATCH(0)', n.verdict === 0);
 check('her lifetime meter == 2', n.lifetime === 2);
 { const tee = await teeConn(agent); await sendOnEr(tee, [undelegateCampaignIx(n.k)], [agent], agent); }
 const nBase = decodeCampaign((await waitCampaignUndelegated(n.k)).data);
 
-console.log('\n[L5] HIDDEN NO-MATCH — base learns nothing from a no-match:');
+console.log('\n[L5] HIDDEN NO-MATCH: base learns nothing from a no-match:');
 check('no-match payee_commit == 0 (no wallet link leaks)', nBase.payee_commit.equals(Buffer.alloc(32)));
 check('receipt is present but opaque (verdict not recoverable without the private nonce)', !nBase.receipt.equals(Buffer.alloc(32)));
 
-console.log('\n[L4] HER-SET CAP — she capped herself at 2 distinct offers; a 3rd is rejected in-enclave:');
+console.log('\n[L4] HER-SET CAP: she capped herself at 2 distinct offers; a 3rd is rejected in-enclave:');
 try { await offer('third', 2, 8, 3, 1); check('3rd distinct offer rejected', false); }
 catch (e) { check('3rd distinct offer rejected (LifetimeBudgetExceeded)', /failed|0x1775|custom program error/i.test(String(e.message))); }
 
@@ -238,7 +238,7 @@ catch { check('forged-nonce settle rejected (ReceiptMismatch)', true); }
 try { await sendAndConfirmTransaction(base, new Transaction().add(settleOfferIx(m.k, randomBytes(32), 1, m.nonce)), [brand], opts); check('wrong-offer settle rejected', false); }
 catch { check('wrong-offer settle rejected (OfferMismatch)', true); }
 
-console.log('\n[L3$] TREASURY SWEEP — closing the no-match campaign forfeits its query stake to the treasury:');
+console.log('\n[L3$] TREASURY SWEEP: closing the no-match campaign forfeits its query stake to the treasury:');
 const treas0 = await bal(treasuryAta), brandBefore = await bal(brandAta);
 await sendAndConfirmTransaction(base, new Transaction().add(closeCampaignIx(n.k)), [brand], opts);
 check(`treasury collected the ${usd(PER_QUERY)} query stake`, (await bal(treasuryAta)) - treas0 === PER_QUERY);
@@ -249,7 +249,7 @@ check('palette still delegation-owned on base', (await base.getAccountInfo(palet
 
 console.log('\n────────── RESULT ──────────');
 console.log(pass
-  ? 'PASS ✓ — Model B holds end-to-end: the agent can only ask committed, escrowed offers (L2), repeats are free (L1), a no-match leaks neither verdict nor wallet (L5), she caps her own repeat-query budget (L4), a real match pays her while forgeries are rejected, and her Palette never leaves the TEE.'
-  : 'CHECK — a sub-assertion failed; inspect above.');
+  ? 'PASS ✓, Model B holds end-to-end: the agent can only ask committed, escrowed offers (L2), repeats are free (L1), a no-match leaks neither verdict nor wallet (L5), she caps her own repeat-query budget (L4), a real match pays her while forgeries are rejected, and her Palette never leaves the TEE.'
+  : 'CHECK: a sub-assertion failed; inspect above.');
 console.log('her palette:', EX(palettePda));
 process.exit(pass ? 0 : 1);

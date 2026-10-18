@@ -1,4 +1,4 @@
-# Seeker: Seed Vault + Genesis Token — what the docs actually say
+# Seeker: Seed Vault + Genesis Token: what the docs actually say
 
 Read before writing any Android/Seeker code, per the standing rule ("go over the
 documents properly first"). Sources are Solana Mobile's own docs and Helius'
@@ -17,7 +17,7 @@ Seed Vault SDK's own docs are explicit:
 Oira is a consumer dApp, not a wallet. It should never link the Seed Vault
 SDK, never touch `WalletContractV1`, and never talk to the
 `com.solanamobile.seedvault.wallet.v1.walletprovider` content provider
-directly — that surface exists so that *wallet apps* (the thing installed on
+directly, that surface exists so that *wallet apps* (the thing installed on
 a Seeker that actually holds keys) can do secure key custody. The correct
 integration for Oira is the **Mobile Wallet Adapter (MWA) protocol**:
 
@@ -26,15 +26,15 @@ Oira (dApp)  --MWA protocol-->  a wallet app on the device  --Seed Vault-->  har
 ```
 
 Package: `@solana-mobile/mobile-wallet-adapter-protocol-web3js` (React
-Native/Expo — matches what `docs/OIRA_BUILD_PROMPT.md` already specifies).
+Native/Expo, matches what `docs/OIRA_BUILD_PROMPT.md` already specifies).
 Core calls:
 
-- `transact(callback)` — opens an MWA session with whatever wallet app the
+- `transact(callback)`: opens an MWA session with whatever wallet app the
   user has (on Seeker, the default wallet is Seed-Vault-backed).
-- `wallet.authorize(...)` inside that session — returns an
+- `wallet.authorize(...)` inside that session: returns an
   `AuthorizationResult` with her authorized public key(s), an `auth_token`
   (cache this to skip re-authorizing next launch), and `wallet_uri_base`.
-- `wallet.signAndSendTransactions(...)` — for `set_traits` / any signed
+- `wallet.signAndSendTransactions(...)`: for `set_traits` / any signed
   write, the wallet (backed by Seed Vault on Seeker) signs; Oira never sees
   the private key, ever.
 
@@ -42,13 +42,13 @@ Core calls:
 Seeker:** her `deviceOwner` becomes the pubkey MWA's `authorize()` returns,
 not a locally-generated fallback key. That's hardware-backed and survives
 reinstalls/app data clears (the key lives in the wallet app / Seed Vault, not
-Oira's storage) — strictly stronger than the current passkey/local-key
+Oira's storage), strictly stronger than the current passkey/local-key
 fallback in `app/index.html`, and it's the same bootstrapping shape already
 in place (`bootIdentity()` just gets a Seeker-specific branch that calls
 `transact()` instead of the local custody fallback when running inside the
 Seeker/Android build).
 
-Sources: [Seed Vault — Solana Mobile Docs](https://docs.solanamobile.com/developers/seed-vault), [Seed Vault SDK intro](https://docs.solanamobile.com/additional-sdks/seedvault_intro), [Seed Vault SDK integration guide](https://github.com/solana-mobile/seed-vault-sdk/blob/main/docs/integration_guide.md), [Mobile Wallet Adapter — Solana Mobile Docs](https://docs.solanamobile.com/developers/mobile-wallet-adapter), [MWA React Native usage](https://docs.solanamobile.com/react-native/using_mobile_wallet_adapter)
+Sources: [Seed Vault, Solana Mobile Docs](https://docs.solanamobile.com/developers/seed-vault), [Seed Vault SDK intro](https://docs.solanamobile.com/additional-sdks/seedvault_intro), [Seed Vault SDK integration guide](https://github.com/solana-mobile/seed-vault-sdk/blob/main/docs/integration_guide.md), [Mobile Wallet Adapter, Solana Mobile Docs](https://docs.solanamobile.com/developers/mobile-wallet-adapter), [MWA React Native usage](https://docs.solanamobile.com/react-native/using_mobile_wallet_adapter)
 
 ## 2. Seed Vault itself, for context (why the above boundary exists)
 
@@ -56,19 +56,19 @@ Sources: [Seed Vault — Solana Mobile Docs](https://docs.solanamobile.com/devel
   execution environment (secure processor mode / auxiliary coprocessor);
   secrets never leave it, everything is encrypted at rest, and biometric/PIN
   auth happens inside that secure context only.
-- A wallet app integrates it via three intents — `ACTION_AUTHORIZE_SEED_ACCESS`,
-  `ACTION_SIGN_TRANSACTION`, `ACTION_GET_PUBLIC_KEY` — each backed by a
+- A wallet app integrates it via three intents: `ACTION_AUTHORIZE_SEED_ACCESS`,
+  `ACTION_SIGN_TRANSACTION`, `ACTION_GET_PUBLIC_KEY`: each backed by a
   content-provider table (`authorizedseeds`, `unauthorizedseeds`, `accounts`,
   `implementationlimits`). None of this is Oira's concern; it's the
   wallet-app's job, and Seeker ships a Seed-Vault-backed wallet already.
 - There's a simulator for API 31+ for wallet-app developers testing Seed
-  Vault itself — irrelevant to Oira since Oira isn't a wallet.
+  Vault itself, irrelevant to Oira since Oira isn't a wallet.
 
-## 3. The Genesis Token (SGT) — what it is and how to check for it
+## 3. The Genesis Token (SGT): what it is and how to check for it
 
 The Seeker Genesis Token is a **soulbound Token-2022 NFT**, minted once per
 device into the primary account of that device's Seed Vault wallet. It
-unlocks holder-gated rewards/access across the ecosystem — this is the
+unlocks holder-gated rewards/access across the ecosystem, this is the
 primitive for "Seeker holder gets boosted terms" in Oira.
 
 **On-chain identifiers (Token-2022 / Token Extensions):**
@@ -89,9 +89,8 @@ minting a fake look-alike token):
    authority is also the mint authority above)
 3. its Token Group Member extension's `group` equals `SGT_GROUP_MINT_ADDRESS`
 
-All three must match — this is what makes it unforgeable-by-copy. Note this
-is the *authenticity* check (is this really an SGT). It is separate from —
-and does not replace — the reward-eligibility check below.
+All three must match, this is what makes it unforgeable-by-copy. Note this
+is the *authenticity* check (is this really an SGT). It is separate from, and does not replace, the reward-eligibility check below.
 
 **Correction (2026-07-11): a required fourth/anti-replay check was missing
 from this doc.** Solana Mobile's own guidance for gating a reward behind SGT
@@ -101,10 +100,10 @@ what's above only captured the authenticity half of it:
 1. The connected wallet owns a Seeker Genesis Token (the three-part mint
    check above).
 2. The user proves ownership of the wallet via message signing (in Oira's
-   case this is free — the MWA `authorize()` call in §1 already proves wallet
+   case this is free, the MWA `authorize()` call in §1 already proves wallet
    control before anything else runs).
 3. **The Seeker Genesis Token has not been previously used to claim this
-   reward** — i.e. check that its *mint address* has not been seen before,
+   reward**, i.e. check that its *mint address* has not been seen before,
    not just that some wallet holds it right now.
 
 Property 3 matters because an SGT is transferable **between a user's own
@@ -144,21 +143,20 @@ async function checkWalletForSGT(walletAddress) {
 }
 ```
 
-(Full script — pagination loop, batching, error handling — is in
+(Full script, pagination loop, batching, error handling, is in
 `docs/SEEKER-SEED-VAULT-AND-GENESIS.md`'s source fetch; ask me to paste the
 complete version into `app/native/` when we actually wire this up. Not
 inlined in full here to keep this doc a reference, not the implementation.)
 
 **Important nuance for Oira specifically:** step 2 in the doc's own
-recommended flow is "user proves wallet ownership via message signing" —
-i.e. don't just check *an* address holds an SGT, have her *sign* to prove
+recommended flow is "user proves wallet ownership via message signing", i.e. don't just check *an* address holds an SGT, have her *sign* to prove
 she controls that wallet, then check that wallet for the SGT. Otherwise
 someone could claim a Genesis-holder benefit by naming a wallet they don't
 own. In Oira's case this is nearly free: the MWA `authorize()` call in §1
 already proves she controls the wallet before we ever check anything, so
 the SGT check just runs against the pubkey `authorize()` returned.
 
-Source: [Seeker Genesis Token — Solana Mobile Docs](https://docs.solanamobile.com/marketing/engaging-seeker-users)
+Source: [Seeker Genesis Token, Solana Mobile Docs](https://docs.solanamobile.com/marketing/engaging-seeker-users)
 
 ## 4. Updated plan shape (supersedes both the "Seed Vault as key source" framing AND the original "Expo/RN Seeker build" framing below)
 
@@ -168,7 +166,7 @@ Source: [Seeker Genesis Token — Solana Mobile Docs](https://docs.solanamobile.
 The paragraph below originally had `bootIdentity()` unconditionally switch
 `deviceOwner` to the MWA-returned pubkey whenever running on Seeker. Founder
 decision: passkey stays the default sign-in for *everyone*, including on
-Seeker — the product is built for an audience that should never have to
+Seeker, the product is built for an audience that should never have to
 think about crypto or wallets. MWA/Seed Vault is offered as an **additional,
 explicit opt-in** (a "Connect Seeker Wallet" affordance she can choose to
 tap), not something that silently takes over her identity the first time she
@@ -176,7 +174,7 @@ opens the app on a Seeker device.
 
 **(b) No separate Expo/React Native project.** MWA does not require a native
 wrapper app: `@solana-mobile/wallet-standard-mobile`'s `registerMwa()` works
-directly from Android Chrome — including a PWA — via a `solana-wallet:`
+directly from Android Chrome, including a PWA, via a `solana-wallet:`
 URI-scheme deep link into the installed wallet app. This is Solana Mobile's
 own documented "MWA for Web Apps" path. So the plan below runs entirely
 inside the existing PWA (`app/`); a separate installable/native-feeling
@@ -193,13 +191,13 @@ native app.
    next to her existing identity/settings UI. Tapping it runs
    `transact()` → `authorize()`; on success, cache the `auth_token` +
    returned pubkey. This does **not** change `deviceOwner` or her passkey
-   flow — it's a parallel, optional identity she can additionally connect,
+   flow, it's a parallel, optional identity she can additionally connect,
    primarily so the Genesis Token check in §3 has a wallet to check against
    and so she can optionally sign owner-writes via Seed Vault if she wants
    to.
 3. If she has connected via MWA, owner-signed writes (`set_traits`, etc.)
    *may* route through `wallet.signAndSendTransactions(...)` in that MWA
-   session as an alternative to the passkey-derived key — but the passkey
+   session as an alternative to the passkey-derived key, but the passkey
    path remains fully functional and is what everything defaults to absent
    an explicit MWA connection.
 4. Gate "Seeker holder" boosted terms behind the full 3-part SGT check in
@@ -207,5 +205,5 @@ native app.
    `authorize()`-returned pubkey and cached alongside her profile (re-check
    periodically, not on every screen, to avoid hammering RPC).
 5. Non-Seeker Android / web / anyone who never taps "Connect Seeker Wallet"
-   keeps today's passkey-only flow completely unchanged — MWA/SGT is
+   keeps today's passkey-only flow completely unchanged, MWA/SGT is
    additive and invisible unless explicitly opted into.

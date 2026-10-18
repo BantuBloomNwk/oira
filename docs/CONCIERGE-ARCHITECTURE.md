@@ -1,7 +1,7 @@
-# Oira concierge — architecture (2026-07-07)
+# Oira concierge: architecture (2026-07-07)
 
 The concierge is the "AI beauty" advisory layer. It is **not** the matcher. Matching is
-cryptographic and happens inside the enclave; the concierge only *talks* — it reads back the
+cryptographic and happens inside the enclave; the concierge only *talks*, it reads back the
 overnight in plain language, answers "will this suit me?", and suggests which offers are worth
 her budget. Its entire value is trust, so its design is defined by one invariant.
 
@@ -17,13 +17,13 @@ context. It must NEVER receive, request, or infer:
 If a future model layer needs none of these to be useful, then a compromised concierge leaks
 nothing that isn't already on her own screen. That is the design target.
 
-## What it CAN see (the whitelist — the only context it gets)
+## What it CAN see (the whitelist: the only context it gets)
 Assembled by a single `buildContext()` that whitelists fields she already sees in her own UI:
 - **Coarse palette buckets** she confirmed and displays herself: season name, undertone word
   (Warm/Neutral/Cool/Olive), depth word (Soft/Rich/Deep), optional Monk band. These are the
   buckets she chose to show, not the raw reading.
-- Her **stated night rules** (min payout, blocked categories, caps) — she authored these.
-- **Public offer metadata** (category, payout, brand's committed shade) — already public on chain.
+- Her **stated night rules** (min payout, blocked categories, caps), she authored these.
+- **Public offer metadata** (category, payout, brand's committed shade), already public on chain.
 - Her **check-a-colour** results (a shade + the deterministic verdict she just ran).
 - Her **earnings summary** (totals she can see), never wallet identifiers.
 
@@ -36,11 +36,10 @@ it has no handle to app secrets, `reading.ita`, the selfie canvas, or `deviceOwn
 - **Production model:** Gemma 3n (E2B) on-device via MediaPipe LiteLLM / LiteRT-LM with WebGPU,
   weights **self-hosted** so the strict CSP can load them (no third-party model host). On native
   (Android/Seeker) it runs through the same on-device runtime. See [[tech_gemma_ondevice]].
-- **v1 (this build):** a local, deterministic reasoning engine behind the *same* interface —
-  `OiraConcierge.answer(question)` → builds the whitelisted context, detects intent, and returns
+- **v1 (this build):** a local, deterministic reasoning engine behind the *same* interface, `OiraConcierge.answer(question)` → builds the whitelisted context, detects intent, and returns
   a warm, grounded, human answer (reusing the proven check-a-colour logic for shade questions).
   It is honest: fully on-device, private, works on every device with zero model download. It is
-  **not yet an LLM** — the Gemma model simply drops into `respond(intent, ctx, q)` later with the
+  **not yet an LLM**: the Gemma model simply drops into `respond(intent, ctx, q)` later with the
   identical context boundary, so nothing about the privacy model changes.
 
 ## Interface contract
@@ -69,7 +68,7 @@ renders the prose, so accuracy is shared across every language and only the word
 - **Language is chosen** from the device locale on first use and overridable from a picker in the
   concierge; the choice persists (`localStorage: oira_lang`).
 - **African languages are the moat, so they do NOT get hand-rolled here.** Yoruba, Swahili, Hausa,
-  Amharic, Zulu etc. route through the **owned MMS/Gemma pipeline** with native review — the same
+  Amharic, Zulu etc. route through the **owned MMS/Gemma pipeline** with native review, the same
   quality bar as the voice corpus. Hand-translated beauty copy is exactly the "gibberish" trap to
   avoid. When Gemma lands (multilingual by design) it answers open-ended in any supported language
   behind the same `buildContext()` boundary.
@@ -112,7 +111,7 @@ The concierge must never: perform or influence the on-chain **match** (cryptogra
 touch raw traits, move funds, reveal anyone else's data, or invent offers/receipts. Advice only.
 
 ## Upgrade path
-1. v1 deterministic responder (this build) — ships now, private, universal.
+1. v1 deterministic responder (this build): ships now, private, universal.
 2. Drop Gemma 3n into `respond()` behind the same `buildContext()` boundary (WebGPU + self-hosted
    weights); add streaming + a small system prompt that hard-codes the "never see raw traits" rule.
 3. Native on-device runtime for Android/Seeker.

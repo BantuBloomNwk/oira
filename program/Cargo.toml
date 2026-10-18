@@ -9,7 +9,7 @@ codegen-units = 1
 [package]
 name = "oira-palette"
 version = "0.1.0"
-description = "Oira Palette vault — private beauty/colour traits matched inside a MagicBlock Private ER (TEE)"
+description = "Oira Palette vault, private beauty/colour traits matched inside a MagicBlock Private ER (TEE)"
 edition = "2021"
 license = "MIT"
 autotests = false

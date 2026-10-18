@@ -12,7 +12,7 @@ name: Devnet e2e (manual/scheduled)
 on:
   workflow_dispatch: {} # manual trigger from the Actions tab or `gh workflow run`
   schedule:
-    - cron: '0 6 * * 1' # weekly, Monday 06:00 UTC — cheap visibility, not meant to be tight
+    - cron: '0 6 * * 1' # weekly, Monday 06:00 UTC: cheap visibility, not meant to be tight
 
 jobs:
   devnet-e2e:
@@ -31,7 +31,7 @@ jobs:
       - name: Confirm the deployer secret is set
         run: |
           if [ -z "${{ secrets.OIRA_DEPLOYER_KEY }}" ]; then
-            echo "OIRA_DEPLOYER_KEY is not set — skipping the whole devnet suite (nothing to fund it with)."
+            echo "OIRA_DEPLOYER_KEY is not set, skipping the whole devnet suite (nothing to fund it with)."
             echo "SKIP=1" >> "$GITHUB_ENV"
           fi
 
@@ -40,12 +40,12 @@ jobs:
         run: |
           mkdir -p keys
           # most e2e scripts (match-real-e2e, model-b-e2e, night-rules-e2e, overnight-real-e2e,
-          # payout-e2e, perbrand-e2e, per-palette-e2e) read this exact path — confirmed by reading
+          # payout-e2e, perbrand-e2e, per-palette-e2e) read this exact path, confirmed by reading
           # the source, not assumed.
           printf '%s' '${{ secrets.OIRA_DEPLOYER_KEY }}' > keys/oira-deployer.json
         # env var form covers oira-chain.mjs's loadDeployer() (used by client/server.mjs, which
         # relay-ws-e2e.mjs needs running) and settle-match-e2e.mjs's OIRA_KEYPAIR (a file path,
-        # a different convention from the others — pointed at the same file written above).
+        # a different convention from the others, pointed at the same file written above).
         env:
           OIRA_DEPLOYER_KEY: ${{ secrets.OIRA_DEPLOYER_KEY }}
 
@@ -124,7 +124,7 @@ jobs:
         working-directory: client
         run: node e2e/settle-match-e2e.mjs
         env:
-          # relative to working-directory (client/), so ../keys — where the key was written (repo-root keys/)
+          # relative to working-directory (client/), so ../keys, where the key was written (repo-root keys/)
           OIRA_KEYPAIR: ../keys/oira-deployer.json
 
       - name: relay-ws-e2e (needs the bridge server actually running)

@@ -16,7 +16,7 @@ scratchpad/
 # Local Netlify folder
 .netlify
 
-# Internal planning docs — not for public release
+# Internal planning docs, not for public release
 docs/patents/
 docs/PATENT-AND-FHE-ANALYSIS.md
 docs/BRAND-EFFICACY-ARCHITECTURE.md
@@ -24,12 +24,12 @@ docs/HEALTH-NAVIGATOR-THESIS.md
 client/campaigns.json
 client/genesis-redemptions.json
 
-# Internal analysis — not for public release
+# Internal analysis, not for public release
 analysis/leakage/
 
-# Internal session log — keep local, never public origin
+# Internal session log, keep local, never public origin
 Sessions.md
 
-# e2e run artifacts — contain ephemeral secret keys
+# e2e run artifacts, contain ephemeral secret keys
 client/*-e2e-state.json
 client/e2e/*-e2e-state.json

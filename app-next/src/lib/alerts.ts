@@ -1,11 +1,13 @@
 import { BackgroundRunner } from '@capacitor/background-runner';
-import { BRIDGE_ORIGIN, isNativeApp } from './native';
+import { WEB_ORIGIN, isNativeApp } from './native';
 import { diag } from './diag';
 
 /* Overnight alerts in the Android app. Once she has opened her answers (a signed request), the
    bridge hands back a read token; this passes it, with the newest answer she has now seen, to
    the background check in public/runners/answers.js, which wakes about every fifteen minutes
-   while the app is closed. Nothing happens on the web, where there is no background runner. */
+   while the app is closed. Nothing happens on the web, where there is no background runner.
+   The check asks through app.myoira.com, which Netlify forwards to the bridge, rather than the
+   bridge's own sslip.io name: that free wildcard DNS failed a scheduled check on the A13. */
 const LABEL = 'app.myoira.answers';
 /* Her switch in the menu, "Tell me what came in overnight". On unless she turns it off. */
 const PREF = 'oira_overnight_alerts';
@@ -27,7 +29,7 @@ export async function enableAnswerAlerts(token: string | undefined, latestSeen: 
   try {
     const perm = await BackgroundRunner.requestPermissions({ apis: ['notifications'] });
     diag('alerts', `notification permission: ${perm.notifications}`);
-    await BackgroundRunner.dispatchEvent({ label: LABEL, event: 'configure', details: { token, base: BRIDGE_ORIGIN, since: latestSeen } });
+    await BackgroundRunner.dispatchEvent({ label: LABEL, event: 'configure', details: { token, base: WEB_ORIGIN, since: latestSeen } });
     diag('alerts', 'overnight check set up');
   } catch (e) {
     diag('alerts', `could not set up: ${(e as Error)?.message || 'error'}`);
@@ -38,4 +40,31 @@ export async function enableAnswerAlerts(token: string | undefined, latestSeen: 
 export async function forgetAnswerAlerts(): Promise<void> {
   if (!isNativeApp()) return;
   try { await BackgroundRunner.dispatchEvent({ label: LABEL, event: 'forget', details: {} }); } catch { /* nothing to forget */ }
+}
+
+/* For the diagnostics panel: what the background check last did, and a way to run it now. */
+export async function alertsStatus(): Promise<string> {
+  if (!isNativeApp()) return 'web, no overnight check';
+  try {
+    const st = await BackgroundRunner.dispatchEvent<{ lastRun: string | null; lastResult: string | null; configured: boolean; since: string | null }>({ label: LABEL, event: 'status', details: {} });
+    if (!st.configured) return 'not set up yet';
+    const seen = st.since && Number(st.since) > 0 ? `, seen up to ${new Date(Number(st.since)).toISOString().slice(11, 19)} UTC` : ', nothing seen yet';
+    if (!st.lastRun) return `set up, has not run yet${seen}`;
+    return `last ran ${new Date(Number(st.lastRun)).toISOString().slice(11, 16)} UTC: ${st.lastResult}${seen}`;
+  } catch (e) {
+    return `could not ask it (${(e as Error)?.message || 'error'})`;
+  }
+}
+
+export async function checkAnswersNow(): Promise<string> {
+  if (!isNativeApp()) return 'only in the Android app';
+  try {
+    const r = await BackgroundRunner.dispatchEvent<{ result?: string }>({ label: LABEL, event: 'checkAnswers', details: {} });
+    diag('alerts', `checked now: ${r?.result || 'done'}`);
+    return r?.result || 'done';
+  } catch (e) {
+    const m = (e as Error)?.message || 'error';
+    diag('alerts', `check now failed: ${m}`);
+    return `failed: ${m}`;
+  }
 }

@@ -4,6 +4,7 @@ import { BackgroundRunner } from '@capacitor/background-runner';
 import { BRIDGE_ORIGIN, isNativeApp } from '../lib/native';
 import { currentOwner, fingerprintAvailable, walletAvailable, connectedWalletAddress } from '../lib/identity';
 import { diagLog } from '../lib/diag';
+import { alertsStatus, checkAnswersNow } from '../lib/alerts';
 
 /**
  * The hidden diagnostics panel. Five taps on the build number in the menu.
@@ -45,12 +46,20 @@ async function notificationCheck(): Promise<string> {
 export const DiagnosticsSheet: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [rows, setRows] = useState<Row[]>([]);
   const [copied, setCopied] = useState(false);
+  const [checking, setChecking] = useState<string | null>(null);
+  const checkNow = async () => {
+    setChecking('checking...');
+    setChecking(await checkAnswersNow());
+  };
 
   useEffect(() => {
     let alive = true;
     (async () => {
       const owner = currentOwner();
-      const signedIn = !owner ? 'no' : connectedWalletAddress() ? 'yes, with a wallet' : 'yes, on this phone';
+      const signedIn = !owner ? 'no'
+        : connectedWalletAddress() ? 'yes, with a wallet'
+        : owner.assurance === 'passkey' ? 'yes, with her passkey'
+        : 'yes, with this phone\'s device key';
       const base: Row[] = [
         { label: 'Build', value: typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'dev' },
         { label: 'Running as', value: isNativeApp() ? `Android app (${Capacitor.getPlatform()})` : 'web' },
@@ -62,8 +71,8 @@ export const DiagnosticsSheet: React.FC<{ onClose: () => void }> = ({ onClose })
         { label: 'Wallet', value: walletAvailable() ? 'available' : 'not available' },
       ];
       if (alive) setRows(base);
-      const [bridge, camera, notes] = await Promise.all([bridgeCheck(), cameraCheck(), notificationCheck()]);
-      if (alive) setRows([...base, { label: 'Bridge', value: bridge }, { label: 'Camera', value: camera }, { label: 'Notifications', value: notes }]);
+      const [bridge, camera, notes, overnight] = await Promise.all([bridgeCheck(), cameraCheck(), notificationCheck(), alertsStatus()]);
+      if (alive) setRows([...base, { label: 'Bridge', value: bridge }, { label: 'Camera', value: camera }, { label: 'Notifications', value: notes }, { label: 'Overnight check', value: overnight }]);
     })();
     return () => { alive = false; };
   }, []);
@@ -100,6 +109,12 @@ export const DiagnosticsSheet: React.FC<{ onClose: () => void }> = ({ onClose })
             <span className="break-all">{r.value}</span>
           </div>
         ))}
+        <div className="mt-3 flex items-center gap-2 font-sans">
+          <button type="button" onClick={checkNow} className="text-[11.5px] px-3 py-1.5 rounded-full border border-moon/30 cursor-pointer">
+            Check for brand questions now
+          </button>
+          {checking && <span className="text-[11px] text-moon/70">{checking}</span>}
+        </div>
         <p className="mt-4 mb-1.5 text-moon/55 font-sans text-[11px]">What happened recently</p>
         {log.length === 0
           ? <p className="text-moon/45">Nothing yet.</p>

@@ -4,7 +4,8 @@ import { Sparkles, ShoppingBag, ShieldCheck, Moon, Disc3, Palette, Users, ArrowL
 import confetti from 'canvas-confetti';
 import type { SealedReading } from './lib/confidence';
 import { IdentitySheet } from './components/IdentitySheet';
-import { boot, currentOwner, connectedWalletAddress, type Owner } from './lib/identity';
+import { boot, currentOwner, connectedWalletAddress, useFingerprint, type Owner } from './lib/identity';
+import { hasEnrolled } from './lib/custody';
 import { warmUp } from './lib/scan';
 import { load as loadHer, save as saveHer, hasBeenReadBefore } from './lib/remember';
 import { sealViaDevice } from './lib/seal';
@@ -433,8 +434,24 @@ export default function App() {
     window.setTimeout(() => loadMyAnswers(), 1500);
   };
 
-  const loadMyAnswers = () => {
-    const o = owner ?? currentOwner();
+  /* The identity brands actually ask about. The app opens on the device key, silently, and only
+     becomes her passkey identity when she taps for it. Anything done as her (reading her answers
+     and setting up the alerts that come with them, writing her rules to her Palette) has to be
+     done as the passkey when this phone has one, or it lands on an empty identity: that is how
+     the A13 was signed up for alerts about nobody. Only ever called from something she tapped,
+     so the fingerprint sheet never appears out of nowhere. */
+  const herIdentity = async (): Promise<Owner | null> => {
+    let o = owner ?? currentOwner();
+    if (o && o.assurance !== 'passkey' && hasEnrolled() && !connectedWalletAddress()) {
+      o = await useFingerprint();
+      setOwner(o);
+    }
+    return o;
+  };
+
+  const loadMyAnswers = async () => {
+    let o: Owner | null;
+    try { o = await herIdentity(); } catch { setAnswersState('failed'); return; }
     if (!o) return;
     setAnswersState('loading');
     fetchMyAnswers(o, isNativeApp() ? BRIDGE_ORIGIN : '')
@@ -855,9 +872,9 @@ export default function App() {
                     setNightRules(newConfig);
                     /* On her palette, where her agent and the program read them. Saved on this
                        phone either way, so a failed write never loses what she chose. */
-                    const o = owner ?? currentOwner();
-                    if (profile.isSealed && o) {
-                      saveRulesToPalette(o, { minPayout: newConfig.lowestPayout, maxPerBrand: newConfig.brandLifetimeCap })
+                    if (profile.isSealed) {
+                      herIdentity()
+                        .then((o) => { if (!o) throw new Error("I'll put them on your Palette next time."); return saveRulesToPalette(o, { minPayout: newConfig.lowestPayout, maxPerBrand: newConfig.brandLifetimeCap }); })
                         .then(() => say({ title: 'Your rules are on your Palette', body: "A brand that breaks them is turned away before anyone looks. That's you, deciding.", tone: 'good' }))
                         .catch((e) => say({ title: 'Saved on this phone for now', body: (e as Error)?.message || "I'll put them on your Palette next time." }));
                     }

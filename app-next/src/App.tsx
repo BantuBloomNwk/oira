@@ -4,7 +4,8 @@ import { Sparkles, ShoppingBag, ShieldCheck, Moon, Disc3, Palette, Users, ArrowL
 import confetti from 'canvas-confetti';
 import type { SealedReading } from './lib/confidence';
 import { IdentitySheet } from './components/IdentitySheet';
-import { boot, currentOwner, connectedWalletAddress, useFingerprint, type Owner } from './lib/identity';
+import { boot, currentOwner, connectedWalletAddress, useFingerprint, rememberHer, rememberedHer, type Owner } from './lib/identity';
+import { fetchBalance } from './lib/send';
 import { hasEnrolled } from './lib/custody';
 import { warmUp } from './lib/scan';
 import { load as loadHer, save as saveHer, hasBeenReadBefore } from './lib/remember';
@@ -72,6 +73,7 @@ import { fetchMyAnswers, type MyAnswer } from './lib/answers';
 import { enableAnswerAlerts } from './lib/alerts';
 import { diag } from './lib/diag';
 import { saveRulesToPalette } from './lib/rulesync';
+import { SendSheet } from './components/SendSheet';
 
 interface CartItemEntry {
   product: ProductItem;
@@ -138,6 +140,9 @@ export default function App() {
   const [walletCopied, setWalletCopied] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [isSendOpen, setIsSendOpen] = useState(false);
+  /* Her real USDC balance, for the menu. Not the sample earnings: those are demo questions. */
+  const [herBalance, setHerBalance] = useState<number | null>(null);
   const [isOnDeviceOpen, setIsOnDeviceOpen] = useState(false);
 
   /* One tray at a time. The app used to reach for alert() at checkout, which is a grey
@@ -251,6 +256,7 @@ export default function App() {
          saw a sealed screen with nothing on it. */
       const p = proofFrom(done);
       if (p) { saveProof(p); setProof(p); }
+      rememberHer(owner.address);
       diag('seal', `sealed (${owner.assurance === 'passkey' ? 'passkey' : 'device key'})${p ? '' : ', no receipt in the reply'}`);
       setProfile((prev) => ({ ...prev, isSealed: true }));
       setShowSeal(true);
@@ -449,6 +455,16 @@ export default function App() {
     return o;
   };
 
+  /* Her balance, read whenever the menu opens or a send closes, for the address she unlocked with. */
+  useEffect(() => {
+    if (!isNavMenuOpen && isSendOpen) return;
+    const address = rememberedHer() ?? (owner?.assurance === 'passkey' ? owner.address : null);
+    if (!address) return;
+    let alive = true;
+    fetchBalance(address).then((b) => { if (alive) setHerBalance(b); }).catch(() => {});
+    return () => { alive = false; };
+  }, [isNavMenuOpen, isSendOpen, owner]);
+
   const loadMyAnswers = async () => {
     let o: Owner | null;
     try { o = await herIdentity(); } catch { setAnswersState('failed'); return; }
@@ -554,6 +570,9 @@ export default function App() {
       {/* Phone Screen Container - Fixed Smartphone Dimensions with Internal Smooth Scrolling */}
       <main id="phone-frame" className={`w-full max-w-[420px] h-[844px] max-h-[92vh] min-h-[640px] rounded-[46px] shadow-[0_25px_70px_-10px_rgba(0,0,0,0.65)] border-[8px] border-[#1B1120] overflow-hidden flex flex-col relative bg-[#FBF3EE] z-10 irisrim${idle ? ' idle' : ''}`}>
         {showSplash && <SplashView onEnter={() => setShowSplash(false)} />}
+
+        {/* Her money, out: to her wallet, her card's deposit address, or anyone. */}
+        {isSendOpen && <SendSheet getOwner={herIdentity} onClose={() => setIsSendOpen(false)} />}
 
         <DayDecor />
 
@@ -884,6 +903,7 @@ export default function App() {
                   answersState={answersState}
                   sealed={profile.isSealed}
                   onRefreshAnswers={loadMyAnswers}
+                  onOpenSend={() => setIsSendOpen(true)}
                   onBackToHome={() => setActiveView('home')}
                 />
               )}
@@ -975,7 +995,9 @@ export default function App() {
         onOpenSeasonPicker={() => setIsSeasonPickerOpen(true)}
         onOpenProfile={() => setIsProfileOpen(true)}
         earned={nightRules.totalEarned}
+        money={herBalance}
         answered={brandLogs.length}
+        onOpenSend={() => setIsSendOpen(true)}
         onOpenBoard={() => {
           setIsBrandBoardOpen(true);
           /* Who asked is the question her answers answer, so they load here too, and with them

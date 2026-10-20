@@ -28,6 +28,9 @@ interface NavigationMenuDrawerProps {
   onOpenPrivacy: () => void;
   onOpenOnDevice: () => void;
   onShowEarnings: () => void;
+  onOpenSend?: () => void;
+  /* Her real USDC balance, or null before she has unlocked with her passkey on this phone. */
+  money?: number | null;
   earned: number;
   answered: number;
   onNotify: (t: Omit<ToastMessage, 'id'>) => void;
@@ -88,6 +91,8 @@ export const NavigationMenuDrawer: React.FC<NavigationMenuDrawerProps> = ({
   onOpenPrivacy,
   onOpenOnDevice,
   onShowEarnings,
+  onOpenSend,
+  money = null,
   earned,
   answered,
   onNotify,
@@ -165,13 +170,17 @@ export const NavigationMenuDrawer: React.FC<NavigationMenuDrawerProps> = ({
             <div className="space-y-0.5">
               {/* Three different questions, three different answers. All three used to open
                   the brand board, which made one destination look like three entries. */}
+              {/* Her real money: what brands paid her, less what she has sent. Tapping it is
+                  where she sends or receives. (The sample questions' earnings live on the home
+                  page, labelled as samples.) */}
               <Row
                 id="menu-earned-btn"
                 icon={<Wallet className="w-4 h-4" />}
-                label="Earned so far"
-                detail={`$${earned.toFixed(2)}`}
-                onClick={go(onShowEarnings)}
+                label="Your money"
+                detail={money == null ? 'Open' : `$${money.toFixed(2)}`}
+                onClick={go(onOpenSend ?? onShowEarnings)}
               />
+
               <Row
                 id="menu-privacy-btn"
                 icon={<ShieldCheck className="w-4 h-4" />}

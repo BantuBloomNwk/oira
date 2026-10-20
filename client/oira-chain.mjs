@@ -736,3 +736,61 @@ export async function setRulesRelay({ ownerPubkey, minPayout, maxPerBrand, sign 
   await sendOnErRelayed(tee, [ix], ownerSigner);
   return { minPayout: Number(minMicro) / 1e6, maxPerBrand: perBrand };
 }
+
+// ---- Her money, out: USDC from her own account to anywhere she names ----
+// Her key signs on her phone (the transfer instruction names her as the only authority); the
+// bridge's deployer pays the network fee and, when the destination has no USDC account yet, the
+// account's rent. Nothing here can move money she has not signed for, and her phone's sign guard
+// checks that the message is exactly this transfer before it signs. Base layer only: her payouts
+// land in a plain token account there.
+export async function usdcBalance(ownerPubkey) {
+  return usdc(new PublicKey(ownerPubkey));
+}
+
+export async function sendUsdcRelay({ ownerPubkey, to, amount, sign }) {
+  if (!ownerPubkey || !to || typeof sign !== 'function') throw new Error('sendUsdcRelay needs ownerPubkey, to and sign()');
+  const ownerPk = new PublicKey(ownerPubkey);
+  let dest;
+  try { dest = new PublicKey(String(to).trim()); } catch { throw new Error("That doesn't look like a Solana address."); }
+  if (dest.equals(ownerPk)) throw new Error("That's your own Oira address, so there's nothing to send.");
+  const micro = BigInt(Math.round(Number(amount) * 1e6));
+  if (!(micro > 0n)) throw new Error('Pick an amount above zero.');
+  const herAta = getAssociatedTokenAddressSync(MINT, ownerPk, true);
+  const herInfo = await base.getAccountInfo(herAta);
+  if (!herInfo) throw new Error("There's nothing in your Oira balance yet.");
+  const have = unpackAccount(herAta, herInfo).amount;
+  if (micro > have) throw new Error(`You have ${Number(have) / 1e6} USDC to send.`);
+
+  /* Where it lands. A card or exchange may hand her the USDC account itself rather than a
+     wallet; that is paid directly. Otherwise the wallet's own USDC account, made if missing. */
+  const ixs = [];
+  let destAta;
+  const destInfo = await base.getAccountInfo(dest);
+  let isTokenAccount = false;
+  if (destInfo && destInfo.owner.equals(TOKEN_PROGRAM_ID)) {
+    try { const a = unpackAccount(dest, destInfo); isTokenAccount = a.mint.equals(MINT); } catch { isTokenAccount = false; }
+    if (!isTokenAccount) throw new Error("That account holds a different token, not USDC.");
+  }
+  let createdAccount = false;
+  if (isTokenAccount) destAta = dest;
+  else {
+    destAta = getAssociatedTokenAddressSync(MINT, dest, true);
+    createdAccount = !(await base.getAccountInfo(destAta));
+    /* Always included, even when the account exists (it is then a no-op). The token-account
+       program refuses it unless destAta really is this wallet's USDC account, which is what lets
+       her phone confirm where the money is going without deriving the address itself. */
+    ixs.push(createAssociatedTokenAccountIdempotentInstruction(deployer.publicKey, destAta, dest, MINT));
+  }
+  ixs.push(createTransferCheckedInstruction(herAta, MINT, destAta, ownerPk, micro, 6));
+
+  const { blockhash, lastValidBlockHeight } = await base.getLatestBlockhash('confirmed');
+  const tx = new Transaction({ feePayer: deployer.publicKey, blockhash, lastValidBlockHeight }).add(...ixs);
+  const msg = tx.serializeMessage();
+  const herSig = Buffer.from(await sign(msg));
+  tx.addSignature(ownerPk, herSig);
+  tx.partialSign(deployer);
+  if (!tx.verifySignatures()) throw new Error('The signature did not match. Nothing was sent.');
+  const sig = await base.sendRawTransaction(tx.serialize(), { skipPreflight: false });
+  await base.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, 'confirmed');
+  return { sig, amount: Number(micro) / 1e6, to: dest.toBase58(), createdAccount, explorer: `https://explorer.solana.com/tx/${sig}?cluster=devnet` };
+}

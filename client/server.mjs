@@ -5,7 +5,7 @@ import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { Keypair } from '@solana/web3.js';
-import { sealPalette, sealPaletteRelay, privatePayout, runOffer, privacyProof, postCampaign, matchCampaign, campaignStatus, bridgeStatus, askHer, brandSeedFor, setRulesRelay } from './oira-chain.mjs';
+import { sealPalette, sealPaletteRelay, privatePayout, runOffer, privacyProof, postCampaign, matchCampaign, campaignStatus, bridgeStatus, askHer, brandSeedFor, setRulesRelay, sendUsdcRelay, usdcBalance } from './oira-chain.mjs';
 import { registerWoman, listWomen, addBrief, getBrief, listBriefs, updateBrief, addAsk, answersFor } from './brief-store.mjs';
 import { notifyToken, ownerOfToken } from './notify.mjs';
 import nacl from 'tweetnacl';
@@ -413,6 +413,26 @@ app.get('/api/me/answers', (req, res) => {
   } catch (e) { console.error('me/answers', e.message); res.status(500).json({ error: 'could not load answers' }); }
 });
 
+// ---- Her balance: USDC in her own account. Public on chain anyway, so no signature needed. ----
+app.get('/api/balance/:owner', async (req, res) => {
+  try { new PublicKey(req.params.owner); } catch { return res.status(400).json({ error: 'bad owner' }); }
+  try { res.json({ usdc: await usdcBalance(req.params.owner) }); }
+  catch (e) { res.status(500).json({ error: 'could not read the balance' }); }
+});
+
+// Sends move her money, and the bridge pays their fees, so each identity gets a few a day.
+const SEND_DAY_MAX = process.env.OIRA_SEND_DAY_MAX != null ? Number(process.env.OIRA_SEND_DAY_MAX) : 10;
+const sendsToday = new Map();
+function sendOverLimit(owner) {
+  const day = new Date().toISOString().slice(0, 10);
+  const e = sendsToday.get(owner);
+  if (!e || e.day !== day) { sendsToday.set(owner, { day, count: 0 }); return false; }
+  return e.count >= SEND_DAY_MAX;
+}
+function recordSend(owner) {
+  const e = sendsToday.get(owner); if (e) e.count++;
+}
+
 // ---- Overnight alerts: how many new answers since a time, for the holder of her read token ----
 // The phone's background check calls this with the token it got from /api/me/answers. It learns
 // a count and the time of the newest answer, nothing else. See notify.mjs.
@@ -471,6 +491,18 @@ wss.on('connection', (ws, req) => {
       setRulesRelay({ ownerPubkey: m.ownerPubkey, minPayout: m.minPayout, maxPerBrand: m.maxPerBrand, sign })
         .then((r) => { try { ws.send(JSON.stringify({ t: 'done', ...r })); } catch {} })
         .catch((e) => { recordError('relay-rules', e); try { ws.send(JSON.stringify({ t: 'error', message: String(e.message || e) })); } catch {} });
+      return;
+    }
+    /* Her USDC, sent where she says. Her key signs the transfer on her phone; the bridge pays the
+       network fee and any new USDC account's rent. */
+    if (m.t === 'send' && !started) {
+      if (rateLimited(ip)) { try { ws.send(JSON.stringify({ t: 'error', message: 'Too many requests. Please wait a moment.' })); } catch {} return ws.close(); }
+      let owner; try { owner = new PublicKey(m.ownerPubkey).toBase58(); } catch { try { ws.send(JSON.stringify({ t: 'error', message: 'bad owner' })); } catch {} return ws.close(); }
+      if (sendOverLimit(owner)) { try { ws.send(JSON.stringify({ t: 'error', message: `You've sent ${SEND_DAY_MAX} times today, so the next one waits until tomorrow. Your money is still in your account.` })); } catch {} return ws.close(); }
+      started = true;
+      sendUsdcRelay({ ownerPubkey: owner, to: m.to, amount: m.amount, sign })
+        .then((r) => { recordSend(owner); console.log('sent', r.amount, 'USDC from', owner.slice(0, 6), 'to', r.to.slice(0, 6)); try { ws.send(JSON.stringify({ t: 'done', ...r })); } catch {} })
+        .catch((e) => { recordError('relay-send', e); try { ws.send(JSON.stringify({ t: 'error', message: String(e.message || e) })); } catch {} });
       return;
     }
     if (m.t === 'start' && !started) {

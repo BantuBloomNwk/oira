@@ -52,6 +52,16 @@ export async function boot(): Promise<Owner> {
  * Sealing on the fallback and then upgrading would strand the first seal at an address she
  * no longer uses.
  */
+/* Her public address, remembered so the app can show her real balance without asking for her
+   fingerprint just to open the menu. An address is public on chain; nothing secret is kept. */
+const HER_KEY = 'oira_her_address';
+export function rememberHer(address: string): void {
+  try { localStorage.setItem(HER_KEY, address); } catch { /* storage refused */ }
+}
+export function rememberedHer(): string | null {
+  try { return localStorage.getItem(HER_KEY); } catch { return null; }
+}
+
 export async function useFingerprint(): Promise<Owner> {
   /* Inside the app, a passkey is tried first, and on many phones the WebView cannot do one:
      no WebAuthn in that WebView, or no PRF from the authenticator. Both quietly land on the
@@ -68,6 +78,7 @@ export async function useFingerprint(): Promise<Owner> {
     diag('identity', 'sealed on the device key, keeping it');
     if (native) await askFingerprint();
     current = await unlockLocal();
+    rememberHer(current.address);
     return current;
   }
   if (native && !prfSupported()) await askFingerprint();
@@ -75,6 +86,7 @@ export async function useFingerprint(): Promise<Owner> {
   diag('identity', `unlocked with ${owner.assurance === 'passkey' ? 'a passkey' : 'the device key'}`);
   if (native && prfSupported() && owner.assurance !== 'passkey') await askFingerprint();
   current = owner;
+  if (owner.assurance === 'passkey') rememberHer(owner.address);
   return current;
 }
 

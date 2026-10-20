@@ -163,3 +163,50 @@ export function rulesSignGuard(me: string, rules: { minPayout: number; maxPerBra
     if (ix.program !== OIRA_PROGRAM || ix.accounts[0] !== me || !equal(ix.data, want)) throw new SignRefused('unexpected rules change');
   };
 }
+
+/* The guard for sending her USDC out. The bridge builds the transfer and pays its fees; her key
+   signs it. Before signing, the message must be exactly this: one USDC transfer, from an
+   account she controls, of the amount she typed, to the address she typed. When she typed a
+   wallet, its USDC account is named by a "create if missing" instruction for that wallet, which
+   the token-account program refuses unless the address really is that wallet's USDC account.
+   Oira pays the fee and any new account's deposit, never her. Nothing else may be in it. */
+const TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA';
+const ATA_PROGRAM = 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL';
+
+export function sendSignGuard(me: string, send: { to: string; micro: bigint; mint: string }) {
+  let requests = 0;
+  return (msg: Uint8Array) => {
+    if (++requests > 1) throw new SignRefused('a send needs one signature');
+    const m = parseLegacy(msg);
+    if (!m.signers.includes(me)) throw new SignRefused('message is not for her key');
+    if (m.signers[0] === me) throw new SignRefused('she would be paying the fee');
+    let transfer: Instruction | null = null;
+    let create: Instruction | null = null;
+    for (const ix of m.instructions) {
+      if (ix.program === TOKEN_PROGRAM) {
+        if (transfer) throw new SignRefused('more than one transfer');
+        transfer = ix;
+      } else if (ix.program === ATA_PROGRAM) {
+        if (create) throw new SignRefused('more than one account');
+        create = ix;
+      } else throw new SignRefused('unexpected program');
+    }
+    if (!transfer) throw new SignRefused('no transfer');
+    /* transferChecked: [12, amount u64, decimals u8], accounts source, mint, destination, authority. */
+    if (transfer.data.length !== 10 || transfer.data[0] !== 12) throw new SignRefused('not a checked transfer');
+    if (transfer.data[9] !== 6) throw new SignRefused('wrong decimals');
+    if (u64(transfer.data, 1) !== send.micro) throw new SignRefused('amount does not match');
+    const [, mint, destination, authority] = transfer.accounts;
+    if (authority !== me) throw new SignRefused('transfer is not hers');
+    if (mint !== send.mint) throw new SignRefused('not USDC');
+    if (create) {
+      /* create idempotent: [1], accounts payer, account, wallet, mint, system, token. */
+      if (create.data.length !== 1 || create.data[0] !== 1) throw new SignRefused('unexpected account instruction');
+      const [payer, account, wallet, cmint] = create.accounts;
+      if (payer === me) throw new SignRefused('she would be paying the deposit');
+      if (wallet !== send.to || cmint !== send.mint || account !== destination) throw new SignRefused('not the address she typed');
+    } else if (destination !== send.to) {
+      throw new SignRefused('not the address she typed');
+    }
+  };
+}

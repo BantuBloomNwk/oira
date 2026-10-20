@@ -42,6 +42,7 @@ interface NightRulesViewProps {
   answersState?: 'idle' | 'loading' | 'failed';
   sealed?: boolean;
   onRefreshAnswers?: () => void;
+  onOpenSend?: () => void;
   onBackToHome: () => void;
   /* Goodnight. Her rules are set, so she goes to the sleeping screen. */
   onGoodnight?: () => void;
@@ -59,6 +60,7 @@ export const NightRulesView: React.FC<NightRulesViewProps> = ({
   sealed = false,
   onRefreshAnswers,
   onBackToHome,
+  onOpenSend,
   onGoodnight,
 }) => {
   const [lowestPayout, setLowestPayout] = useState(config.lowestPayout);
@@ -330,7 +332,12 @@ export const NightRulesView: React.FC<NightRulesViewProps> = ({
                 <p className="text-[11.5px] text-[#EFDDE2]/70 mt-1.5">No brand has asked you yet. When one does, you'll see it here, and they'll never see you.</p>
               ) : (
                 <div className="mt-2 space-y-2">
-                  <p className="text-[11.5px] text-[#F3DDD6]">${myAnswers.earned.toFixed(2)} earned from {myAnswers.answers.filter((a) => a.outcome === 'yes').length} yes{myAnswers.answers.filter((a) => a.outcome === 'yes').length === 1 ? '' : 'es'}</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11.5px] text-[#F3DDD6]">${myAnswers.earned.toFixed(2)} earned from {myAnswers.answers.filter((a) => a.outcome === 'yes').length} yes{myAnswers.answers.filter((a) => a.outcome === 'yes').length === 1 ? '' : 'es'}</p>
+                    {onOpenSend && myAnswers.earned > 0 && (
+                      <button type="button" onClick={onOpenSend} className="shrink-0 text-[11.5px] font-semibold text-[#D6A756] underline cursor-pointer">Send it</button>
+                    )}
+                  </div>
                   {myAnswers.answers.slice(0, 8).map((a, i) => (
                     <div key={i} className="p-2.5 rounded-xl bg-[#1B1120] border border-[#43203B] text-[11.5px] leading-snug">
                       <div className="flex items-center justify-between gap-2">

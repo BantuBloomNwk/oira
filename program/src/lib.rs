@@ -39,6 +39,7 @@ pub const MAX_ENC_LEN: usize = 512;              // encrypted recovery blob (bel
 pub const QUERY_CAP_PER_EPOCH: u32 = 8;          // hard anti-abuse query budget per epoch
 pub const LIFETIME_QUERY_CAP: u32 = 64;          // lifetime query cap
 pub const EPOCH_SECS: i64 = 86_400;              // epoch = 1 day, derived IN-ENCLAVE from the clock (never caller-supplied)
+pub const CLAIM_WINDOW_SECS: i64 = 7 * 86_400;   // after a match, the brand can't close until she has had this long to settle
 pub const CAMPAIGN_SEED: &[u8] = b"campaign";
 pub const ESCROW_SEED: &[u8] = b"escrow";
 // Protocol treasury that collects forfeited per-query stakes (take-rate on BRAND spend, never hers).
@@ -321,7 +322,9 @@ pub mod oira_palette {
         // Commit the match state onto the CAMPAIGN, this is what undelegates to base for settle.
         let c = &mut ctx.accounts.campaign;
         c.answered = true;
-        c.receipt = hashv(&[&c_target_hash[..], &[verdict][..], &nonce[..]]).to_bytes();
+        c.receipt = receipt_of(&c_target_hash, verdict, &nonce);
+        // Stamped on every answer, match or not, so its presence says nothing about the verdict.
+        c.answered_at = Clock::get()?.unix_timestamp;
         // Commit to her payout wallet, don't publish it. base sees only H(owner‖nonce); the secret
         // nonce (128-bit, derived from her private salt) is disclosed by her agent ONLY if she accepts, so her
         // wallet is unlinkable on a match she never settles, and never leaks at all on a no-match.
@@ -391,16 +394,18 @@ pub mod oira_palette {
         c.active = true;
         c.bump = ctx.bumps.campaign;
         c.answered = false;
-        c.receipt = [0u8; 32];
+        c.receipt = [0u8; 24];
+        c.answered_at = 0;
         c.payee_commit = [0u8; 32];
         Ok(())
     }
 
     /// Settle an accepted offer, the payout is now AUTHORIZED BY THE REAL ON-CHAIN MATCH,
-    /// not a brand-supplied boolean. The brand presents (offer_hash, verdict, nonce); the
-    /// program requires the offer to be this campaign's target, the verdict to be MATCH, and
-    /// sha256(offer_hash‖verdict‖nonce) to equal the committed match receipt on her Palette.
-    /// She (the payee) must own the Palette. No match, no money.
+    /// not a brand-supplied boolean. Whoever holds her disclosed (verdict, nonce), her, her agent or
+    /// the brand, presents (offer_hash, verdict, nonce); no brand signature is needed. The program
+    /// requires the offer to be this campaign's target, the verdict to be MATCH, the receipt to
+    /// open, and the receiving account to belong to the wallet her enclave committed to. No match,
+    /// no money, and the money can't go anywhere but her.
     pub fn settle_offer(ctx: Context<SettleOffer>, offer_hash: [u8; 32], verdict: u8, nonce: [u8; 16]) -> Result<()> {
         // The verdict + receipt were computed IN-ENCLAVE and committed onto the campaign; the brand
         // can only settle by presenting the (verdict, nonce) her agent DISCLOSED on an accept. The
@@ -408,8 +413,7 @@ pub mod oira_palette {
         require!(offer_hash == ctx.accounts.campaign.target_hash, OiraError::OfferMismatch);
         require!(verdict == 1, OiraError::NotAMatch);
         require!(ctx.accounts.campaign.answered, OiraError::NotAnswered);
-        let receipt = hashv(&[&offer_hash[..], &[verdict][..], &nonce[..]]).to_bytes();
-        require!(receipt == ctx.accounts.campaign.receipt, OiraError::ReceiptMismatch);
+        require!(receipt_of(&offer_hash, verdict, &nonce) == ctx.accounts.campaign.receipt, OiraError::ReceiptMismatch);
         // The payee was committed in-enclave as H(her wallet‖nonce); base never saw the wallet. She
         // proves ownership by re-opening the commitment with the same disclosed nonce.
         let payee_commit = hashv(&[ctx.accounts.her_token.owner.as_ref(), &nonce[..]]).to_bytes();
@@ -439,6 +443,16 @@ pub mod oira_palette {
     }
 
     pub fn close_campaign(ctx: Context<CloseCampaign>) -> Result<()> {
+        // A match she hasn't been paid for holds the escrow. The brand can't close it out from under
+        // her until the claim window has passed; she (or anyone holding her disclosed nonce) can settle
+        // without the brand, so the window is hers to use.
+        {
+            let c = &ctx.accounts.campaign;
+            if c.answered && c.payee_commit != [0u8; 32] && c.accepts == 0 {
+                let now = Clock::get()?.unix_timestamp;
+                require!(now >= c.answered_at.saturating_add(CLAIM_WINDOW_SECS), OiraError::MatchAwaitingSettlement);
+            }
+        }
         let (brand, oid, bump, spent) = { let c = &ctx.accounts.campaign; (c.brand, c.offer_id, c.bump, c.spent) };
         let remaining = ctx.accounts.escrow.amount;          // escrowed − paid
         let to_treasury = spent.min(remaining);              // forfeited per-query stakes (L3 economic teeth)
@@ -745,11 +759,12 @@ pub struct Campaign {
     pub bump: u8,
     // Match state written IN-ENCLAVE and committed to base on undelegate.
     pub answered: bool,            // idempotency (L1): a repeat query of this offer is a free no-op
-    pub receipt: [u8; 32],         // sha256(target_hash‖verdict‖nonce), opaque; the verdict is NOT recoverable without the private nonce (L5)
+    pub receipt: [u8; 24],         // sha256(target_hash‖verdict‖nonce) cut to 192 bits, opaque; the verdict is NOT recoverable without the private nonce (L5)
+    pub answered_at: i64,          // ER clock at the answer; starts her claim window. receipt + answered_at keep the old 32-byte slot, so live accounts still load
     pub payee_commit: [u8; 32],    // H(her wallet‖nonce), set ONLY on a match (zeros otherwise). Her wallet is unlinkable until she settles (L5)
 }
 impl Campaign {
-    pub const SPACE: usize = 8 + 32 + 32 + 8 + 1 + 8 + 8 + 32 + 8 + 8 + 8 + 4 + 4 + 1 + 1 + 1 + 32 + 32;
+    pub const SPACE: usize = 8 + 32 + 32 + 8 + 1 + 8 + 8 + 32 + 8 + 8 + 8 + 4 + 4 + 1 + 1 + 1 + 24 + 8 + 32;
 }
 
 #[derive(Accounts)]
@@ -771,12 +786,15 @@ pub struct CreateCampaign<'info> {
 
 #[derive(Accounts)]
 pub struct SettleOffer<'info> {
-    pub brand: Signer<'info>,
+    /// CHECK: not a signer. Pinned by the campaign's seeds and has_one, so it can only be this
+    /// campaign's brand. Settling needs her disclosed nonce, and the money can only reach the wallet
+    /// her enclave committed to, so she can settle without the brand.
+    pub brand: UncheckedAccount<'info>,
     #[account(mut, seeds = [CAMPAIGN_SEED, brand.key().as_ref(), &campaign.offer_id.to_le_bytes()], bump = campaign.bump, has_one = brand)]
     pub campaign: Account<'info, Campaign>,
     #[account(mut, seeds = [ESCROW_SEED, campaign.key().as_ref()], bump)]
     pub escrow: Account<'info, TokenAccount>,
-    #[account(mut)]
+    #[account(mut, constraint = her_token.mint == escrow.mint @ OiraError::BadMint)]
     pub her_token: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
@@ -794,6 +812,15 @@ pub struct CloseCampaign<'info> {
     #[account(mut, token::mint = escrow.mint, token::authority = TREASURY)]
     pub treasury_token: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
+}
+
+/// The match receipt: sha256(offer_hash‖verdict‖nonce), first 192 bits. Second preimages stay far
+/// out of reach, and the 128-bit nonce still hides the verdict.
+pub fn receipt_of(offer_hash: &[u8; 32], verdict: u8, nonce: &[u8; 16]) -> [u8; 24] {
+    let full = hashv(&[&offer_hash[..], &[verdict][..], &nonce[..]]).to_bytes();
+    let mut r = [0u8; 24];
+    r.copy_from_slice(&full[..24]);
+    r
 }
 
 #[error_code]
@@ -822,4 +849,5 @@ pub enum OiraError {
     #[msg("brand token account owner mismatch")] BadTokenOwner,
     #[msg("brand token account mint mismatch")] BadMint,
     #[msg("not allowed to commit this account")] NotAllowedToCommit,
+    #[msg("a match is waiting to be settled; the brand can close once the claim window has passed")] MatchAwaitingSettlement,
 }

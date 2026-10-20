@@ -98,8 +98,8 @@ function decodePalette(buf) { let o = 8; o += 32; const encLen = buf.readUInt32L
   const query_count = buf.readUInt32LE(o); o += 4; o += 4; o += 4; // lifetime, epoch
   const is_private = buf.readUInt8(o); o += 1; const last_verdict = buf.readUInt8(o); o += 1; const last_nonce = Buffer.from(buf.subarray(o, o + 16));
   return { query_count, is_private, last_verdict, last_nonce }; }
-// Campaign (after 8-byte disc): answered@163 receipt@164 payee_commit@196
-function decodeCampaign(buf) { return { answered: buf.readUInt8(163) === 1, receipt: Buffer.from(buf.subarray(164, 196)) }; }
+// Campaign (after 8-byte disc): answered@163 receipt@164 (24 bytes) answered_at@188 payee_commit@196
+function decodeCampaign(buf) { return { answered: buf.readUInt8(163) === 1, receipt: Buffer.from(buf.subarray(164, 188)), answeredAt: Number(buf.readBigInt64LE(188)) }; }
 
 const base = new Connection(BASE_RPC, 'confirmed');
 const opts = { commitment: 'confirmed', maxRetries: 5 };
@@ -167,7 +167,8 @@ console.log('\n[5] REAL match, computed in-enclave by the AGENT (owner offline, 
 const mk = campaignFor(BigInt(Date.now()) + BigInt(Math.floor(Math.random() * 1e6)), 2, 8, 3, 1); // matches her
 const m = await offer(mk);
 check('matching campaign -> verdict MATCH(1)', m.pv.last_verdict === 1);
-check('campaign receipt == sha256(target_hash‖1‖nonce)', m.cv.receipt.equals(sha(mk.targetHash, Buffer.from([1]), m.pv.last_nonce)));
+check('campaign receipt == sha256(target_hash‖1‖nonce), first 24 bytes', m.cv.receipt.equals(sha(mk.targetHash, Buffer.from([1]), m.pv.last_nonce).subarray(0, 24)));
+check('the answer is time-stamped for her claim window', m.cv.answeredAt > 0);
 
 const nk = campaignFor(BigInt(Date.now()) + BigInt(Math.floor(Math.random() * 1e6)), 0, 8, 3, 1); // warm undertone -> no-match
 const n = await offer(nk);

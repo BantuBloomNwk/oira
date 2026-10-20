@@ -158,7 +158,7 @@ function decodePalette(buf) { let o = 8; o += 32; const encLen = buf.readUInt32L
   return { query_count, lifetime_queries, epoch, is_private, last_verdict, last_nonce }; }
 function decodeCampaign(buf) { // after 8-byte disc
   const answered = buf.readUInt8(163) === 1;
-  const receipt = Buffer.from(buf.subarray(164, 196));
+  const receipt = Buffer.from(buf.subarray(164, 188));
   const payee_commit = Buffer.from(buf.subarray(196, 228));
   return { answered, receipt, payee_commit }; }
 
@@ -255,7 +255,7 @@ await waitUndelegated(palettePda, 'palette');
 const cv = decodeCampaign((await acct(campaign)).data);
 const pvBase = decodePalette((await acct(palettePda)).data);
 check('campaign answered == true', cv.answered);
-check('campaign receipt == sha256(target_hash‖1‖nonce)', cv.receipt.equals(sha(targetHash, Buffer.from([1]), nonce)));
+check('campaign receipt == sha256(target_hash‖1‖nonce), first 24 bytes', cv.receipt.equals(sha(targetHash, Buffer.from([1]), nonce).subarray(0, 24)));
 check('campaign payee_commit == sha256(her_wallet‖nonce)', cv.payee_commit.equals(sha(her.publicKey.toBuffer(), nonce)));
 check('LEAK-FIX: base palette verdict WIPED to 0', pvBase.last_verdict === 0);
 check('LEAK-FIX: base palette nonce WIPED to zero', pvBase.last_nonce.equals(Buffer.alloc(16)));

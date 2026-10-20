@@ -131,9 +131,9 @@ function decodePalette(buf) { let o = 8; o += 32; const n = buf.readUInt32LE(o);
   const query_count = buf.readUInt32LE(o); o += 4; const lifetime_queries = buf.readUInt32LE(o); o += 4; const epoch = buf.readUInt32LE(o); o += 4;
   const is_private = buf.readUInt8(o); o += 1; const last_verdict = buf.readUInt8(o); o += 1; const last_nonce = Buffer.from(buf.subarray(o, o + 16));
   return { query_count, lifetime_queries, epoch, is_private, last_verdict, last_nonce }; }
-// Campaign (after 8-byte disc): queries@153 accepts@157 active@161 bump@162 answered@163 receipt@164 payee_commit@196
+// Campaign (after 8-byte disc): queries@153 accepts@157 active@161 bump@162 answered@163 receipt@164 (24 bytes) answered_at@188 payee_commit@196
 function decodeCampaign(buf) { return { queries: buf.readUInt32LE(153), answered: buf.readUInt8(163) === 1,
-  receipt: Buffer.from(buf.subarray(164, 196)), payee_commit: Buffer.from(buf.subarray(196, 228)) }; }
+  receipt: Buffer.from(buf.subarray(164, 188)), payee_commit: Buffer.from(buf.subarray(196, 228)) }; }
 
 const base = new Connection(BASE_RPC, 'confirmed');
 const opts = { commitment: 'confirmed', maxRetries: 5 };
@@ -221,7 +221,7 @@ const nBase = decodeCampaign((await waitCampaignUndelegated(n.k)).data);
 
 console.log('\n[L5] HIDDEN NO-MATCH: base learns nothing from a no-match:');
 check('no-match payee_commit == 0 (no wallet link leaks)', nBase.payee_commit.equals(Buffer.alloc(32)));
-check('receipt is present but opaque (verdict not recoverable without the private nonce)', !nBase.receipt.equals(Buffer.alloc(32)));
+check('receipt is present but opaque (verdict not recoverable without the private nonce)', !nBase.receipt.equals(Buffer.alloc(24)));
 
 console.log('\n[L4] HER-SET CAP: she capped herself at 2 distinct offers; a 3rd is rejected in-enclave:');
 try { await offer('third', 2, 8, 3, 1); check('3rd distinct offer rejected', false); }

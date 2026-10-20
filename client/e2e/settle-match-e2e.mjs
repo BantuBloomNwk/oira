@@ -33,6 +33,7 @@ import nacl from 'tweetnacl';
 import fs from 'fs';
 
 const PROGRAM = new PublicKey('CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP');
+const CONFIG_PDA = PublicKey.findProgramAddressSync([Buffer.from('config')], PROGRAM)[0]; // accepted tokens + treasury
 const TEE_VALIDATOR = new PublicKey('MTEWGuqxUpYZGFJQcp8tLN7x5v9BSeoFHYWQQ3n3xzo');
 const TEE_RPC = 'https://devnet-tee.magicblock.app';
 const BASE_RPC = process.env.BASE_RPC || 'https://api.devnet.solana.com'; // set BASE_RPC to a less-throttled devnet RPC to avoid 429s
@@ -136,7 +137,7 @@ const createCampaignIx = (category, perQuery, perAccept, tHash, escrowAmt) => ne
   { pubkey: brand.publicKey, isSigner: true, isWritable: true }, { pubkey: MINT, isSigner: false, isWritable: false },
   { pubkey: campaign, isSigner: false, isWritable: true }, { pubkey: escrow, isSigner: false, isWritable: true },
   { pubkey: brandAta, isSigner: false, isWritable: true }, { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-  { pubkey: SYS, isSigner: false, isWritable: false }, { pubkey: RENT, isSigner: false, isWritable: false }],
+  { pubkey: SYS, isSigner: false, isWritable: false }, { pubkey: RENT, isSigner: false, isWritable: false }, { pubkey: CONFIG_PDA, isSigner: false, isWritable: false }],
   data: Buffer.concat([disc('create_campaign'), bU64(offerId), Buffer.from([category]), bU64(perQuery), bU64(perAccept), Buffer.from(tHash), bU64(escrowAmt)]) });
 // NEW ABI: settle_offer(offer_hash[32], verdict[1], nonce[16]), reads receipt+payee off the CAMPAIGN.
 // The palette is NOT an account here (its receipt moved onto the campaign).
@@ -149,7 +150,7 @@ const settleOfferIx = (offerHash, verdict, nonce) => new TransactionInstruction(
 const closeCampaignIx = () => new TransactionInstruction({ programId: PROGRAM, keys: [
   { pubkey: brand.publicKey, isSigner: true, isWritable: true }, { pubkey: campaign, isSigner: false, isWritable: true },
   { pubkey: escrow, isSigner: false, isWritable: true }, { pubkey: brandAta, isSigner: false, isWritable: true },
-  { pubkey: treasuryAta, isSigner: false, isWritable: true }, { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false }], data: disc('close_campaign') });
+  { pubkey: treasuryAta, isSigner: false, isWritable: true }, { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false }, { pubkey: CONFIG_PDA, isSigner: false, isWritable: false }], data: disc('close_campaign') });
 
 // ── decoders ──
 function decodePalette(buf) { let o = 8; o += 32; const encLen = buf.readUInt32LE(o); o += 4; o += encLen; o += 32; // root

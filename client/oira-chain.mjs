@@ -14,6 +14,7 @@ import nacl from 'tweetnacl';
 import fs from 'fs';
 
 const PROGRAM = new PublicKey('CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP');
+const CONFIG_PDA = PublicKey.findProgramAddressSync([Buffer.from('config')], PROGRAM)[0]; // accepted tokens + treasury
 const TEE_VALIDATOR = new PublicKey('MTEWGuqxUpYZGFJQcp8tLN7x5v9BSeoFHYWQQ3n3xzo');
 const TEE_RPC = process.env.OIRA_TEE_RPC || 'https://devnet-tee.magicblock.app';
 // BASE_RPC is env-overridable so a hosted deploy can point at a paid/dedicated devnet RPC
@@ -56,6 +57,8 @@ async function _refreshStatus() {
   try { const r = await fetch(TEE_RPC.replace(/\?.*/, ''), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getVersion' }) }); out.teeOk = !!r && r.ok; } catch {}
   _status = out; _refreshing = false;
 }
+// The sponsor wallet's balance right now, for the daily budget. A fresh read, not the cached status.
+export async function sponsorBalanceSol() { return (await base.getBalance(deployer.publicKey)) / 1e9; }
 export function bridgeStatus() {
   if (Date.now() - _status.at > 60_000) _refreshStatus(); // fire-and-forget refresh when stale
   return { deployerSol: _status.deployerSol, rpcOk: _status.rpcOk, teeOk: _status.teeOk };
@@ -177,7 +180,7 @@ export async function runOffer({ ownerSecret, ownerPubkey, agentSecret, salt, tr
     { pubkey: brand.publicKey, isSigner: true, isWritable: true }, { pubkey: MINT, isSigner: false, isWritable: false },
     { pubkey: campaign, isSigner: false, isWritable: true }, { pubkey: escrow, isSigner: false, isWritable: true },
     { pubkey: brandAta, isSigner: false, isWritable: true }, { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: SYS, isSigner: false, isWritable: false }, { pubkey: RENT, isSigner: false, isWritable: false }],
+    { pubkey: SYS, isSigner: false, isWritable: false }, { pubkey: RENT, isSigner: false, isWritable: false }, { pubkey: CONFIG_PDA, isSigner: false, isWritable: false }],
     data: Buffer.concat([disc('create_campaign'), bU64(Number(offerId)), Buffer.from([category]), bU64(100_000), bU64(Number(perAccept)), Buffer.from(targetHash), bU64(Number(escrowAmt))]) });
   const createSig = await sendAndConfirmTransaction(base, new Transaction().add(createIx), [brand], opts);
   const delCampIx = new TransactionInstruction({ programId: PROGRAM, keys: [
@@ -606,7 +609,7 @@ export async function postCampaign({ target, payout = 5, category = 0, label = '
     { pubkey: brand.publicKey, isSigner: true, isWritable: true }, { pubkey: MINT, isSigner: false, isWritable: false },
     { pubkey: campaign, isSigner: false, isWritable: true }, { pubkey: escrow, isSigner: false, isWritable: true },
     { pubkey: brandAta, isSigner: false, isWritable: true }, { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-    { pubkey: SYS, isSigner: false, isWritable: false }, { pubkey: RENT, isSigner: false, isWritable: false }],
+    { pubkey: SYS, isSigner: false, isWritable: false }, { pubkey: RENT, isSigner: false, isWritable: false }, { pubkey: CONFIG_PDA, isSigner: false, isWritable: false }],
     data: Buffer.concat([disc('create_campaign'), bU64(Number(offerId)), Buffer.from([category]), bU64(Number(perQueryU)), bU64(Number(perAccept)), Buffer.from(targetHash), bU64(Number(escrowAmt))]) });
   const createSig = await sendAndConfirmTransaction(base, new Transaction().add(createIx), [brand], opts);
   const delCampIx = new TransactionInstruction({ programId: PROGRAM, keys: [

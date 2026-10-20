@@ -17,8 +17,8 @@ android {
          *
          * It also has to be signed with the TWA's existing key, alias `oira`. A fresh key
          * produces an app Play will not accept over the old one at any version. */
-        versionCode 29
-        versionName "1.5.3"
+        versionCode 30
+        versionName "1.5.4"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

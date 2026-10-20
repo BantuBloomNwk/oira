@@ -14,7 +14,7 @@
 //
 //   node e2e/escrow-close-local.mjs            (needs program/target/deploy/oira_palette.so)
 
-import { Connection, Keypair, PublicKey, Transaction, TransactionInstruction, sendAndConfirmTransaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { ComputeBudgetProgram, Connection, Keypair, PublicKey, Transaction, TransactionInstruction, sendAndConfirmTransaction, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, AccountLayout, MintLayout, ACCOUNT_SIZE, MINT_SIZE } from '@solana/spl-token';
 import { createHash, randomBytes } from 'crypto';
 import { spawn } from 'child_process';
@@ -68,6 +68,11 @@ const strangerToken = Keypair.generate().publicKey; tokenAccount(strangerToken, 
 const brandToken = Keypair.generate().publicKey; tokenAccount(brandToken, mint, brand.publicKey, 0);
 const treasuryToken = Keypair.generate().publicKey; tokenAccount(treasuryToken, mint, TREASURY, 0);
 
+// The protocol config, as init_config leaves it: this test's mint accepted, spent stakes to TREASURY.
+const [configPda, configBump] = PublicKey.findProgramAddressSync([Buffer.from('config')], PROGRAM);
+account(configPda, PROGRAM, Buffer.concat([accDisc('Config'), Keypair.generate().publicKey.toBuffer(), TREASURY.toBuffer(),
+  mint.toBuffer(), Buffer.alloc(32 * 3), Buffer.from([1, configBump])]));
+
 const ESCROWED = 10_000, SPENT = 100, PAYOUT = 2_000;
 const now = Math.floor(Date.now() / 1000);
 
@@ -105,7 +110,8 @@ const settleIx = (c, { brandKey = brand.publicKey, to = herToken, nonce = c.nonc
 const closeIx = (c) => new TransactionInstruction({ programId: PROGRAM, keys: [
   { pubkey: brand.publicKey, isSigner: true, isWritable: true }, { pubkey: c.pda, isSigner: false, isWritable: true },
   { pubkey: c.escrow, isSigner: false, isWritable: true }, { pubkey: brandToken, isSigner: false, isWritable: true },
-  { pubkey: treasuryToken, isSigner: false, isWritable: true }, { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false }],
+  { pubkey: treasuryToken, isSigner: false, isWritable: true }, { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+  { pubkey: configPda, isSigner: false, isWritable: false }],
   data: disc('close_campaign') });
 
 // ---- validator ----
@@ -121,7 +127,18 @@ for (let i = 0; ; i++) {
 }
 for (const k of [brand, stranger]) await conn.confirmTransaction(await conn.requestAirdrop(k.publicKey, LAMPORTS_PER_SOL), 'confirmed');
 
-const send = (ix, signer) => sendAndConfirmTransaction(conn, new Transaction().add(ix), [signer], { commitment: 'confirmed' });
+// A unique compute limit and a freshly fetched blockhash per transaction, so a retried instruction
+// is never a byte-identical replay and nothing waits on web3.js's blockhash cache.
+let nth = 0;
+async function send(ix, signer) {
+  const tx = new Transaction().add(ComputeBudgetProgram.setComputeUnitLimit({ units: 400_000 + ++nth })).add(ix);
+  const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash('confirmed');
+  tx.recentBlockhash = blockhash; tx.feePayer = signer.publicKey; tx.sign(signer);
+  const sig = await conn.sendRawTransaction(tx.serialize());
+  const r = await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, 'confirmed');
+  if (r.value.err) throw new Error(JSON.stringify(r.value.err));
+  return sig;
+}
 async function refused(label, ix, signer, want) {
   try { await send(ix, signer); check(label, false); }
   catch (e) { const logs = (e.logs || e.transactionLogs || []).join('\n') + String(e.message); check(label, want ? logs.includes(want) : true); if (want && !logs.includes(want)) console.log(logs.slice(-600)); }

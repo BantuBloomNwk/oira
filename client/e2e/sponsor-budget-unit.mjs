@@ -1,0 +1,25 @@
+// The sponsor budget counts real spending, ignores top-ups, and resets each UTC day.
+import { createBudget } from '../sponsor-budget.mjs';
+let failed = 0;
+const check = (label, ok) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${label}`); if (!ok) failed++; };
+let clock = new Date('2026-10-21T08:00:00Z');
+const b = createBudget(2, () => clock);
+b.observe(10);
+check('a fresh day starts with nothing spent', b.spent() === 0 && b.allows());
+b.observe(9.4);
+check('spending 0.6 SOL counts as 0.6', b.spent() === 0.6);
+b.observe(12.4);
+check('a 3 SOL top-up does not make it look like less was spent', b.spent() === 0.6);
+b.observe(10.5);
+check('further spending adds up across the top-up (2.5 SOL)', b.spent() === 2.5);
+check('past the 2 SOL cap, new sponsored work is refused', !b.allows());
+clock = new Date('2026-10-22T00:00:05Z');
+b.observe(10.5);
+check('at midnight UTC it starts over', b.spent() === 0 && b.allows());
+check('and remembers yesterday for the daily report', b.previous()?.day === '2026-10-21' && b.previous()?.spent === 2.5);
+const off = createBudget(0, () => clock); off.observe(5); off.observe(0.1);
+check('a cap of 0 never refuses', off.allows());
+b.observe(null); b.observe(NaN);
+check('a failed balance read changes nothing', b.spent() === 0);
+console.log(failed ? `\n${failed} FAILED` : '\nALL GREEN');
+process.exit(failed ? 1 : 0);

@@ -41,6 +41,13 @@ export async function alertBridge(level, msg) {
   await push(line);
 }
 
+// The once-a-day summary. Not rate-limited like alerts, because it's one message a day.
+export async function dailyReport(text) {
+  const line = `[oira-bridge] DAILY: ${scrub(text)}`;
+  console.log(line);
+  await push(line);
+}
+
 // Record a bridge error. { alert: true } also pushes it to the alert channel (use for the paths that
 // actually matter, a failed seal, a crash, not every transient 429).
 export function recordError(scope, err, opts = {}) {

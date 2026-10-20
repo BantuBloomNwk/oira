@@ -42,9 +42,12 @@ pub const EPOCH_SECS: i64 = 86_400;              // epoch = 1 day, derived IN-EN
 pub const CLAIM_WINDOW_SECS: i64 = 7 * 86_400;   // after a match, the brand can't close until she has had this long to settle
 pub const CAMPAIGN_SEED: &[u8] = b"campaign";
 pub const ESCROW_SEED: &[u8] = b"escrow";
-// Protocol treasury that collects forfeited per-query stakes (take-rate on BRAND spend, never hers).
-// DEVNET: the deployer wallet. MAINNET: replace with a governance multisig before launch.
-pub const TREASURY: Pubkey = anchor_lang::pubkey!("6wWrCWZ3y9UveFG1t5GzupJ1qkWn5r4QPWg8EmELA8Xz");
+// The protocol config: which tokens a campaign may escrow, and where forfeited per-query stakes go
+// (take-rate on BRAND spend, never hers). Set once by the program's upgrade authority, then
+// changed only by the config admin, which can be handed to a multisig. Replaces the old
+// hard-coded devnet treasury.
+pub const CONFIG_SEED: &[u8] = b"config";
+pub const MAX_MINTS: usize = 4;
 // SECURITY FIX: the attested MagicBlock TEE validator, pinned. Delegation previously accepted
 // ANY validator supplied via remaining_accounts, letting an attacker redirect her sealed
 // traits into a validator they control instead of the real TEE. Matches the client's own
@@ -366,6 +369,9 @@ pub mod oira_palette {
     // ─────────── offer_board: brand campaigns with USDC escrow ───────────
 
     pub fn create_campaign(ctx: Context<CreateCampaign>, offer_id: u64, category: u8, per_query_cost: u64, per_accept_payout: u64, target_hash: [u8; 32], escrow_amount: u64) -> Result<()> {
+        // Only tokens the config accepts. Her payouts stay in stable money.
+        let cfg = &ctx.accounts.config;
+        require!(cfg.mints[..cfg.mint_count as usize].contains(&ctx.accounts.mint.key()), OiraError::MintNotAccepted);
         require!(escrow_amount >= per_accept_payout, OiraError::EscrowTooSmall);
         require!(per_query_cost > 0, OiraError::EscrowTooSmall);
         token::transfer(
@@ -489,6 +495,24 @@ pub mod oira_palette {
         Ok(())
     }
 
+    // ─────────── protocol config ───────────
+
+    /// Create the config. Only the program's upgrade authority can, once.
+    pub fn init_config(ctx: Context<InitConfig>, treasury: Pubkey, mints: Vec<Pubkey>) -> Result<()> {
+        let c = &mut ctx.accounts.config;
+        c.admin = ctx.accounts.authority.key();
+        c.bump = ctx.bumps.config;
+        write_config(c, treasury, &mints)
+    }
+
+    /// Change the treasury, the accepted tokens, or hand the admin role on (e.g. to a multisig).
+    pub fn set_config(ctx: Context<SetConfig>, new_admin: Pubkey, treasury: Pubkey, mints: Vec<Pubkey>) -> Result<()> {
+        require!(new_admin != Pubkey::default(), OiraError::BadConfig);
+        let c = &mut ctx.accounts.config;
+        c.admin = new_admin;
+        write_config(c, treasury, &mints)
+    }
+
     // ─────────── campaign delegation into the ER (L2/L3) ───────────
     // The brand delegates its campaign into the SAME ER as her Palette so match_query can read
     // the committed target + escrow allowance in-enclave, then undelegates it to base for settle.
@@ -511,6 +535,17 @@ pub mod oira_palette {
         ).commit_and_undelegate(&[ctx.accounts.campaign.to_account_info()]).build_and_invoke()?;
         Ok(())
     }
+}
+
+fn write_config(c: &mut Config, treasury: Pubkey, mints: &[Pubkey]) -> Result<()> {
+    require!(treasury != Pubkey::default(), OiraError::BadConfig);
+    require!(!mints.is_empty() && mints.len() <= MAX_MINTS, OiraError::BadConfig);
+    require!(mints.iter().all(|m| *m != Pubkey::default()), OiraError::BadConfig);
+    c.treasury = treasury;
+    c.mints = [Pubkey::default(); MAX_MINTS];
+    c.mints[..mints.len()].copy_from_slice(mints);
+    c.mint_count = mints.len() as u8;
+    Ok(())
 }
 
 /// The real in-enclave comparison over BUCKETED traits: exact undertone + Monk depth within
@@ -782,6 +817,40 @@ pub struct CreateCampaign<'info> {
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
+    #[account(seeds = [CONFIG_SEED], bump = config.bump)]
+    pub config: Account<'info, Config>,
+}
+
+#[account]
+pub struct Config {
+    pub admin: Pubkey,
+    pub treasury: Pubkey,
+    pub mints: [Pubkey; MAX_MINTS],
+    pub mint_count: u8,
+    pub bump: u8,
+}
+impl Config {
+    pub const SPACE: usize = 8 + 32 + 32 + 32 * MAX_MINTS + 1 + 1;
+}
+
+#[derive(Accounts)]
+pub struct InitConfig<'info> {
+    #[account(mut)]
+    pub authority: Signer<'info>,
+    #[account(init, payer = authority, space = Config::SPACE, seeds = [CONFIG_SEED], bump)]
+    pub config: Account<'info, Config>,
+    #[account(constraint = program.programdata_address()? == Some(program_data.key()) @ OiraError::NotUpgradeAuthority)]
+    pub program: Program<'info, crate::program::OiraPalette>,
+    #[account(constraint = program_data.upgrade_authority_address == Some(authority.key()) @ OiraError::NotUpgradeAuthority)]
+    pub program_data: Account<'info, ProgramData>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct SetConfig<'info> {
+    pub admin: Signer<'info>,
+    #[account(mut, seeds = [CONFIG_SEED], bump = config.bump, has_one = admin @ OiraError::NotConfigAdmin)]
+    pub config: Account<'info, Config>,
 }
 
 #[derive(Accounts)]
@@ -809,9 +878,11 @@ pub struct CloseCampaign<'info> {
     pub escrow: Account<'info, TokenAccount>,
     #[account(mut)]
     pub brand_token: Account<'info, TokenAccount>,
-    #[account(mut, token::mint = escrow.mint, token::authority = TREASURY)]
+    #[account(mut, token::mint = escrow.mint, token::authority = config.treasury)]
     pub treasury_token: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
+    #[account(seeds = [CONFIG_SEED], bump = config.bump)]
+    pub config: Account<'info, Config>,
 }
 
 /// The match receipt: sha256(offer_hash‖verdict‖nonce), first 192 bits. Second preimages stay far
@@ -850,4 +921,8 @@ pub enum OiraError {
     #[msg("brand token account mint mismatch")] BadMint,
     #[msg("not allowed to commit this account")] NotAllowedToCommit,
     #[msg("a match is waiting to be settled; the brand can close once the claim window has passed")] MatchAwaitingSettlement,
+    #[msg("this token is not accepted for campaigns")] MintNotAccepted,
+    #[msg("bad config values")] BadConfig,
+    #[msg("only the program's upgrade authority can do this")] NotUpgradeAuthority,
+    #[msg("only the config admin can do this")] NotConfigAdmin,
 }

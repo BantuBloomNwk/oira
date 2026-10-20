@@ -5,12 +5,13 @@ import { WebSocketServer } from 'ws';
 import { fileURLToPath } from 'url';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { Keypair } from '@solana/web3.js';
-import { sealPalette, sealPaletteRelay, privatePayout, runOffer, privacyProof, postCampaign, matchCampaign, campaignStatus, bridgeStatus, askHer, brandSeedFor, setRulesRelay, sendUsdcRelay, usdcBalance } from './oira-chain.mjs';
+import { sealPalette, sealPaletteRelay, privatePayout, runOffer, privacyProof, postCampaign, matchCampaign, campaignStatus, bridgeStatus, askHer, brandSeedFor, setRulesRelay, sendUsdcRelay, usdcBalance, sponsorBalanceSol } from './oira-chain.mjs';
 import { registerWoman, listWomen, addBrief, getBrief, listBriefs, updateBrief, addResult, finishBrief, migrateBriefs, setInboxKey, inboxKeyFor, sealForHer, inboxFor } from './brief-store.mjs';
 import { notifyToken, ownerOfToken } from './notify.mjs';
 import nacl from 'tweetnacl';
 import { PublicKey } from '@solana/web3.js';
-import { recordError, alertBridge, monitorStats } from './oira-monitor.mjs';
+import { recordError, alertBridge, monitorStats, dailyReport } from './oira-monitor.mjs';
+import { createBudget } from './sponsor-budget.mjs';
 import { createChallenge, verifyAndClaim } from './genesis-check.mjs';
 import { reason as conciergeReason, llmConfigured } from './oira-concierge.mjs';
 import { ttsConfigured, synthesize } from './oira-tts.mjs';
@@ -74,10 +75,11 @@ app.use((req, res, next) => {
 // no user data. `bridgeStatus()` is cached + refreshed in the background, so this never blocks.
 app.get('/api/health', (req, res) => {
   const s = bridgeStatus(), m = monitorStats();
-  const degraded = s.rpcOk === false || s.teeOk === false || (s.deployerSol != null && s.deployerSol < 1);
+  const degraded = s.rpcOk === false || s.teeOk === false || (s.deployerSol != null && s.deployerSol < 1) || !budget.allows();
   res.json({ ok: true, service: 'oira-bridge', degraded, uptimeSec: m.uptimeSec, startedAt: m.startedAt,
     errors: { count: m.errorCount, last: m.lastError }, deployer: { balanceSol: s.deployerSol },
-    rpc: { ok: s.rpcOk }, tee: { ok: s.teeOk }, alertChannel: m.alertChannel, signed: viaNetlify(req) });
+    rpc: { ok: s.rpcOk }, tee: { ok: s.teeOk }, alertChannel: m.alertChannel, signed: viaNetlify(req),
+    sponsor: { spentTodaySol: budget.spent(), capSol: budget.cap, open: budget.allows() } });
 });
 
 // Per-IP rate limit on the EXPENSIVE devnet flows (each seal/offer/payout spends deployer
@@ -131,6 +133,7 @@ function recordSeal(ip) {
   const now = Date.now();
   if (sealDay.day !== today()) { sealDay.day = today(); sealDay.count = 0; }
   sealDay.count++;
+  dayStats.seals++;
   let e = sealHits.get(ip);
   if (!e || now > e.resetAt) { e = { count: 0, resetAt: now + SEAL_WINDOW_MS }; sealHits.set(ip, e); }
   e.count++;
@@ -154,6 +157,23 @@ function chargeSponsor(ip) {
   sponsorDay.count++;
 }
 setInterval(() => { const now = Date.now(); for (const [ip, e] of sponsorHits) if (now > e.resetAt) sponsorHits.delete(ip); }, SEAL_WINDOW_MS).unref();
+
+// The daily SOL budget for everything the bridge pays for: seals it sponsors, sends, brand briefs.
+// The count limits above don't bound money; this does. OIRA_SPONSOR_SOL_DAY, 0 turns it off.
+const budget = createBudget(process.env.OIRA_SPONSOR_SOL_DAY != null ? Number(process.env.OIRA_SPONSOR_SOL_DAY) : 4);
+const BUDGET_MSG = "We've helped a lot of people today, so this pauses until tomorrow. Everything of yours is safe.";
+let budgetAlertDay = '';
+async function sponsorBudgetOk() {
+  try { budget.observe(await sponsorBalanceSol()); } catch { /* a failed read never blocks her */ }
+  if (budget.allows()) return true;
+  if (budgetAlertDay !== today()) {
+    budgetAlertDay = today();
+    alertBridge('warn', `sponsor budget reached: ${budget.spent()} of ${budget.cap} SOL spent today. Sponsored seals, sends and briefs pause until 00:00 UTC.`);
+  }
+  return false;
+}
+// What happened today, for the summary that goes out after midnight UTC.
+const dayStats = { day: today(), seals: 0, sends: 0, briefs: 0, errors0: 0 };
 app.use((req, res, next) => {
   if (req.method === 'POST' && ['/api/seal', '/api/campaign', '/api/payout', '/api/brand/campaign', '/api/brand/match', '/api/concierge'].includes(req.path)
       && rateLimited(clientIp(req))) {
@@ -381,13 +401,17 @@ async function runBrief(id) {
   finishBrief(id);
 }
 
-app.post('/api/brand/match', (req, res) => {
+app.post('/api/brand/match', async (req, res) => {
   const id = String((req.body && req.body.campaign) || '');
   const brief = getBrief(id);
   if (!brief) return res.status(404).json({ error: 'brief not found' });
   if (brief.status !== 'open') return res.status(409).json({ error: 'This brief has already been asked.' });
   if (running) return res.status(409).json({ error: 'Another brief is being asked right now. Try again in a minute.' });
   if (!listWomen().length) return res.status(409).json({ error: 'No sealed women to ask yet.' });
+  // Each brief funds a brand key and a campaign per woman asked, so it waits on the budget too.
+  if (!(await sponsorBudgetOk())) return res.status(429).json({ error: "Today's budget for asking is used up. Briefs start again at 00:00 UTC." });
+  if (running) return res.status(409).json({ error: 'Another brief is being asked right now. Try again in a minute.' });
+  dayStats.briefs++;
   running = runBrief(id).finally(() => { running = null; });
   res.status(202).json({ started: true, campaign: id });
 });
@@ -429,6 +453,7 @@ function sendOverLimit(owner) {
   return e.count >= SEND_DAY_MAX;
 }
 function recordSend(owner) {
+  dayStats.sends++;
   const e = sendsToday.get(owner); if (e) e.count++;
 }
 
@@ -495,7 +520,7 @@ wss.on('connection', (ws, req) => {
     try { ws.send(JSON.stringify({ t: 'sign', id, msg: Buffer.from(msgBytes).toString('base64') })); }
     catch (e) { reject(e); }
   });
-  ws.on('message', (raw) => {
+  ws.on('message', async (raw) => {
     let m; try { m = JSON.parse(raw.toString()); } catch { return; }
     if (m.t === 'sig' && pending.has(m.id)) { const r = pending.get(m.id); pending.delete(m.id); return r(Buffer.from(m.sig, 'base64')); }
     /* Her rules, written to her palette. Her key signs on her phone; no sponsor SOL is spent. */
@@ -514,6 +539,7 @@ wss.on('connection', (ws, req) => {
       let owner; try { owner = new PublicKey(m.ownerPubkey).toBase58(); } catch { try { ws.send(JSON.stringify({ t: 'error', message: 'bad owner' })); } catch {} return ws.close(); }
       if (sendOverLimit(owner)) { try { ws.send(JSON.stringify({ t: 'error', message: `You've sent ${SEND_DAY_MAX} times today, so the next one waits until tomorrow. Your money is still in your account.` })); } catch {} return ws.close(); }
       started = true;
+      if (!(await sponsorBudgetOk())) { try { ws.send(JSON.stringify({ t: 'error', message: BUDGET_MSG })); } catch {} return ws.close(); }
       sendUsdcRelay({ ownerPubkey: owner, to: m.to, amount: m.amount, sign })
         .then((r) => { recordSend(owner); console.log('sent', r.amount, 'USDC from', owner.slice(0, 6), 'to', r.to.slice(0, 6)); try { ws.send(JSON.stringify({ t: 'done', ...r })); } catch {} })
         .catch((e) => { recordError('relay-send', e); try { ws.send(JSON.stringify({ t: 'error', message: String(e.message || e) })); } catch {} });
@@ -530,6 +556,8 @@ wss.on('connection', (ws, req) => {
       // assurance travels straight from her client ('wallet' vs 'passkey'/'fallback'/absent),
       // it decides whether sealPaletteRelay sponsors her shortfall or requires her own funds.
       const assurance = m.assurance === 'wallet' ? 'wallet' : m.assurance;
+      // A wallet sign-in pays its own way; everything else is sponsored, so it waits on the budget.
+      if (assurance !== 'wallet' && !(await sponsorBudgetOk())) { try { ws.send(JSON.stringify({ t: 'error', message: BUDGET_MSG })); } catch {} return ws.close(); }
       let charged = false;
       const beforeSponsor = () => { if (charged) return; chargeSponsor(ip); charged = true; };
       sealPaletteRelay({ ownerPubkey: m.ownerPubkey, traits, encBlob, lifetimeCap: m.lifetimeCap || 0, salt, sign, assurance, beforeSponsor })
@@ -557,6 +585,15 @@ wss.on('connection', (ws, req) => {
 // breaks a real seal, not after. Every 5 min; alertBridge rate-limits so this can't spam.
 setInterval(() => {
   const s = bridgeStatus();
+  // The daily summary, once the UTC day has turned. One message: what happened, and what it cost.
+  budget.observe(s.deployerSol);
+  if (dayStats.day !== today()) {
+    const p = budget.previous();
+    const errors = monitorStats().errorCount - dayStats.errors0;
+    const spent = p && p.day === dayStats.day ? `${p.spent} SOL sponsored` : 'sponsored SOL not measured';
+    dailyReport(`${dayStats.day}: ${dayStats.seals} seals, ${dayStats.sends} sends, ${dayStats.briefs} briefs, ${errors} errors, ${spent}, balance ${s.deployerSol} SOL`);
+    Object.assign(dayStats, { day: today(), seals: 0, sends: 0, briefs: 0, errors0: monitorStats().errorCount });
+  }
   if (s.deployerSol != null && s.deployerSol < 1) alertBridge('warn', `deployer balance low: ${s.deployerSol} SOL: top up`);
   if (s.rpcOk === false) alertBridge('warn', 'base devnet RPC unreachable');
   if (s.teeOk === false) alertBridge('warn', 'MagicBlock TEE unreachable');

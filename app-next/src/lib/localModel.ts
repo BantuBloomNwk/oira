@@ -125,6 +125,12 @@ async function hosted(): Promise<boolean> {
   }
 }
 
+/* Is the model already on this phone? A cache lookup only, never the network, so the app can
+   check this on every launch without asking the weights host anything. */
+export async function readyOnThisPhone(): Promise<boolean> {
+  return webgpuOk() && (await cached());
+}
+
 export async function modelState(): Promise<ModelState> {
   if (!webgpuOk()) return 'unsupported';
   if (await cached()) return 'ready';

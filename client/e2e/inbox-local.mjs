@@ -93,6 +93,8 @@ check('the overnight check counts her new entry', news.count === 1); if (news.co
 const again = await fetch(`${BASE}/api/brand/match`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-oira-brand-key': BRAND_KEY }, body: JSON.stringify({ campaign: 'done1' }) });
 check('a finished brief cannot be asked again', again.status === 409); if (again.status !== 409) console.log('   match:', again.status, await again.text());
 const studio = await (await fetch(`${BASE}/api/brand/campaigns`)).json();
+const health = await (await fetch(`${BASE}/api/health`)).json();
+check('health reports the sponsor budget', health.sponsor && health.sponsor.capSol === 4 && typeof health.sponsor.spentTodaySol === 'number');
 check('the brand studio still shows totals', studio.campaigns.find((c) => c.campaign === 'done1')?.results.yes === 1);
 
 console.log(failed ? `\n${failed} FAILED` : '\nALL GREEN');

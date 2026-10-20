@@ -22,6 +22,7 @@ import nacl from 'tweetnacl';
 import fs from 'fs';
 
 const PROGRAM = new PublicKey('CmguZy9dpo5zPzEBdFL9cbzoto2EsWMizvH8hvAmSaqP');
+const CONFIG_PDA = PublicKey.findProgramAddressSync([Buffer.from('config')], PROGRAM)[0]; // accepted tokens + treasury
 const TEE_VALIDATOR = new PublicKey('MTEWGuqxUpYZGFJQcp8tLN7x5v9BSeoFHYWQQ3n3xzo');
 const TEE_RPC = 'https://devnet-tee.magicblock.app';
 const BASE_RPC = process.env.BASE_RPC || 'https://api.devnet.solana.com';
@@ -86,7 +87,7 @@ const createCampaignIx = (k) => new TransactionInstruction({ programId: PROGRAM,
   { pubkey: brand.publicKey, isSigner: true, isWritable: true }, { pubkey: MINT, isSigner: false, isWritable: false },
   { pubkey: k.c, isSigner: false, isWritable: true }, { pubkey: k.e, isSigner: false, isWritable: true },
   { pubkey: brandAta, isSigner: false, isWritable: true }, { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-  { pubkey: SYS, isSigner: false, isWritable: false }, { pubkey: RENT, isSigner: false, isWritable: false }],
+  { pubkey: SYS, isSigner: false, isWritable: false }, { pubkey: RENT, isSigner: false, isWritable: false }, { pubkey: CONFIG_PDA, isSigner: false, isWritable: false }],
   data: Buffer.concat([disc('create_campaign'), bU64(k.offerId), Buffer.from([k.category]), bU64(PER_QUERY), bU64(k.perAccept), Buffer.from(k.targetHash), bU64(ESCROW)]) });
 const delegateCampaignIx = (k) => new TransactionInstruction({ programId: PROGRAM, keys: [
   { pubkey: brand.publicKey, isSigner: true, isWritable: true }, { pubkey: brand.publicKey, isSigner: false, isWritable: false },

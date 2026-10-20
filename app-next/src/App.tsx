@@ -66,7 +66,9 @@ import { generateHandle } from './lib/handle';
 import { useIdle } from './hooks/useIdle';
 import { useTimeOfDay } from './hooks/useTimeOfDay';
 import { installContext, loadConcierge } from './lib/concierge';
-import { activate as activateLocalModel, modelState } from './lib/localModel';
+import { activate as activateLocalModel, readyOnThisPhone } from './lib/localModel';
+import { ageConfirmed, confirmAge } from './lib/age';
+import { AgeSheet } from './components/AgeSheet';
 import { sampleBrandQuery, type HerRules } from './lib/brandsim';
 import { undertoneCode, seasonCode } from './lib/traitcodes';
 import { fetchMyAnswers, type MyAnswer } from './lib/answers';
@@ -207,6 +209,8 @@ export default function App() {
    * She can still decline. The fallback is real and it works; it just does not follow her to
    * a new phone, and she is told so in those words. */
   const beginScan = () => {
+    // 18 and over, asked once, before anything about her is read or made.
+    if (!ageConfirmed()) { setAgeAsk(true); return; }
     const o = currentOwner();
     if (!o || o.assurance === 'fallback') {
       setPendingScan(true);
@@ -375,6 +379,7 @@ export default function App() {
   const [owner, setOwner] = useState<Owner | null>(null);
   /* Up between "she asked to be read" and "she has an identity to be read into". */
   const [pendingScan, setPendingScan] = useState(false);
+  const [ageAsk, setAgeAsk] = useState(false);
   /* The seal is genuinely doing something now, so it has states: working, and failed. */
   const [sealing, setSealing] = useState(false);
   const [sealError, setSealError] = useState<string | null>(null);
@@ -527,8 +532,8 @@ export default function App() {
      Nothing is fetched here. It is a cache lookup and an object assignment, and on a phone
      that never downloaded them it does nothing at all. */
   useEffect(() => {
-    void modelState()
-      .then((s) => { if (s === 'ready') activateLocalModel(); })
+    void readyOnThisPhone()
+      .then((ready) => { if (ready) activateLocalModel(); })
       .catch(() => {});
   }, []);
 
@@ -656,6 +661,13 @@ export default function App() {
 
         {/* Which door she takes. Sits over the frame like the seal does, because it is the
             same moment continued rather than a separate place she has gone to. */}
+        {ageAsk && (
+          <AgeSheet
+            onYes={() => { confirmAge(); setAgeAsk(false); beginScan(); }}
+            onClose={() => setAgeAsk(false)}
+          />
+        )}
+
         {pendingScan && (
           <IdentitySheet
             onReady={(o) => { setOwner(o); setPendingScan(false); setScanStep('scanning'); }}

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { Keypair } from '@solana/web3.js';
 import { sealPalette, sealPaletteRelay, privatePayout, runOffer, privacyProof, postCampaign, matchCampaign, campaignStatus, bridgeStatus, askHer, brandSeedFor, setRulesRelay, sendUsdcRelay, usdcBalance } from './oira-chain.mjs';
-import { registerWoman, listWomen, addBrief, getBrief, listBriefs, updateBrief, addAsk, answersFor } from './brief-store.mjs';
+import { registerWoman, listWomen, addBrief, getBrief, listBriefs, updateBrief, addResult, finishBrief, migrateBriefs, setInboxKey, inboxKeyFor, sealForHer, inboxFor } from './brief-store.mjs';
 import { notifyToken, ownerOfToken } from './notify.mjs';
 import nacl from 'tweetnacl';
 import { PublicKey } from '@solana/web3.js';
@@ -328,11 +328,9 @@ const EX_ADDR = (a) => `https://explorer.solana.com/address/${a}?cluster=devnet`
 // first, then the match in the rollup, then payment on a yes. The brand only ever sees counts.
 const CATS = ['Foundation', 'Concealer', 'Lipstick', 'Blush', 'Skincare', 'Other'];
 const SEASONS_12 = ['Bright Spring', 'True Spring', 'Light Spring', 'Light Summer', 'True Summer', 'Soft Summer', 'Soft Autumn', 'True Autumn', 'Deep Autumn', 'Deep Winter', 'True Winter', 'Bright Winter'];
-const counts = (b) => {
-  const asks = (b.asks || []).filter((a) => a.outcome !== 'unavailable' && a.outcome !== 'error');
-  return { asked: asks.length, yes: asks.filter((a) => a.outcome === 'yes').length, no: asks.filter((a) => a.outcome === 'no').length,
-    turnedAway: asks.filter((a) => a.outcome === 'declined').length, paid: asks.reduce((t, a) => t + (a.outcome === 'yes' ? a.amount || 0 : 0), 0) };
-};
+const counts = (b) => b.results || { asked: 0, yes: 0, no: 0, turnedAway: 0, paid: 0 };
+{ const n = migrateBriefs(); if (n) console.log('briefs: moved', n, 'old per-woman records to totals'); }
+
 const publicBrief = (b) => ({ campaign: b.id, label: b.label, payout: b.payout, category: b.category, reach: b.reach, status: b.status, createdAt: b.createdAt, results: counts(b) });
 
 app.post('/api/brand/campaign', async (req, res) => {
@@ -361,29 +359,33 @@ async function runBrief(id) {
   const brief = getBrief(id); if (!brief) return;
   updateBrief(id, { status: 'running' });
   try {
-    const askedAlready = new Set((brief.asks || []).map((a) => a.owner));
-    const pool = listWomen().filter((w) => !askedAlready.has(w)).sort(() => Math.random() - 0.5);
-    let done = counts(brief).asked;
+    // One pass over the women, so nobody is asked twice; who was asked is never written down.
+    const pool = listWomen().sort(() => Math.random() - 0.5);
+    let done = 0;
     for (const owner of pool) {
       if (done >= brief.reach) break;
       try {
         const r = await askHer({ brief, ownerPubkey: owner });
-        addAsk(id, { owner, ...r });
-        if (r.outcome !== 'unavailable') done++;
+        if (r.outcome === 'unavailable') continue;
+        done++;
+        addResult(id, r.outcome, r.amount || 0);
+        sealForHer(owner, { brand: brief.label, category: CATS[brief.category] || 'Other', season: SEASONS_12[brief.target.ts] || '',
+          payout: brief.payout, outcome: r.outcome, reason: r.reason || null, amount: r.outcome === 'yes' ? r.amount || 0 : 0,
+          explorer: r.outcome === 'yes' ? r.explorer || null : null });
         console.log('brief', id.slice(0, 8), r.outcome, r.reason || '');
       } catch (e) {
-        addAsk(id, { owner, outcome: 'error' });
         recordError('brief-ask', e);
       }
     }
-    updateBrief(id, { status: 'done' });
-  } catch (e) { updateBrief(id, { status: 'done' }); recordError('brief-run', e); }
+  } catch (e) { recordError('brief-run', e); }
+  finishBrief(id);
 }
 
 app.post('/api/brand/match', (req, res) => {
   const id = String((req.body && req.body.campaign) || '');
   const brief = getBrief(id);
   if (!brief) return res.status(404).json({ error: 'brief not found' });
+  if (brief.status !== 'open') return res.status(409).json({ error: 'This brief has already been asked.' });
   if (running) return res.status(409).json({ error: 'Another brief is being asked right now. Try again in a minute.' });
   if (!listWomen().length) return res.status(409).json({ error: 'No sealed women to ask yet.' });
   running = runBrief(id).finally(() => { running = null; });
@@ -404,12 +406,9 @@ app.get('/api/me/answers', (req, res) => {
     let pk; try { pk = new PublicKey(owner).toBytes(); } catch { return res.status(400).json({ error: 'bad owner' }); }
     const msg = Buffer.from(`oira:my-answers:v1\n${owner}\n${time}`);
     if (!nacl.sign.detached.verify(msg, sig, pk)) return res.status(401).json({ error: 'bad signature' });
-    const answers = answersFor(owner).map(({ brief, ask }) => ({
-      brand: brief.label, category: CATS[brief.category] || 'Other', season: SEASONS_12[brief.target.ts] || '',
-      payout: brief.payout, outcome: ask.outcome, reason: ask.reason || null,
-      amount: ask.outcome === 'yes' ? ask.amount || 0 : 0, explorer: ask.outcome === 'yes' ? ask.explorer || null : null, at: ask.at,
-    }));
-    res.json({ answers, earned: answers.reduce((t, a) => t + a.amount, 0), notifyToken: notifyToken(owner) });
+    // Sealed to her inbox key; her phone opens them. `answers` stays for older app versions.
+    const key = inboxKeyFor(owner);
+    res.json({ entries: inboxFor(owner), inboxKey: key, answers: [], earned: 0, notifyToken: notifyToken(owner) });
   } catch (e) { console.error('me/answers', e.message); res.status(500).json({ error: 'could not load answers' }); }
 });
 
@@ -437,6 +436,21 @@ function recordSend(owner) {
 // The phone's background check calls this with the token it got from /api/me/answers. It learns
 // a count and the time of the newest answer, nothing else. See notify.mjs.
 const newsSeen = new Map();
+// ---- Her inbox key: the public half of a key her phone keeps. Signed by her, so nobody can
+// point her answers at a key of their own. ----
+app.post('/api/me/inbox', (req, res) => {
+  const { owner, time, key, sig } = req.body || {};
+  const t = Number(time || 0);
+  if (!owner || !t || !key || !sig) return res.status(400).json({ error: 'owner, time, key and sig required' });
+  if (Math.abs(Date.now() - t) > 5 * 60_000) return res.status(401).json({ error: 'request too old' });
+  let pk; try { pk = new PublicKey(owner).toBytes(); } catch { return res.status(400).json({ error: 'bad owner' }); }
+  const keyBytes = Buffer.from(String(key), 'base64');
+  if (keyBytes.length !== 32) return res.status(400).json({ error: 'bad key' });
+  if (!nacl.sign.detached.verify(Buffer.from(`oira:inbox-key:v1\n${owner}\n${key}\n${t}`), Buffer.from(String(sig), 'base64'), pk)) return res.status(401).json({ error: 'bad signature' });
+  if (!setInboxKey(owner, keyBytes.toString('base64'))) return res.status(404).json({ error: 'seal your Palette first' });
+  res.json({ ok: true });
+});
+
 app.get('/api/me/news', (req, res) => {
   const owner = ownerOfToken(String(req.headers['x-oira-notify'] || ''));
   if (!owner) return res.status(401).json({ error: 'unknown token' });
@@ -445,8 +459,8 @@ app.get('/api/me/news', (req, res) => {
   if (recent.length >= 30) return res.status(429).json({ error: 'too many checks' });
   newsSeen.set(owner, [...recent, now]);
   const since = Number(req.query.since) || 0;
-  const fresh = answersFor(owner).filter(({ ask }) => ask.at > since);
-  res.json({ count: fresh.length, latest: fresh.reduce((m, { ask }) => Math.max(m, ask.at), since) });
+  const fresh = inboxFor(owner).filter((e) => e.at > since);
+  res.json({ count: fresh.length, latest: fresh.reduce((m, e) => Math.max(m, e.at), since) });
 });
 
 // ---- RELAYED SEAL over WebSocket: her owner key stays on her device ----

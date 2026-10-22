@@ -69,6 +69,9 @@ import { installContext, loadConcierge } from './lib/concierge';
 import { activate as activateLocalModel, readyOnThisPhone } from './lib/localModel';
 import { ageConfirmed, confirmAge } from './lib/age';
 import { AgeSheet } from './components/AgeSheet';
+import { MoveSheet } from './components/MoveSheet';
+import { canMigrate } from './lib/migrate';
+import { saveSealedTraits } from './lib/migration-state';
 import { sampleBrandQuery, type HerRules } from './lib/brandsim';
 import { undertoneCode, seasonCode } from './lib/traitcodes';
 import { fetchMyAnswers, type MyAnswer } from './lib/answers';
@@ -253,6 +256,7 @@ export default function App() {
     setSealError(null);
     try {
       const done = await sealViaDevice(owner, { traits: { undertone, depth, season } });
+      saveSealedTraits({ undertone, depth, season });
       /* The seal signature, which is the thing she can look up.
          These field names are taken from a real seal against the live bridge, not guessed. An
          earlier version of this line reached for receipt, signature and tx, none of which the
@@ -380,6 +384,10 @@ export default function App() {
   /* Up between "she asked to be read" and "she has an identity to be read into". */
   const [pendingScan, setPendingScan] = useState(false);
   const [ageAsk, setAgeAsk] = useState(false);
+  /* Her Palette is on this phone's own key, so offer to move it to a passkey. */
+  const [canMove, setCanMove] = useState(false);
+  const [moveOpen, setMoveOpen] = useState(false);
+  useEffect(() => { void canMigrate().then(setCanMove).catch(() => setCanMove(false)); }, [profile.isSealed]);
   /* The seal is genuinely doing something now, so it has states: working, and failed. */
   const [sealing, setSealing] = useState(false);
   const [sealError, setSealError] = useState<string | null>(null);
@@ -661,6 +669,14 @@ export default function App() {
 
         {/* Which door she takes. Sits over the frame like the seal does, because it is the
             same moment continued rather than a separate place she has gone to. */}
+        {moveOpen && (
+          <MoveSheet
+            rules={profile.isSealed ? { minPayout: nightRules.lowestPayout, maxPerBrand: nightRules.brandLifetimeCap } : null}
+            onDone={(o) => { setOwner(o); setCanMove(false); }}
+            onClose={() => setMoveOpen(false)}
+          />
+        )}
+
         {ageAsk && (
           <AgeSheet
             onYes={() => { confirmAge(); setAgeAsk(false); beginScan(); }}
@@ -1010,6 +1026,7 @@ export default function App() {
         money={herBalance}
         answered={brandLogs.length}
         onOpenSend={() => setIsSendOpen(true)}
+        onOpenMove={canMove ? () => setMoveOpen(true) : undefined}
         onOpenBoard={() => {
           setIsBrandBoardOpen(true);
           /* Who asked is the question her answers answer, so they load here too, and with them

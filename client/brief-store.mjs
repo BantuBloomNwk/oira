@@ -31,10 +31,22 @@ export function registerWoman(owner) {
   if (!owner) return;
   const db = load(WOMEN);
   const now = Date.now();
-  db[owner] = { firstSealedAt: db[owner]?.firstSealedAt ?? now, lastSeenAt: now };
+  // Keep what's already there (her inbox key, a retirement): a re-seal used to wipe them.
+  db[owner] = { ...(db[owner] || {}), firstSealedAt: db[owner]?.firstSealedAt ?? now, lastSeenAt: now };
   save(WOMEN, db);
 }
-export function listWomen() { return Object.keys(load(WOMEN)); }
+export function listWomen() { return Object.keys(load(WOMEN)).filter((w) => !load(WOMEN)[w]?.retiredTo); }
+export function isRegistered(owner) { const w = load(WOMEN)[owner]; return !!w && !w.retiredTo; }
+
+/* She moved to a new address (device key to passkey). The old one stays on record, marked, so no
+   brand is sent to it again; her new address carries on. */
+export function retireWoman(owner, to) {
+  const db = load(WOMEN);
+  if (!db[owner]) return false;
+  db[owner] = { ...db[owner], retiredTo: to, retiredAt: Date.now() };
+  save(WOMEN, db);
+  return true;
+}
 
 /* The public half of her inbox key, registered by a request she signed. */
 export function setInboxKey(owner, key) {

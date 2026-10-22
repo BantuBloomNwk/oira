@@ -97,6 +97,20 @@ const health = await (await fetch(`${BASE}/api/health`)).json();
 check('health reports the sponsor budget', health.sponsor && health.sponsor.capSol === 4 && typeof health.sponsor.spentTodaySol === 'number');
 check('the brand studio still shows totals', studio.campaigns.find((c) => c.campaign === 'done1')?.results.yes === 1);
 
+console.log('\nMoving to a passkey:');
+store.registerWoman(owner);
+check('a re-seal keeps her inbox key', store.inboxKeyFor(owner) === b64(inbox.publicKey));
+const fresh = Keypair.generate().publicKey.toBase58();
+const retire = async (signer, from, to) => {
+  const time = Date.now();
+  const sig = nacl.sign.detached(Buffer.from(`oira:retire:v1\n${from}\n${to}\n${time}`), signer.secretKey);
+  return (await fetch(`${BASE}/api/me/retire`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ owner: from, to, time, sig: b64(sig) }) })).status;
+};
+check('retiring is refused until the new address has sealed', (await retire(her, owner, fresh)) === 409);
+store.registerWoman(fresh);
+check('only the old key can retire it', (await retire(stranger, owner, fresh)) === 401);
+check('her own signature retires the old address', (await retire(her, owner, fresh)) === 200);
+check('brands are sent to the new address, never the old one', store.listWomen().includes(fresh) && !store.listWomen().includes(owner));
 console.log(failed ? `\n${failed} FAILED` : '\nALL GREEN');
 stop();
 fs.rmSync(dir, { recursive: true, force: true });

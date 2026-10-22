@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { createHmac, timingSafeEqual } from 'crypto';
 import { Keypair } from '@solana/web3.js';
 import { sealPalette, sealPaletteRelay, privatePayout, runOffer, privacyProof, postCampaign, matchCampaign, campaignStatus, bridgeStatus, askHer, brandSeedFor, setRulesRelay, sendUsdcRelay, usdcBalance, sponsorBalanceSol } from './oira-chain.mjs';
-import { registerWoman, listWomen, addBrief, getBrief, listBriefs, updateBrief, addResult, finishBrief, migrateBriefs, setInboxKey, inboxKeyFor, sealForHer, inboxFor } from './brief-store.mjs';
+import { registerWoman, listWomen, addBrief, getBrief, listBriefs, updateBrief, addResult, finishBrief, migrateBriefs, setInboxKey, inboxKeyFor, sealForHer, inboxFor, retireWoman, isRegistered } from './brief-store.mjs';
 import { notifyToken, ownerOfToken } from './notify.mjs';
 import nacl from 'tweetnacl';
 import { PublicKey } from '@solana/web3.js';
@@ -473,6 +473,23 @@ app.post('/api/me/inbox', (req, res) => {
   if (keyBytes.length !== 32) return res.status(400).json({ error: 'bad key' });
   if (!nacl.sign.detached.verify(Buffer.from(`oira:inbox-key:v1\n${owner}\n${key}\n${t}`), Buffer.from(String(sig), 'base64'), pk)) return res.status(401).json({ error: 'bad signature' });
   if (!setInboxKey(owner, keyBytes.toString('base64'))) return res.status(404).json({ error: 'seal your Palette first' });
+  res.json({ ok: true });
+});
+
+// ---- She moved from her device key to a passkey. Signed by the OLD key, naming the new address,
+// and only once the new address has sealed, so nobody can be taken off the list before their new
+// seal is in place. Brands stop being sent to the old address; nothing else changes. ----
+app.post('/api/me/retire', (req, res) => {
+  const { owner, to, time, sig } = req.body || {};
+  const t = Number(time || 0);
+  if (!owner || !to || !t || !sig) return res.status(400).json({ error: 'owner, to, time and sig required' });
+  if (Math.abs(Date.now() - t) > 5 * 60_000) return res.status(401).json({ error: 'request too old' });
+  let pk; try { pk = new PublicKey(owner).toBytes(); new PublicKey(to); } catch { return res.status(400).json({ error: 'bad address' }); }
+  if (owner === to) return res.status(400).json({ error: 'same address' });
+  if (!nacl.sign.detached.verify(Buffer.from(`oira:retire:v1\n${owner}\n${to}\n${t}`), Buffer.from(String(sig), 'base64'), pk)) return res.status(401).json({ error: 'bad signature' });
+  if (!isRegistered(to)) return res.status(409).json({ error: 'seal the new address first' });
+  if (!retireWoman(owner, to)) return res.status(404).json({ error: 'nothing to retire' });
+  console.log('retired', owner.slice(0, 6), 'moved to', to.slice(0, 6));
   res.json({ ok: true });
 });
 

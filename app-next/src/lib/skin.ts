@@ -154,7 +154,7 @@ export type Undertone = 'warm' | 'cool' | 'neutral' | 'olive';
 /* Undertone from where the skin sits in the a-b chroma plane, not from a red-minus-blue guess.
    The hue angle is stable across depth, which is the property that matters: a warm deep
    skin and a warm fair skin should both come back warm. */
-function undertoneFrom(a: number, b: number): Undertone {
+export function undertoneFrom(a: number, b: number): Undertone {
   const hue = (Math.atan2(b, a) * 180) / Math.PI;
   const chroma = Math.hypot(a, b);
   /* Almost no colour left to read. Say balanced rather than invent a lean. */

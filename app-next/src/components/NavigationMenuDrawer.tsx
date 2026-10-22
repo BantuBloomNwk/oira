@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X, Bell, ChevronRight, ClipboardList, Cpu, RotateCcw, ScanFace, Settings, ShieldCheck,
-  Sparkles, TrendingUp, UserRound, Wallet,
+  Sparkles, TrendingUp, UserRound, Wallet, Fingerprint,
 } from 'lucide-react';
 import { UserProfile, SeasonPalette } from '../types';
 import type { ToastMessage } from './Toast';
@@ -29,6 +29,8 @@ interface NavigationMenuDrawerProps {
   onOpenOnDevice: () => void;
   onShowEarnings: () => void;
   onOpenSend?: () => void;
+  /* Shown only to women whose Palette is on this phone's own key. */
+  onOpenMove?: () => void;
   /* Her real USDC balance, or null before she has unlocked with her passkey on this phone. */
   money?: number | null;
   earned: number;
@@ -92,6 +94,7 @@ export const NavigationMenuDrawer: React.FC<NavigationMenuDrawerProps> = ({
   onOpenOnDevice,
   onShowEarnings,
   onOpenSend,
+  onOpenMove,
   money = null,
   earned,
   answered,
@@ -180,6 +183,14 @@ export const NavigationMenuDrawer: React.FC<NavigationMenuDrawerProps> = ({
                 detail={money == null ? 'Open' : `$${money.toFixed(2)}`}
                 onClick={go(onOpenSend ?? onShowEarnings)}
               />
+              {onOpenMove && (
+                <Row
+                  icon={<Fingerprint className="w-4 h-4" />}
+                  label="Take your Palette with you"
+                  detail="Move"
+                  onClick={go(onOpenMove)}
+                />
+              )}
 
               <Row
                 id="menu-privacy-btn"

@@ -25,6 +25,7 @@ import type { Owner } from './owner';
 import { isNativeApp } from './native';
 import { initNativeBiometric, nativeBiometricAvailable, nativeBiometricReady, confirmWithBiometric } from './biometric';
 import { diag } from './diag';
+import { migrationFinished } from './migration-state';
 import { forgetAnswerAlerts } from './alerts';
 
 export type { Owner };
@@ -74,7 +75,12 @@ export async function useFingerprint(): Promise<Owner> {
      different key and so a different address, and switching now would strand that seal. She
      keeps the identity her seal belongs to, behind her fingerprint; moving it to a passkey is
      a step of its own, never a side effect of tapping this. */
-  if (isNativeApp() && loadProof() && !hasEnrolled()) {
+  /* "Sealed on the device key" is judged by the address she sealed with, not by whether a passkey
+     exists yet: a move to a passkey creates one first, and if the move stops halfway she must
+     stay on the identity her seal belongs to until it finishes. */
+  const sealedOnDevice = isNativeApp() && loadProof() && !migrationFinished()
+    && (!hasEnrolled() || rememberedHer() === (await unlockLocal()).address);
+  if (sealedOnDevice) {
     diag('identity', 'sealed on the device key, keeping it');
     if (native) await askFingerprint();
     current = await unlockLocal();

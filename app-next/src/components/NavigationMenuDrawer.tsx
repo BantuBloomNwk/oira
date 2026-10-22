@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import { useCurrency } from '../lib/currency';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   X, Bell, ChevronRight, ClipboardList, Cpu, RotateCcw, ScanFace, Settings, ShieldCheck,
-  Sparkles, TrendingUp, UserRound, Wallet, Fingerprint,
+  Sparkles, TrendingUp, UserRound, Wallet, Fingerprint, Coins,
 } from 'lucide-react';
 import { UserProfile, SeasonPalette } from '../types';
 import type { ToastMessage } from './Toast';
@@ -31,6 +32,7 @@ interface NavigationMenuDrawerProps {
   onOpenSend?: () => void;
   /* Shown only to women whose Palette is on this phone's own key. */
   onOpenMove?: () => void;
+  onOpenCurrency?: () => void;
   /* Her real USDC balance, or null before she has unlocked with her passkey on this phone. */
   money?: number | null;
   earned: number;
@@ -95,6 +97,7 @@ export const NavigationMenuDrawer: React.FC<NavigationMenuDrawerProps> = ({
   onShowEarnings,
   onOpenSend,
   onOpenMove,
+  onOpenCurrency,
   money = null,
   earned,
   answered,
@@ -113,6 +116,9 @@ export const NavigationMenuDrawer: React.FC<NavigationMenuDrawerProps> = ({
     const recent = [...taps.filter((t) => now - t < 3000), now];
     if (recent.length >= 5) { setTaps([]); setDiagOpen(true); } else setTaps(recent);
   };
+
+  // Before the early return: hooks must run on every render.
+  const { money: fmt, pref } = useCurrency();
 
   if (!isOpen) return null;
 
@@ -180,9 +186,17 @@ export const NavigationMenuDrawer: React.FC<NavigationMenuDrawerProps> = ({
                 id="menu-earned-btn"
                 icon={<Wallet className="w-4 h-4" />}
                 label="Your money"
-                detail={money == null ? 'Open' : `$${money.toFixed(2)}`}
+                detail={money == null ? 'Open' : fmt(money)}
                 onClick={go(onOpenSend ?? onShowEarnings)}
               />
+              {onOpenCurrency && (
+                <Row
+                  icon={<Coins className="w-4 h-4" />}
+                  label="Show money in"
+                  detail={pref.show === 'local' && pref.code !== 'USD' ? pref.code : 'USD'}
+                  onClick={go(onOpenCurrency)}
+                />
+              )}
               {onOpenMove && (
                 <Row
                   icon={<Fingerprint className="w-4 h-4" />}

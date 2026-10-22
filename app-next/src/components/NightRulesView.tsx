@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useCurrency } from '../lib/currency';
 import { motion } from 'motion/react';
 import { 
   ArrowLeft, 
@@ -63,6 +64,7 @@ export const NightRulesView: React.FC<NightRulesViewProps> = ({
   onOpenSend,
   onGoodnight,
 }) => {
+  const { money: fmt } = useCurrency();
   const [lowestPayout, setLowestPayout] = useState(config.lowestPayout);
   const [brandCap, setBrandCap] = useState(config.brandLifetimeCap);
   const [activeTab, setActiveTab] = useState<'rules' | 'rituals'>('rules');
@@ -333,7 +335,7 @@ export const NightRulesView: React.FC<NightRulesViewProps> = ({
               ) : (
                 <div className="mt-2 space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[11.5px] text-[#F3DDD6]">${myAnswers.earned.toFixed(2)} earned from {myAnswers.answers.filter((a) => a.outcome === 'yes').length} yes{myAnswers.answers.filter((a) => a.outcome === 'yes').length === 1 ? '' : 'es'}</p>
+                    <p className="text-[11.5px] text-[#F3DDD6]">{fmt(myAnswers.earned)} earned from {myAnswers.answers.filter((a) => a.outcome === 'yes').length} yes{myAnswers.answers.filter((a) => a.outcome === 'yes').length === 1 ? '' : 'es'}</p>
                     {onOpenSend && myAnswers.earned > 0 && (
                       <button type="button" onClick={onOpenSend} className="shrink-0 text-[11.5px] font-semibold text-[#D6A756] underline cursor-pointer">Send it</button>
                     )}
@@ -343,10 +345,10 @@ export const NightRulesView: React.FC<NightRulesViewProps> = ({
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[#F3DDD6] font-semibold truncate">{a.brand}</span>
                         <span className={a.outcome === 'yes' ? 'text-[#D6A756] font-semibold shrink-0' : 'text-[#EFDDE2]/70 shrink-0'}>
-                          {a.outcome === 'yes' ? `Yes, +$${a.amount.toFixed(2)}` : a.outcome === 'no' ? 'No, $0.00' : 'Turned away'}
+                          {a.outcome === 'yes' ? `Yes, +${fmt(a.amount)}` : a.outcome === 'no' ? 'No' : 'Turned away'}
                         </span>
                       </div>
-                      <p className="text-[#EFDDE2]/75 mt-0.5">{a.category} for a {a.season}, ${a.payout.toFixed(2)} a yes</p>
+                      <p className="text-[#EFDDE2]/75 mt-0.5">{a.category} for a {a.season}, {fmt(a.payout)} a yes</p>
                       <p className="text-[#EFDDE2]/55 mt-0.5">
                         {a.outcome === 'yes' ? 'It suits you. They learned that, and nothing else.' : a.outcome === 'no' ? 'Not your match. Nothing about you was shared.' : a.reason || 'It broke one of your rules.'}
                         {a.explorer && <> <a href={a.explorer} target="_blank" rel="noopener" className="underline text-[#F3DDD6]">See the payment</a></>}

@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { useCurrency, suggestedCountry } from '../lib/currency';
+import { BRIDGE_ORIGIN, isNativeApp } from '../lib/native';
 import type { Owner } from '../lib/owner';
 import { fetchBalance, sendUsdc, type Sent } from '../lib/send';
 import { connectedWalletAddress } from '../lib/identity';
@@ -48,6 +50,9 @@ export const SendSheet: React.FC<SendSheetProps> = ({ getOwner, onClose }) => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState<Sent | null>(null);
+  const { money } = useCurrency();
+  const [cashOutAsk, setCashOutAsk] = useState(false);
+  const [counted, setCounted] = useState(() => { try { return localStorage.getItem('oira_interest_cashout') === '1'; } catch { return false; } });
 
   useEffect(() => {
     let alive = true;
@@ -101,6 +106,17 @@ export const SendSheet: React.FC<SendSheetProps> = ({ getOwner, onClose }) => {
 
   const hint = WHERE.find((w) => w.id === where)!.hint;
 
+  const countMeIn = async () => {
+    try {
+      await fetch(`${isNativeApp() ? BRIDGE_ORIGIN : ''}/api/interest`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ kind: 'cashout', country: suggestedCountry() }),
+      });
+    } catch { /* counted next time */ return; }
+    try { localStorage.setItem('oira_interest_cashout', '1'); } catch { /* fine */ }
+    setCounted(true);
+  };
+
   return (
     <div className="absolute inset-0 z-[60] bg-black/45 flex items-end justify-center">
       <div className="w-full max-w-[420px] bg-paper rounded-t-3xl px-5 pt-5 pb-7 max-h-[92%] overflow-y-auto">
@@ -110,7 +126,7 @@ export const SendSheet: React.FC<SendSheetProps> = ({ getOwner, onClose }) => {
               {sent ? 'Sent, love' : mode === 'receive' ? 'Receive money' : 'Send your money'}
             </h2>
             <p className="text-[12.5px] leading-[1.55] text-muted mt-1">
-              {balance == null ? 'Checking your balance...' : `You have $${balance.toFixed(2)} USDC. It's yours, and only your fingerprint can move it.`}
+              {balance == null ? 'Checking your balance...' : `You have ${money(balance)} in USDC. It's yours, and only your fingerprint can move it.`}
             </p>
           </div>
           <button type="button" onClick={onClose} className="text-[12px] text-muted px-2 py-1 cursor-pointer" aria-label="Close">Close</button>
@@ -150,7 +166,7 @@ export const SendSheet: React.FC<SendSheetProps> = ({ getOwner, onClose }) => {
         ) : sent ? (
           <div className="mt-4 space-y-3">
             <p className="text-[13px] text-ink leading-snug">
-              ${sent.amount.toFixed(2)} is on its way to {sent.to.slice(0, 4)}...{sent.to.slice(-4)}. I paid the fee, so it cost you nothing extra.
+              {money(sent.amount)} is on its way to {sent.to.slice(0, 4)}...{sent.to.slice(-4)}. I paid the fee, so it cost you nothing extra.
             </p>
             <a href={sent.explorer} target="_blank" rel="noopener" className="inline-block text-[12.5px] font-semibold text-[#A85578] underline">
               See the receipt on Solana
@@ -222,6 +238,22 @@ export const SendSheet: React.FC<SendSheetProps> = ({ getOwner, onClose }) => {
               {busy ? 'Sending...' : value > 0 ? `Send $${value.toFixed(2)}` : 'Send'}
             </button>
             <p className="text-[10.5px] text-muted text-center mt-2">Oira pays the network fee. You'll never need SOL for this.</p>
+
+            {/* Not built yet. One tap counts her in, by country only, so we know where to start. */}
+            <div className="mt-4 pt-3 border-t border-[#F0E1E6] text-center">
+              {!cashOutAsk && !counted && (
+                <button type="button" onClick={() => setCashOutAsk(true)} className="text-[12px] font-medium text-[#A85578] cursor-pointer underline">
+                  Cash out to my bank or mobile money
+                </button>
+              )}
+              {cashOutAsk && !counted && (
+                <div>
+                  <p className="text-[12px] text-ink leading-snug">That's coming. Want it? Tap and I'll count you in. I only note your country, nothing about you.</p>
+                  <button type="button" onClick={countMeIn} className="mt-2 rounded-full border border-ink px-4 py-2 text-[12px] font-semibold text-ink cursor-pointer">Count me in</button>
+                </div>
+              )}
+              {counted && <p className="text-[11.5px] text-muted">You're counted, love. You'll be among the first to have it.</p>}
+            </div>
           </>
         )}
       </div>

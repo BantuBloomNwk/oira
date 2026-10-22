@@ -12,6 +12,8 @@ import nacl from 'tweetnacl';
 import { PublicKey } from '@solana/web3.js';
 import { recordError, alertBridge, monitorStats, dailyReport } from './oira-monitor.mjs';
 import { createBudget } from './sponsor-budget.mjs';
+import { fxTable, refreshFx } from './fx.mjs';
+import { KINDS as INTEREST_KINDS, countInterest, interestCounts } from './interest.mjs';
 import { createChallenge, verifyAndClaim } from './genesis-check.mjs';
 import { reason as conciergeReason, llmConfigured } from './oira-concierge.mjs';
 import { ttsConfigured, synthesize } from './oira-tts.mjs';
@@ -434,6 +436,30 @@ app.get('/api/me/answers', (req, res) => {
     const key = inboxKeyFor(owner);
     res.json({ entries: inboxFor(owner), inboxKey: key, answers: [], earned: 0, notifyToken: notifyToken(owner) });
   } catch (e) { console.error('me/answers', e.message); res.status(500).json({ error: 'could not load answers' }); }
+});
+
+// ---- Exchange rates, for showing her money in her own currency. The whole table, so the server
+// never learns which currency she looks at. ----
+app.get('/api/fx', async (req, res) => {
+  const t = fxTable() || await refreshFx();
+  if (!t) return res.status(503).json({ error: 'rates not available yet' });
+  res.set('Cache-Control', 'public, max-age=300');
+  res.json(t);
+});
+
+// ---- Interest in a feature that doesn't exist yet. One count per feature per country; nothing
+// about who tapped is kept. ----
+app.post('/api/interest', (req, res) => {
+  const kind = String((req.body && req.body.kind) || '');
+  const country = String((req.body && req.body.country) || '').toUpperCase();
+  if (!INTEREST_KINDS.has(kind) || !/^[A-Z]{2}$/.test(country)) return res.status(400).json({ error: 'kind and a two-letter country required' });
+  if (rateLimited(clientIp(req))) return res.status(429).json({ error: 'Too many requests. Please wait a moment.' });
+  countInterest(kind, country);
+  res.json({ ok: true });
+});
+app.get('/api/interest', (req, res) => {
+  if (!brandAllowed(req)) return res.status(401).json({ error: 'brand key required' });
+  res.json(interestCounts());
 });
 
 // ---- Her balance: USDC in her own account. Public on chain anyway, so no signature needed. ----

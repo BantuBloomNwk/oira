@@ -70,6 +70,8 @@ import { activate as activateLocalModel, readyOnThisPhone } from './lib/localMod
 import { ageConfirmed, confirmAge } from './lib/age';
 import { AgeSheet } from './components/AgeSheet';
 import { MoveSheet } from './components/MoveSheet';
+import { CurrencySheet } from './components/CurrencySheet';
+import { useCurrency } from './lib/currency';
 import { canMigrate } from './lib/migrate';
 import { saveSealedTraits } from './lib/migration-state';
 import { sampleBrandQuery, type HerRules } from './lib/brandsim';
@@ -387,6 +389,8 @@ export default function App() {
   /* Her Palette is on this phone's own key, so offer to move it to a passkey. */
   const [canMove, setCanMove] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
+  const [currencyOpen, setCurrencyOpen] = useState(false);
+  const { money: fmtMoney } = useCurrency();
   useEffect(() => { void canMigrate().then(setCanMove).catch(() => setCanMove(false)); }, [profile.isSealed]);
   /* The seal is genuinely doing something now, so it has states: working, and failed. */
   const [sealing, setSealing] = useState(false);
@@ -669,6 +673,8 @@ export default function App() {
 
         {/* Which door she takes. Sits over the frame like the seal does, because it is the
             same moment continued rather than a separate place she has gone to. */}
+        {currencyOpen && <CurrencySheet onClose={() => setCurrencyOpen(false)} />}
+
         {moveOpen && (
           <MoveSheet
             rules={profile.isSealed ? { minPayout: nightRules.lowestPayout, maxPerBrand: nightRules.brandLifetimeCap } : null}
@@ -855,7 +861,7 @@ export default function App() {
                       </div>
                       <p className="text-[12px] text-[#43203B]">
                         {myAnswers && myAnswers.answers.length
-                          ? <>{myAnswers.answers.length} brands asked, not one of them saw you • <span className="font-semibold text-[#43203B]">${myAnswers.earned.toFixed(2)} earned</span></>
+                          ? <>{myAnswers.answers.length} brands asked, not one of them saw you • <span className="font-semibold text-[#43203B]">{fmtMoney(myAnswers.earned)} earned</span></>
                           : <>{brandLogs.length} sample questions, not one of them saw you • <span className="font-semibold text-[#43203B]">${nightRules.totalEarned.toFixed(2)} in samples</span></>}
                       </p>
                     </div>
@@ -1027,6 +1033,7 @@ export default function App() {
         answered={brandLogs.length}
         onOpenSend={() => setIsSendOpen(true)}
         onOpenMove={canMove ? () => setMoveOpen(true) : undefined}
+        onOpenCurrency={() => setCurrencyOpen(true)}
         onOpenBoard={() => {
           setIsBrandBoardOpen(true);
           /* Who asked is the question her answers answer, so they load here too, and with them
